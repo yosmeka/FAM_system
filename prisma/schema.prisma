@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          Role      @default(USER)
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  maintenanceRequests MaintenanceRequest[] @relation("MaintenanceRequestedBy")
+}
+
+model Asset {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  serialNumber    String         @unique
+  purchaseDate    DateTime
+  purchasePrice   Float
+  currentValue    Float
+  status          String         @default("ACTIVE")
+  location        String?
+  department      String?
+  category        String?
+  supplier        String?
+  warrantyExpiry  DateTime?
+  lastMaintenance DateTime?
+  nextMaintenance DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  depreciations   Depreciation[]
+  documents       Document[]
+}
+
+model Transfer {
+  id           String    @id @default(cuid())
+  assetId      String
+  fromLocation String
+  toLocation   String
+  reason       String
+  status       String    @default("PENDING")
+  approvedBy   String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Maintenance {
+  id          String    @id @default(cuid())
+  assetId     String
+  description String
+  cost        Float?
+  status      String    @default("PENDING")
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Disposal {
+  id         String    @id @default(cuid())
+  assetId    String
+  reason     String
+  method     String
+  proceeds   Float?
+  status     String    @default("PENDING")
+  approvedBy String?
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model MaintenanceRequest {
+  id            String            @id @default(cuid())
+  assetId       String
+  description   String
+  status        MaintenanceStatus @default(PENDING)
+  requestedById String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  requestedBy   User              @relation("MaintenanceRequestedBy", fields: [requestedById], references: [id])
+}
+
+model Document {
+  id        String       @id @default(cuid())
+  assetId   String
+  type      DocumentType
+  url       String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  asset     Asset        @relation(fields: [assetId], references: [id])
+}
+
+model Depreciation {
+  id        String   @id @default(cuid())
+  assetId   String
+  amount    Float
+  date      DateTime
+  createdAt DateTime @default(now())
+  asset     Asset    @relation(fields: [assetId], references: [id])
+}
+
+enum AssetStatus {
+  ACTIVE
+  TRANSFERRED
+  DISPOSED
+  UNDER_MAINTENANCE
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  INSPECTION
+}
+
+enum MaintenanceStatus {
+  PENDING
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DisposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum DocumentType {
+  INVOICE
+  WARRANTY
+  INSURANCE
+  MAINTENANCE_RECORD
+  OTHER
+}
+
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
