@@ -18,11 +18,6 @@ export async function GET(
       where: {
         id: params.id,
       },
-      include: {
-        department: true,
-        category: true,
-        supplier: true,
-      },
     });
 
     if (!asset) {
@@ -61,18 +56,13 @@ export async function PUT(
         currentValue: parseFloat(body.currentValue),
         status: body.status,
         location: body.location,
-        departmentId: body.departmentId,
-        categoryId: body.categoryId,
-        supplierId: body.supplierId,
+        department: body.department,
+        category: body.category,
+        supplier: body.supplier,
         description: body.description,
-        warrantyExpiryDate: body.warrantyExpiryDate ? new Date(body.warrantyExpiryDate) : null,
-        lastMaintenanceDate: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : null,
-        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
-      },
-      include: {
-        department: true,
-        category: true,
-        supplier: true,
+        warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
+        lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
+        nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
       },
     });
 

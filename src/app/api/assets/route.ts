@@ -12,11 +12,6 @@ export async function GET() {
     }
 
     const assets = await prisma.asset.findMany({
-      include: {
-        department: true,
-        category: true,
-        supplier: true,
-      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -42,24 +37,19 @@ export async function POST(request: Request) {
     const asset = await prisma.asset.create({
       data: {
         name: body.name,
+        description: body.description,
         serialNumber: body.serialNumber,
         purchaseDate: new Date(body.purchaseDate),
         purchasePrice: parseFloat(body.purchasePrice),
         currentValue: parseFloat(body.currentValue),
         status: body.status,
         location: body.location,
-        departmentId: body.departmentId,
-        categoryId: body.categoryId,
-        supplierId: body.supplierId,
-        description: body.description,
-        warrantyExpiryDate: body.warrantyExpiryDate ? new Date(body.warrantyExpiryDate) : null,
-        lastMaintenanceDate: body.lastMaintenanceDate ? new Date(body.lastMaintenanceDate) : null,
-        nextMaintenanceDate: body.nextMaintenanceDate ? new Date(body.nextMaintenanceDate) : null,
-      },
-      include: {
-        department: true,
-        category: true,
-        supplier: true,
+        department: body.department,
+        category: body.category,
+        supplier: body.supplier,
+        warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
+        lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
+        nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
       },
     });
 
