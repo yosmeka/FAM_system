@@ -7,6 +7,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface Asset {
   id: string;
@@ -35,6 +36,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
 
   useEffect(() => {
     const fetchAsset = async () => {
@@ -55,6 +57,21 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
     fetchAsset();
   }, [params.id]);
+
+  useEffect(() => {
+    if (asset) {
+      // Generate depreciation data for the chart
+      const purchaseYear = new Date(asset.purchaseDate).getFullYear();
+      const data = [];
+      for (let i = 0; i < 5; i++) {
+        data.push({
+          year: purchaseYear + i,
+          value: asset.purchasePrice * (1 - (i * 0.2))
+        });
+      }
+      setDepreciationData(data);
+    }
+  }, [asset]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this asset?')) {
@@ -223,7 +240,14 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       <div className="mb-6">
         <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
         <div className="h-48 bg-blue-100 rounded-lg flex items-center justify-center text-gray-500 mb-4">
-          (Depreciation chart placeholder)
+        <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={depreciationData}>
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#8884d8" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
         </div>
         <div className="overflow-x-auto text-sm">
           <table className="w-full border text-left">
