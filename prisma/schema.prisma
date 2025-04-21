@@ -17,7 +17,9 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  maintenanceRequests MaintenanceRequest[] @relation("MaintenanceRequestedBy")
+  maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
+  transferRequests Transfer[] @relation("TransferRequestedBy")
+  disposalRequests Disposal[] @relation("DisposalRequestedBy")
 }
 
 model Asset {
@@ -40,56 +42,56 @@ model Asset {
   updatedAt       DateTime       @updatedAt
   depreciations   Depreciation[]
   documents       Document[]
+  maintenanceRequests Maintenance[] @relation
+  transferRequests Transfer[] @relation
+  disposalRequests Disposal[] @relation
 }
 
 model Transfer {
-  id           String    @id @default(cuid())
-  assetId      String
-  fromLocation String
-  toLocation   String
-  reason       String
-  status       String    @default("PENDING")
-  approvedBy   String?
-  approvedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id            String        @id @default(cuid())
+  assetId       String
+  requesterId   String
+  fromDepartment String
+  toDepartment  String
+  reason        String
+  status        TransferStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  requester     User          @relation("TransferRequestedBy", fields: [requesterId], references: [id])
+  asset         Asset         @relation(fields: [assetId], references: [id])
 }
 
 model Maintenance {
-  id          String    @id @default(cuid())
-  assetId     String
-  description String
-  cost        Float?
-  status      String    @default("PENDING")
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String            @id @default(cuid())
+  assetId       String
+  requesterId   String
+  description   String
+  priority      MaintenancePriority
+  status        MaintenanceStatus @default(PENDING)
+  cost          Float?
+  completedAt   DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  requester     User              @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  asset         Asset             @relation(fields: [assetId], references: [id])
 }
 
 model Disposal {
-  id         String    @id @default(cuid())
-  assetId    String
-  reason     String
-  method     String
-  proceeds   Float?
-  status     String    @default("PENDING")
-  approvedBy String?
-  approvedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id            String         @id @default(cuid())
+  assetId       String
+  requesterId   String
+  reason        String
+  method        DisposalMethod
+  expectedValue Float
+  actualValue   Float?
+  status        DisposalStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  requester     User           @relation("DisposalRequestedBy", fields: [requesterId], references: [id])
+  asset         Asset          @relation(fields: [assetId], references: [id])
 }
 
-model MaintenanceRequest {
-  id            String            @id @default(cuid())
-  assetId       String
-  description   String
-  status        MaintenanceStatus @default(PENDING)
-  requestedById String
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  requestedBy   User              @relation("MaintenanceRequestedBy", fields: [requestedById], references: [id])
-}
+
 
 model Document {
   id        String       @id @default(cuid())
@@ -102,13 +104,20 @@ model Document {
 }
 
 model Depreciation {
-  id        String   @id @default(cuid())
-  assetId   String
-  amount    Float
-  date      DateTime
-  createdAt DateTime @default(now())
-  asset     Asset    @relation(fields: [assetId], references: [id])
+  id              String   @id @default(cuid())
+  assetId         String
+  amount          Float
+  date            DateTime
+  method          String
+  usefulLife      Int
+  salvageValue    Float
+  depreciationRate Float
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  asset           Asset    @relation(fields: [assetId], references: [id])
 }
+
 
 enum AssetStatus {
   ACTIVE
@@ -138,6 +147,13 @@ enum MaintenanceStatus {
   CANCELLED
 }
 
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum DisposalStatus {
   PENDING
   APPROVED
@@ -145,10 +161,17 @@ enum DisposalStatus {
   COMPLETED
 }
 
+enum DisposalMethod {
+  SALE
+  DONATION
+  RECYCLE
+  SCRAP
+}
+
 enum DocumentType {
   INVOICE
   WARRANTY
-  INSURANCE
+  MANUAL
   MAINTENANCE_RECORD
   OTHER
 }

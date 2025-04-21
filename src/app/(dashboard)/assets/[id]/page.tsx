@@ -143,6 +143,12 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         {canManageAssets() && (
           <div className="flex space-x-3">
             <Link
+              href={`/assets/${asset.id}/depreciation`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Calculate Depreciation
+            </Link>
+            <Link
               href={`/assets/${asset.id}/edit`}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >

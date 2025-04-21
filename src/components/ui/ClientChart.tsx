@@ -3,11 +3,10 @@
 // Import the chart registration file first
 import '@/lib/chart-registry';
 
-import { Bar, Line } from 'react-chartjs-2';
+import { Bar, Line, Pie } from 'react-chartjs-2';
 import { useEffect, useState } from 'react';
 
-// Only support line and bar charts
-type ChartType = 'line' | 'bar';
+import { ChartType } from '@/types/chart';
 
 interface ClientChartProps {
   type: ChartType;
@@ -19,6 +18,8 @@ interface ClientChartProps {
 const ChartComponents = {
   line: Line as any,
   bar: Bar as any,
+  pie: Pie as any,
+  heatmap: Bar as any, // Using Bar as base for heatmap
 } as const;
 
 export function ClientChart({ type, data, options }: ClientChartProps) {

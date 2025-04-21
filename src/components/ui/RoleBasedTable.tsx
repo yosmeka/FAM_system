@@ -14,6 +14,7 @@ interface RoleBasedTableProps<T> {
   data: T[];
   className?: string;
   onRowClick?: (item: T) => void;
+  loading?: boolean;
 }
 
 export function RoleBasedTable<T>({
