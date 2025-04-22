@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import Navbar from '@/components/navigation/navbar';
+import React from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Navbar from "@/components/navigation/navbar";
 
 export default function DashboardLayout({
   children,
@@ -15,12 +15,12 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
   }, [status, router]);
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
@@ -40,4 +40,4 @@ export default function DashboardLayout({
       </main>
     </div>
   );
-} 
+}

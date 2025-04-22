@@ -1,24 +1,57 @@
-'use client';
+"use client";
 
-import React, { Fragment } from 'react';
-import { Disclosure, Menu, Transition } from '@headlessui/react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useSession, signOut } from 'next-auth/react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import React, { Fragment } from "react";
+import { Disclosure, Menu, Transition } from "@headlessui/react";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', roles: ['ADMIN', 'FINANCE_OFFICER', 'ASSET_MANAGER', 'AUDITOR', 'DEPARTMENT_OFFICER', 'BRANCH_OFFICER'] },
-  { name: 'Assets', href: '/assets', roles: ['ADMIN', 'ASSET_MANAGER', 'AUDITOR'] },
-  { name: 'Transfers', href: '/transfers', roles: ['ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_OFFICER', 'BRANCH_OFFICER'] },
-  { name: 'Maintenance', href: '/maintenance', roles: ['ADMIN', 'ASSET_MANAGER', 'DEPARTMENT_OFFICER', 'BRANCH_OFFICER'] },
-  { name: 'Disposals', href: '/disposals', roles: ['ADMIN', 'ASSET_MANAGER', 'FINANCE_OFFICER'] },
-  { name: 'Reports', href: '/reports', roles: ['ADMIN', 'FINANCE_OFFICER', 'AUDITOR'] },
-  { name: 'Users', href: '/users', roles: ['ADMIN'] },
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    roles: [
+      "ADMIN",
+      "FINANCE_OFFICER",
+      "ASSET_MANAGER",
+      "AUDITOR",
+      "DEPARTMENT_OFFICER",
+      "BRANCH_OFFICER",
+      ,
+      "USER",
+    ],
+  },
+  {
+    name: "Assets",
+    href: "/assets",
+    roles: ["ADMIN", "ASSET_MANAGER", "AUDITOR", "USER"],
+  },
+  {
+    name: "Transfers",
+    href: "/transfers",
+    roles: ["ADMIN", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
+  },
+  {
+    name: "Maintenance",
+    href: "/maintenance",
+    roles: ["ADMIN", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
+  },
+  {
+    name: "Disposals",
+    href: "/disposals",
+    roles: ["ADMIN", "ASSET_MANAGER", "FINANCE_OFFICER"],
+  },
+  {
+    name: "Reports",
+    href: "/reports",
+    roles: ["ADMIN", "FINANCE_OFFICER", "AUDITOR"],
+  },
+  { name: "Users", href: "/users", roles: ["ADMIN"] },
 ];
 
 function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
+  return classes.filter(Boolean).join(" ");
 }
 
 export default function Navbar() {
@@ -28,7 +61,9 @@ export default function Navbar() {
   if (!session) return null;
 
   const userRole = session.user?.role as string;
-  const filteredNavigation = navigation.filter(item => item.roles.includes(userRole));
+  const filteredNavigation = navigation.filter((item) =>
+    item.roles.includes(userRole)
+  );
 
   return (
     <Disclosure as="nav" className="bg-gray-800">
@@ -59,9 +94,9 @@ export default function Navbar() {
                         href={item.href}
                         className={classNames(
                           pathname === item.href
-                            ? 'bg-gray-900 text-white'
-                            : 'text-gray-300 hover:bg-gray-700 hover:text-white',
-                          'rounded-md px-3 py-2 text-sm font-medium'
+                            ? "bg-gray-900 text-white"
+                            : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                          "rounded-md px-3 py-2 text-sm font-medium"
                         )}
                       >
                         {item.name}
@@ -96,8 +131,8 @@ export default function Navbar() {
                           <button
                             onClick={() => signOut()}
                             className={classNames(
-                              active ? 'bg-gray-100' : '',
-                              'block w-full px-4 py-2 text-left text-sm text-gray-700'
+                              active ? "bg-gray-100" : "",
+                              "block w-full px-4 py-2 text-left text-sm text-gray-700"
                             )}
                           >
                             Sign out
@@ -119,9 +154,9 @@ export default function Navbar() {
                   href={item.href}
                   className={classNames(
                     pathname === item.href
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white',
-                    'block rounded-md px-3 py-2 text-base font-medium'
+                      ? "bg-gray-900 text-white"
+                      : "text-gray-300 hover:bg-gray-700 hover:text-white",
+                    "block rounded-md px-3 py-2 text-base font-medium"
                   )}
                 >
                   {item.name}
@@ -133,4 +168,4 @@ export default function Navbar() {
       )}
     </Disclosure>
   );
-} 
+}

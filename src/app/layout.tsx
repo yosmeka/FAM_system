@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "react-hot-toast"; // ✅ Use the one from react-hot-toast
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/query-provider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -26,11 +26,11 @@ export default function RootLayout({
           <AuthProvider>
             <QueryProvider>
               {children}
-              <Toaster />
+              <Toaster position="top-right" />
             </QueryProvider>
           </AuthProvider>
         </SessionProvider>
       </body>
     </html>
   );
-} 
+}
