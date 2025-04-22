@@ -12,8 +12,7 @@ const ClientChart = dynamic(() => import("./ClientChart").then(mod => mod.Client
   loading: () => <div className="h-64 w-full animate-pulse bg-gray-200 rounded-lg" />,
 });
 
-// Only support line and bar charts
-type ChartType = "line" | "bar";
+import { ChartType } from '@/types/chart';
 
 interface RoleBasedChartProps {
   type: ChartType;

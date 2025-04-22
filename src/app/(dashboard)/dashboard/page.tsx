@@ -120,7 +120,7 @@ export default function DashboardPage() {
             Asset Status Distribution
           </h2>
           <div className="h-80">
-            <Pie type="pie" data={assetStatusData} />
+            <Pie data={assetStatusData} />
           </div>
         </div>
 
@@ -130,7 +130,6 @@ export default function DashboardPage() {
           </h2>
           <div className="h-80">
             <Bar
-              type="bar"
               data={monthlyDepreciationData}
               options={{
                 responsive: true,
