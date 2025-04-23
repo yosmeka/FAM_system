@@ -101,6 +101,7 @@ export default function TransfersPage() {
         <RoleBasedButton
           onClick={() => router.push('/transfers/new')}
           variant="primary"
+          className="bg-red-600 hover:bg-red-700 text-white"
         >
           New Transfer
         </RoleBasedButton>

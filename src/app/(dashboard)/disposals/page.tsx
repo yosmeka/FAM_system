@@ -103,6 +103,7 @@ const columns: Column<DisposalRequest>[] = [
         <RoleBasedButton
           onClick={() => router.push('/disposals/new')}
           variant="primary"
+          className="bg-red-600 hover:bg-red-700 text-white"
         >
           New Disposal Request
         </RoleBasedButton>

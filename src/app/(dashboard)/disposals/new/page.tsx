@@ -132,6 +132,7 @@ export default function NewDisposalPage() {
               <RoleBasedButton
                 type="submit"
                 variant="primary"
+                className="bg-red-600 hover:bg-red-700 text-white"
                 loading={loading}
               >
                 Submit Request

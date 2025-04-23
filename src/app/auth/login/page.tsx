@@ -57,7 +57,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
-        <h2 className="text-center text-2xl font-bold text-gray-800">
+        <h2 className="text-center text-2xl font-bold text-red-600">
           Fixed Asset Management System
         </h2>
         <p className="text-center text-sm text-gray-600 mt-2">
@@ -72,7 +72,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               placeholder="Email address"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
             {errors.email && (
               <p className="text-sm text-red-600 mt-1">
@@ -88,7 +88,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               placeholder="Password"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
             {errors.password && (
               <p className="text-sm text-red-600 mt-1">
@@ -101,11 +101,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full flex justify-center py-2 px-4 text-sm font-medium rounded-md text-white ${
-                isLoading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+              className={`w-full flex justify-center py-2 px-4 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </button>

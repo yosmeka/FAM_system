@@ -91,6 +91,7 @@ export default function NewMaintenanceRequestPage() {
                 type="submit"
                 variant="primary"
                 loading={loading}
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Submit Request
               </RoleBasedButton>

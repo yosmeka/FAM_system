@@ -86,6 +86,7 @@ export default function MaintenancePage() {
         <RoleBasedButton
           onClick={() => router.push('/maintenance/new')}
           variant="primary"
+          className="bg-red-600 hover:bg-red-700 text-white"
         >
           New Maintenance Request
         </RoleBasedButton>

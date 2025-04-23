@@ -116,6 +116,7 @@ export default function NewTransferPage() {
                 type="submit"
                 variant="primary"
                 loading={loading}
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Create Transfer
               </RoleBasedButton>

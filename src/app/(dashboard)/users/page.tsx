@@ -86,9 +86,9 @@ export default function UsersPage() {
         <h1 className="text-3xl font-bold">User Management</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
         >
-          + Add User
+          Add New User
         </button>
       </div>
 
@@ -163,6 +163,7 @@ export default function UsersPage() {
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="USER">User</option>
+                <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
@@ -175,9 +176,9 @@ export default function UsersPage() {
               </button>
               <button
                 onClick={handleAddUser}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
-                Save
+                Add User
               </button>
             </div>
           </div>
