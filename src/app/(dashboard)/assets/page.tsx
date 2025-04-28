@@ -29,6 +29,9 @@ export default function AssetsPage() {
   const { canManageAssets } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
 
   const {
     data: assets = [],
@@ -45,11 +48,11 @@ export default function AssetsPage() {
     },
   });
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this asset?")) {
-      return;
-    }
+  // Get unique categories and departments
+  const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));
+  const departments = Array.from(new Set(assets.map(asset => asset.department).filter(Boolean)));
 
+  const handleDelete = async (id: string) => {
     try {
       const response = await fetch(`/api/assets/${id}`, {
         method: "DELETE",
@@ -64,6 +67,8 @@ export default function AssetsPage() {
     } catch (error) {
       toast.error("Failed to delete asset");
       console.error("Error deleting asset:", error);
+    } finally {
+      setDeleteAssetId(null);
     }
   };
 
@@ -76,7 +81,13 @@ export default function AssetsPage() {
     const matchesStatus =
       statusFilter === "ALL" || asset.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesCategory =
+      categoryFilter === "ALL" || asset.category === categoryFilter;
+
+    const matchesDepartment =
+      departmentFilter === "ALL" || asset.department === departmentFilter;
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
   });
 
   const formatDate = (dateString: string) => {
@@ -134,34 +145,42 @@ export default function AssetsPage() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="container mx-auto p-6">
       <Toaster position="top-right" />
       <div className="mb-8 flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">Assets</h1>
         {canManageAssets() && (
           <Link
             href="/assets/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             Add New Asset
           </Link>
         )}
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="col-span-1 sm:col-span-2">
           <input
             type="text"
             placeholder="Search assets..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div>
           <select
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -172,15 +191,38 @@ export default function AssetsPage() {
             <option value="DISPOSED">Disposed</option>
           </select>
         </div>
+        <div>
+          <select
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+          >
+            <option value="ALL">All Categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <select
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+          >
+            <option value="ALL">All Departments</option>
+            {departments.map((department) => (
+              <option key={department} value={department}>
+                {department}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="mt-2 text-gray-600">Loading assets...</p>
-        </div>
-      ) : filteredAssets.length === 0 ? (
-        <div className="text-center py-12">
+      {filteredAssets.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
             fill="none"
@@ -205,14 +247,14 @@ export default function AssetsPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200">
             {filteredAssets.map((asset) => (
-              <li key={asset.id}>
+              <li key={asset.id} className="hover:bg-gray-50">
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium text-indigo-600 truncate">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         {asset.name}
                       </p>
                       <p className="ml-2 flex-shrink-0 flex">
@@ -228,7 +270,7 @@ export default function AssetsPage() {
                     <div className="flex space-x-2">
                       <Link
                         href={`/assets/${asset.id}`}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         View
                       </Link>
@@ -241,7 +283,7 @@ export default function AssetsPage() {
                             Edit
                           </Link>
                           <button
-                            onClick={() => handleDelete(asset.id)}
+                            onClick={() => setDeleteAssetId(asset.id)}
                             className="text-red-600 hover:text-red-900"
                           >
                             Delete
@@ -270,6 +312,30 @@ export default function AssetsPage() {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteAssetId && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
+            <p>Are you sure you want to delete this asset?</p>
+            <div className="mt-6 flex justify-end space-x-2">
+              <button
+                onClick={() => setDeleteAssetId(null)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteAssetId)}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

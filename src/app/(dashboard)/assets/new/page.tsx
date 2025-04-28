@@ -47,7 +47,13 @@ export default function NewAssetPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create asset');
+        const errorData = await response.json();
+        if (response.status === 409 && errorData?.error?.toLowerCase().includes('serial')) {
+          toast.error('Serial number must be unique');
+        } else {
+          throw new Error('Failed to create asset');
+        }
+        return;
       }
 
       toast.success('Asset created successfully');
@@ -61,11 +67,13 @@ export default function NewAssetPage() {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -82,92 +90,71 @@ export default function NewAssetPage() {
     <div className="max-w-4xl mx-auto p-4">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900">Add New Asset</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Create a new asset in the system
-        </p>
+        <p className="mt-1 text-sm text-gray-500">Create a new asset in the system</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white shadow-sm rounded-lg p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 bg-white shadow-md rounded-2xl p-8 border border-red-100"
+      >
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {/* Input fields */}
+          {[
+            { id: 'name', label: 'Asset Name', type: 'text' },
+            { id: 'serialNumber', label: 'Serial Number', type: 'text' },
+            { id: 'purchaseDate', label: 'Purchase Date', type: 'date' },
+            { id: 'purchasePrice', label: 'Purchase Price', type: 'number' },
+            { id: 'currentValue', label: 'Current Value', type: 'number' },
+            { id: 'location', label: 'Location', type: 'text' },
+            { id: 'department', label: 'Department', type: 'text' },
+            { id: 'supplier', label: 'Supplier', type: 'text' },
+            { id: 'warrantyExpiry', label: 'Warranty Expiry Date', type: 'date' },
+            { id: 'lastMaintenance', label: 'Last Maintenance Date', type: 'date' },
+            { id: 'nextMaintenance', label: 'Next Maintenance Date', type: 'date' },
+          ].map(({ id, label, type }) => (
+            <div key={id}>
+              <label htmlFor={id} className="block text-sm font-semibold text-gray-800 mb-1">
+                {label}
+              </label>
+              <input
+                type={type}
+                name={id}
+                id={id}
+                required
+                value={formData[id as keyof typeof formData] as string | number | undefined}
+                onChange={handleChange}
+                className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white shadow-sm text-sm placeholder:text-gray-400"
+                placeholder={`Enter ${label.toLowerCase()}`}
+              />
+            </div>
+          ))}
+
+          {/* Category dropdown */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Asset Name
+            <label htmlFor="category" className="block text-sm font-semibold text-gray-800 mb-1">
+              Category
             </label>
-            <input
-              type="text"
-              name="name"
-              id="name"
+            <select
+              name="category"
+              id="category"
               required
-              value={formData.name}
+              value={formData.category}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
+              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
+            >
+              <option value="">Select category</option>
+              <option value="Computer">Computer</option>
+              <option value="Furniture">Furniture</option>
+              <option value="Vehicle">Vehicle</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Office Equipment">Office Equipment</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
+          {/* Status dropdown */}
           <div>
-            <label htmlFor="serialNumber" className="block text-sm font-medium text-gray-700">
-              Serial Number
-            </label>
-            <input
-              type="text"
-              name="serialNumber"
-              id="serialNumber"
-              required
-              value={formData.serialNumber}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="purchaseDate" className="block text-sm font-medium text-gray-700">
-              Purchase Date
-            </label>
-            <input
-              type="date"
-              name="purchaseDate"
-              id="purchaseDate"
-              required
-              value={formData.purchaseDate}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="purchasePrice" className="block text-sm font-medium text-gray-700">
-              Purchase Price
-            </label>
-            <input
-              type="number"
-              name="purchasePrice"
-              id="purchasePrice"
-              required
-              step="0.01"
-              value={formData.purchasePrice}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="currentValue" className="block text-sm font-medium text-gray-700">
-              Current Value
-            </label>
-            <input
-              type="number"
-              name="currentValue"
-              id="currentValue"
-              required
-              step="0.01"
-              value={formData.currentValue}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="status" className="block text-sm font-semibold text-gray-800 mb-1">
               Status
             </label>
             <select
@@ -176,116 +163,20 @@ export default function NewAssetPage() {
               required
               value={formData.status}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
             >
+              <option value="">Select status</option>
               <option value="ACTIVE">Active</option>
               <option value="UNDER_MAINTENANCE">Under Maintenance</option>
               <option value="TRANSFERRED">Transferred</option>
               <option value="DISPOSED">Disposed</option>
             </select>
           </div>
-
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-              Location
-            </label>
-            <input
-              type="text"
-              name="location"
-              id="location"
-              value={formData.location}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="department" className="block text-sm font-medium text-gray-700">
-              Department
-            </label>
-            <input
-              type="text"
-              name="department"
-              id="department"
-              value={formData.department}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-              Category
-            </label>
-            <input
-              type="text"
-              name="category"
-              id="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="supplier" className="block text-sm font-medium text-gray-700">
-              Supplier
-            </label>
-            <input
-              type="text"
-              name="supplier"
-              id="supplier"
-              value={formData.supplier}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="warrantyExpiry" className="block text-sm font-medium text-gray-700">
-              Warranty Expiry Date
-            </label>
-            <input
-              type="date"
-              name="warrantyExpiry"
-              id="warrantyExpiry"
-              value={formData.warrantyExpiry}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="lastMaintenance" className="block text-sm font-medium text-gray-700">
-              Last Maintenance Date
-            </label>
-            <input
-              type="date"
-              name="lastMaintenance"
-              id="lastMaintenance"
-              value={formData.lastMaintenance}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="nextMaintenance" className="block text-sm font-medium text-gray-700">
-              Next Maintenance Date
-            </label>
-            <input
-              type="date"
-              name="nextMaintenance"
-              id="nextMaintenance"
-              value={formData.nextMaintenance}
-              onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-            />
-          </div>
         </div>
 
+        {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="description" className="block text-sm font-semibold text-gray-800 mb-1">
             Description
           </label>
           <textarea
@@ -294,22 +185,24 @@ export default function NewAssetPage() {
             rows={3}
             value={formData.description}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+            placeholder="Add a short description of the asset..."
+            className="block w-full px-3 py-2 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
           />
         </div>
 
-        <div className="flex justify-end space-x-3">
+        {/* Buttons */}
+        <div className="flex justify-end space-x-3 pt-4">
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
           >
             {isSubmitting ? 'Creating...' : 'Create Asset'}
           </button>
@@ -317,4 +210,4 @@ export default function NewAssetPage() {
       </form>
     </div>
   );
-} 
+}

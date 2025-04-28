@@ -172,7 +172,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   return (
     <div className="max-w-6xl mx-auto p-4 bg-white shadow-md rounded-lg">
       {/* Header Bar */}
-      <div className="bg-blue-600 text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+      <div className="bg-red-500 text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <div className="flex items-center gap-4 mb-2 md:mb-0">
           <ArrowLeft className="cursor-pointer" onClick={() => router.back()} />
           <div>

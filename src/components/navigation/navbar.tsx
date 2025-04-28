@@ -26,16 +26,16 @@ const navigation = [
     href: "/assets",
     roles: ["ADMIN", "MANAGER", "USER", "ASSET_MANAGER", "AUDITOR"],
   },
-  {
-    name: "Transfers",
-    href: "/transfers",
-    roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
-  },
-  {
-    name: "Maintenance",
-    href: "/maintenance",
-    roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
-  },
+  // {
+  //   name: "Transfers",
+  //   href: "/transfers",
+  //   roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
+  // },
+  // {
+  //   name: "Maintenance",
+  //   href: "/maintenance",
+  //   roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
+  // },
   {
     name: "Disposals",
     href: "/disposals",

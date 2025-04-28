@@ -8,32 +8,32 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getRoleColor(role: Role) {
   const colors = {
-    [Role.ADMIN]: {
+    'ADMIN': {
       bg: "bg-red-100",
       text: "text-red-800",
       border: "border-red-300",
     },
-    [Role.MANAGER]: {
+    'MANAGER': {
       bg: "bg-blue-100",
       text: "text-blue-800",
       border: "border-blue-300",
     },
-    [Role.USER]: {
+    'USER': {
       bg: "bg-green-100",
       text: "text-green-800",
       border: "border-green-300",
     },
-  };
+  } as const;
 
   return colors[role];
 }
 
 export function getRoleLabel(role: Role) {
   const labels = {
-    [Role.ADMIN]: "Administrator",
-    [Role.MANAGER]: "Manager",
-    [Role.USER]: "User",
-  };
+    'ADMIN': "Administrator",
+    'MANAGER': "Manager",
+    'USER': "User",
+  } as const;
 
   return labels[role];
 } 

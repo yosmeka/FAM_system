@@ -16,6 +16,7 @@ export interface AssetCategoryData {
   category: string;
   count: number;
   value: number;
+  status?: string;
 }
 
 export interface AssetStatusData {
@@ -26,6 +27,7 @@ export interface AssetStatusData {
 export interface AssetValueData {
   month: string;
   value: number;
+  depreciation: number;
 }
 
 export interface AssetDepartmentData {
