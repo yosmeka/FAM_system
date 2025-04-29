@@ -51,24 +51,45 @@ export default function AssetReportsPage() {
   };
 
   const getFilterOptions = () => {
-    if (filterType === 'category') {
-      return assetsByCategory.map(item => item.category);
-    }
-    return assetsByDepartment.map(item => item.category);
+    const data = filterType === 'category' ? assetsByCategory : assetsByDepartment;
+    // Get unique categories/departments
+    return Array.from(new Set(data.map(item => item.category)));
   };
 
   const getFilteredData = () => {
     let filteredData = filterType === 'category' ? assetsByCategory : assetsByDepartment;
     
-    if (selectedFilter !== 'all') {
-      filteredData = filteredData.filter(item => item.category === selectedFilter);
-    }
-
+    // First apply status filter if needed
     if (statusFilter !== 'all') {
       filteredData = filteredData.filter(item => item.status === statusFilter);
     }
 
-    return filteredData;
+    // Then apply category/department filter
+    if (selectedFilter !== 'all') {
+      filteredData = filteredData.filter(item => item.category === selectedFilter);
+    }
+
+    // Aggregate the filtered data
+    const aggregatedData = new Map();
+    
+    filteredData.forEach(item => {
+      const key = item.category;
+      
+      if (!aggregatedData.has(key)) {
+        aggregatedData.set(key, {
+          category: item.category,
+          status: statusFilter !== 'all' ? statusFilter : 'all',
+          count: 0,
+          value: 0
+        });
+      }
+      
+      const existing = aggregatedData.get(key);
+      existing.count += item.count;
+      existing.value += item.value;
+    });
+    
+    return Array.from(aggregatedData.values());
   };
 
   if (loading) {
@@ -208,7 +229,9 @@ export default function AssetReportsPage() {
               type={selectedFilter === 'all' ? 'pie' : 'bar'}
               data={getFilteredData()}
               options={{
-                labels: getFilteredData().map((item) => item.category),
+                labels: getFilteredData().map((item) => 
+                  statusFilter !== 'all' ? `${item.category} (${item.status})` : item.category
+                ),
                 values: getFilteredData().map((item) => item.count),
               }}
             />
@@ -225,7 +248,10 @@ export default function AssetReportsPage() {
               type="pie"
               data={statusDistribution}
               options={{
-                labels: statusDistribution.map((item) => item.status),
+                labels: statusDistribution.map((item) => 
+                  item.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' : 
+                  item.status.charAt(0) + item.status.slice(1).toLowerCase()
+                ),
                 values: statusDistribution.map((item) => item.count),
               }}
             />

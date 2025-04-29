@@ -90,8 +90,13 @@ export function RoleBasedChart({
   const formattedData = (() => {
     switch (type) {
       case 'pie':
+        // Ensure unique labels by appending index if needed
+        const pieLabels = data.map((item, index) => {
+          const baseLabel = item.category || item.status;
+          return `${baseLabel}-${index}`;
+        });
         return {
-          labels: data.map(item => item.category || item.status),
+          labels: pieLabels,
           datasets: [{
             data: data.map(item => item.count || item.value),
             backgroundColor: [
@@ -100,42 +105,50 @@ export function RoleBasedChart({
               '#FFCE56',
               '#4BC0C0',
               '#9966FF',
-              '#FF9F40'
-            ],
-          }]
+              '#FF9F40',
+              '#FF6384',
+              '#36A2EB',
+              '#FFCE56',
+              '#4BC0C0',
+            ].slice(0, data.length),
+            borderColor: '#fff',
+            borderWidth: 1,
+          }],
         };
       case 'bar':
+        // Ensure unique labels for bar chart
+        const barLabels = data.map((item, index) => {
+          const baseLabel = item.category || item.status;
+          return `${baseLabel}-${index}`;
+        });
         return {
-          labels: data.map(item => item.category),
+          labels: barLabels,
+          datasets: [{
+            label: 'Count',
+            data: data.map(item => item.count || item.value),
+            backgroundColor: '#36A2EB',
+            borderColor: '#36A2EB',
+            borderWidth: 1,
+          }],
+        };
+      case 'line':
+        // Ensure unique labels for line chart
+        const lineLabels = data.map((item, index) => {
+          const baseLabel = item.year || item.month;
+          return `${baseLabel}-${index}`;
+        });
+        return {
+          labels: lineLabels,
           datasets: [{
             label: 'Value',
             data: data.map(item => item.value),
-            backgroundColor: '#36A2EB',
-          }]
-        };
-      case 'line':
-        return {
-          labels: data.map(item => item.month),
-          datasets: [
-            {
-              label: 'Book Value',
-              data: data.map(item => item.value),
-              borderColor: '#36A2EB',
-              tension: 0.1
-            },
-            {
-              label: 'Depreciation',
-              data: data.map(item => item.depreciation),
-              borderColor: '#FF6384',
-              tension: 0.1
-            }
-          ]
+            borderColor: '#FF6384',
+            tension: 0.1,
+            fill: false,
+          }],
         };
       default:
-        return {
-          labels: [],
-          datasets: []
-        };
+        return data;
     }
   })();
 
@@ -150,7 +163,12 @@ export function RoleBasedChart({
         <p className="text-sm text-gray-500 mb-4">{description}</p>
       )}
       <div className="relative h-[300px]">
-        <ClientChart key={type} type={type} data={formattedData} options={mergedOptions} />
+        <ClientChart 
+          key={`chart-${type}-${Math.random()}`} 
+          type={type} 
+          data={formattedData} 
+          options={mergedOptions} 
+        />
       </div>
     </div>
   );

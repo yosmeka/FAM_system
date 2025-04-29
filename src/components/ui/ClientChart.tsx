@@ -41,6 +41,8 @@ export function ClientChart({ type, data, options }: ClientChartProps) {
     return null;
   }
 
-  // Use a key to force re-render when type changes
-  return <ChartComponent key={type} data={data} options={options} />;
+  // Create a stable key based on the chart type and data structure
+  const chartKey = `${type}-${JSON.stringify(data.labels)}`;
+
+  return <ChartComponent key={chartKey} data={data} options={options} />;
 } 
