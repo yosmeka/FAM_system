@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import { usePDF } from 'react-to-pdf';
 import { 
   calculateDepreciation, 
   generateChartData, 
@@ -35,7 +37,8 @@ interface Asset {
   updatedAt: string;
 }
 
-export default function AssetDetailsPage({ params }: { params: { id: string } }) {
+export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = React.use(params);
   const router = useRouter();
   const { data: session } = useSession();
   const { canManageAssets } = usePermissions();
@@ -45,6 +48,10 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   
+  const { toPDF, targetRef } = usePDF({
+    filename: `depreciation-report-${asset?.name || 'asset'}.pdf`,
+  });
+
   // Depreciation settings
   const [usefulLife, setUsefulLife] = useState<number>(5);
   const [salvageValue, setSalvageValue] = useState<number>(0);
@@ -54,7 +61,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   useEffect(() => {
     const fetchAsset = async () => {
       try {
-        const response = await fetch(`/api/assets/${params.id}`);
+        const response = await fetch(`/api/assets/${resolvedParams.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch asset');
         }
@@ -69,7 +76,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     };
 
     fetchAsset();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   useEffect(() => {
     if (asset) {
@@ -100,7 +107,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/assets/${params.id}`, {
+      const response = await fetch(`/api/assets/${resolvedParams.id}`, {
         method: 'DELETE',
       });
 
@@ -229,142 +236,159 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         <button className="py-2">History</button>
       </div>
 
-      {/* Depreciation Settings */}
-      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-        <h2 className="text-lg font-semibold mb-4">Depreciation Settings</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Method</label>
-            <select
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={depreciationMethod}
-              onChange={(e) => setDepreciationMethod(e.target.value as DepreciationMethod)}
-            >
-              <option value="STRAIGHT_LINE">Straight Line</option>
-              <option value="DECLINING_BALANCE">Declining Balance</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Useful Life (Years)</label>
-            <input
-              type="number"
-              min="1"
-              max="50"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={usefulLife}
-              onChange={(e) => setUsefulLife(Number(e.target.value))}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Salvage Value</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              value={salvageValue}
-              onChange={(e) => setSalvageValue(Number(e.target.value))}
-            />
-          </div>
-          
-          {depreciationMethod === 'DECLINING_BALANCE' && (
+      {/* Depreciation Section */}
+      <div ref={targetRef}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Depreciation</h2>
+          <button
+            onClick={() => toPDF()}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            <Download size={16} />
+            Export PDF
+          </button>
+        </div>
+
+        {/* Depreciation Settings */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Depreciation Settings</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Rate (%)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Method</label>
+              <select
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                value={depreciationMethod}
+                onChange={(e) => setDepreciationMethod(e.target.value as DepreciationMethod)}
+              >
+                <option value="STRAIGHT_LINE">Straight Line</option>
+                <option value="DECLINING_BALANCE">Declining Balance</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Useful Life (Years)</label>
               <input
                 type="number"
                 min="1"
-                max="100"
+                max="50"
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={depreciationRate}
-                onChange={(e) => setDepreciationRate(Number(e.target.value))}
+                value={usefulLife}
+                onChange={(e) => setUsefulLife(Number(e.target.value))}
               />
             </div>
-          )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Salvage Value</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                value={salvageValue}
+                onChange={(e) => setSalvageValue(Number(e.target.value))}
+              />
+            </div>
+            
+            {depreciationMethod === 'DECLINING_BALANCE' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Rate (%)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  value={depreciationRate}
+                  onChange={(e) => setDepreciationRate(Number(e.target.value))}
+                />
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Depreciation Details */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Depreciation</h2>
-        <div className="overflow-x-auto text-sm">
+        {/* Depreciation Details */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-2">Depreciation Details</h2>
+          <div className="overflow-x-auto text-sm">
+            <table className="w-full border text-left">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-2 border">Date Acquired</th>
+                  <th className="p-2 border">Depreciable Cost</th>
+                  <th className="p-2 border">Salvage Value</th>
+                  <th className="p-2 border">Asset Life (months)</th>
+                  <th className="p-2 border">Depr. Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
+                  <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
+                  <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
+                  <td className="p-2 border">{usefulLife * 12} months</td>
+                  <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Depreciation Chart */}
+        <div className="mb-6">
+          <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
+          <div className="h-48 bg-white rounded-lg border p-2 mb-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart 
+                data={depreciationData}
+                margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+              >
+                <XAxis 
+                  dataKey="year" 
+                  stroke="#666"
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis 
+                  stroke="#666"
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                />
+                <Tooltip 
+                  formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
+                  labelFormatter={(label) => `Year: ${label}`}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={{ fill: '#3b82f6', r: 4 }}
+                  activeDot={{ r: 6, fill: '#2563eb' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Yearly Depreciation Table */}
+        <div className="overflow-x-auto text-sm mb-6">
+          <h3 className="text-md font-medium mb-2">Yearly Depreciation Schedule</h3>
           <table className="w-full border text-left">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-2 border">Date Acquired</th>
-                <th className="p-2 border">Depreciable Cost</th>
-                <th className="p-2 border">Salvage Value</th>
-                <th className="p-2 border">Asset Life (months)</th>
-                <th className="p-2 border">Depr. Method</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
-                <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
-                <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
-                <td className="p-2 border">{usefulLife * 12} months</td>
-                <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Yearly Depreciation Table */}
-      <div className="mb-6">
-        <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
-        <div className="h-48 bg-white rounded-lg border p-2 mb-4">
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart 
-              data={depreciationData}
-              margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
-            >
-              <XAxis 
-                dataKey="year" 
-                stroke="#666"
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis 
-                stroke="#666"
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `$${value.toLocaleString()}`}
-              />
-              <Tooltip 
-                formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
-                labelFormatter={(label) => `Year: ${label}`}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="value" 
-                stroke="#3b82f6" 
-                strokeWidth={2}
-                dot={{ fill: '#3b82f6', r: 4 }}
-                activeDot={{ r: 6, fill: '#2563eb' }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="overflow-x-auto text-sm">
-          <table className="w-full border text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-2 border">Year</th>
-                <th className="p-2 border">Depreciation expense</th>
-                <th className="p-2 border">Accumulated depreciation at year-end</th>
-                <th className="p-2 border">Book value at year-end</th>
+                <th className="p-2 border font-semibold">Year</th>
+                <th className="p-2 border font-semibold">Depreciation Expense</th>
+                <th className="p-2 border font-semibold">Accumulated Depreciation</th>
+                <th className="p-2 border font-semibold">Book Value</th>
               </tr>
             </thead>
             <tbody>
               {depreciationResults.map((result, index) => (
-                <tr key={index}>
+                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="p-2 border">{result.year}</td>
                   <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
                   <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
