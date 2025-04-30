@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Toaster } from "react-hot-toast";
@@ -26,6 +26,7 @@ interface Asset {
 export default function AssetsPage() {
   const { data: session } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { canManageAssets } = usePermissions();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -58,9 +59,10 @@ export default function AssetsPage() {
         method: "DELETE",
       });
 
-      if (response.status === 204) {
+      if (response.ok) {
         toast.success("Asset deleted successfully");
-        window.location.reload();
+        // Invalidate and refetch the assets query
+        await queryClient.invalidateQueries({ queryKey: ["assets"] });
       } else {
         throw new Error("Failed to delete asset");
       }

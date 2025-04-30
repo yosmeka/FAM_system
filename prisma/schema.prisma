@@ -58,7 +58,7 @@ model Transfer {
   requesterId    String
   toDepartment   String
   status         TransferStatus @default(PENDING)
-  asset          Asset          @relation(fields: [assetId], references: [id])
+  asset          Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester      User           @relation("TransferRequestedBy", fields: [requesterId], references: [id])
 }
 
@@ -73,7 +73,7 @@ model Maintenance {
   priority    MaintenancePriority
   requesterId String
   status      MaintenanceStatus   @default(PENDING)
-  asset       Asset               @relation(fields: [assetId], references: [id])
+  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
 }
 
@@ -88,7 +88,7 @@ model Disposal {
   requesterId   String
   method        DisposalMethod
   status        DisposalStatus @default(PENDING)
-  asset         Asset          @relation(fields: [assetId], references: [id])
+  asset         Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester     User           @relation("DisposalRequestedBy", fields: [requesterId], references: [id])
 }
 
@@ -99,7 +99,7 @@ model Document {
   url       String
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
-  asset     Asset        @relation(fields: [assetId], references: [id])
+  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
 }
 
 model Depreciation {
@@ -114,7 +114,7 @@ model Depreciation {
   salvageValue     Float
   updatedAt        DateTime @updatedAt
   usefulLife       Int
-  asset            Asset    @relation(fields: [assetId], references: [id])
+  asset            Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 }
 
 model AssetHistory {
@@ -125,7 +125,7 @@ model AssetHistory {
   newValue  String?
   changedAt DateTime @default(now())
   changedBy String?
-  asset     Asset    @relation(fields: [assetId], references: [id])
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
 }
