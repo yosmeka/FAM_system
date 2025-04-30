@@ -45,6 +45,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState('Depreciation');
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   
@@ -126,6 +127,273 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const renderHistoryTab = () => {
+    return (
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold mb-4">Asset History</h2>
+        <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr className="bg-gray-50">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Event
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Field
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Changed from
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Changed to
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action by
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {/* Sample static data */}
+              <tr className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  04/16/2025 12:14 PM
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Asset edit
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  Asset Life (months)
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  2
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  25
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  yo yo
+                </td>
+              </tr>
+              <tr className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  04/16/2025 12:13 PM
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Dispose
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  Status
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  Available
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  Disposed
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  yo yo
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'History':
+        return renderHistoryTab();
+      case 'Depreciation':
+        return (
+          <div ref={targetRef}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Depreciation</h2>
+              <button
+                onClick={() => toPDF()}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <Download size={16} />
+                Export PDF
+              </button>
+            </div>
+
+            {/* Depreciation Settings */}
+            <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4">Depreciation Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Method</label>
+                  <select
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={depreciationMethod}
+                    onChange={(e) => setDepreciationMethod(e.target.value as DepreciationMethod)}
+                  >
+                    <option value="STRAIGHT_LINE">Straight Line</option>
+                    <option value="DECLINING_BALANCE">Declining Balance</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Useful Life (Years)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={usefulLife}
+                    onChange={(e) => setUsefulLife(Number(e.target.value))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salvage Value</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={salvageValue}
+                    onChange={(e) => setSalvageValue(Number(e.target.value))}
+                  />
+                </div>
+                
+                {depreciationMethod === 'DECLINING_BALANCE' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Rate (%)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      value={depreciationRate}
+                      onChange={(e) => setDepreciationRate(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Depreciation Details */}
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-2">Depreciation Details</h2>
+              <div className="overflow-x-auto text-sm">
+                <table className="w-full border text-left">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="p-2 border">Date Acquired</th>
+                      <th className="p-2 border">Depreciable Cost</th>
+                      <th className="p-2 border">Salvage Value</th>
+                      <th className="p-2 border">Asset Life (months)</th>
+                      <th className="p-2 border">Depr. Method</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
+                      <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
+                      <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
+                      <td className="p-2 border">{usefulLife * 12} months</td>
+                      <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Depreciation Chart */}
+            <div className="mb-6">
+              <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
+              <div className="h-48 bg-white rounded-lg border p-2 mb-4">
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart 
+                    data={depreciationData}
+                    margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                  >
+                    <XAxis 
+                      dataKey="year" 
+                      stroke="#666"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      stroke="#666"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value.toLocaleString()}`}
+                    />
+                    <Tooltip 
+                      formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
+                      labelFormatter={(label) => `Year: ${label}`}
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                      activeDot={{ r: 6, fill: '#2563eb' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Yearly Depreciation Table */}
+            <div className="overflow-x-auto text-sm mb-6">
+              <h3 className="text-md font-medium mb-2">Yearly Depreciation Schedule</h3>
+              <table className="w-full border text-left">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-2 border font-semibold">Year</th>
+                    <th className="p-2 border font-semibold">Depreciation Expense</th>
+                    <th className="p-2 border font-semibold">Accumulated Depreciation</th>
+                    <th className="p-2 border font-semibold">Book Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {depreciationResults.map((result, index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="p-2 border">{result.year}</td>
+                      <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
+                      <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
+                      <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Tab Under Development</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              The {activeTab} tab is currently under development and will be available soon.
+            </p>
+          </div>
+        );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-4">
@@ -149,7 +417,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'Not set';
     return new Date(dateString).toLocaleDateString();
   };
@@ -222,183 +490,21 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        <button className="py-2 border-b-2 border-yellow-500 font-medium">Depreciation</button>
-        <button className="py-2">Details</button>
-        <button className="py-2">Events</button>
-        <button className="py-2">Photos</button>
-        <button className="py-2">Docs</button>
-        <button className="py-2">Warranty</button>
-        <button className="py-2">Linking</button>
-        <button className="py-2">Maint.</button>
-        <button className="py-2">Contracts</button>
-        <button className="py-2">Reserve</button>
-        <button className="py-2">Audit</button>
-        <button className="py-2">History</button>
-      </div>
-
-      {/* Depreciation Section */}
-      <div ref={targetRef}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Depreciation</h2>
+        {['Details', 'Events', 'Photos', 'Docs', 'Depreciation', 'Warranty', 'Linking', 'Maint.', 'Contracts', 'Reserve', 'Audit', 'History'].map((tab) => (
           <button
-            onClick={() => toPDF()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            key={tab}
+            className={`py-2 ${
+              activeTab === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+            }`}
+            onClick={() => setActiveTab(tab)}
           >
-            <Download size={16} />
-            Export PDF
+            {tab}
           </button>
-        </div>
-
-        {/* Depreciation Settings */}
-        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4">Depreciation Settings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Method</label>
-              <select
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={depreciationMethod}
-                onChange={(e) => setDepreciationMethod(e.target.value as DepreciationMethod)}
-              >
-                <option value="STRAIGHT_LINE">Straight Line</option>
-                <option value="DECLINING_BALANCE">Declining Balance</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Useful Life (Years)</label>
-              <input
-                type="number"
-                min="1"
-                max="50"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={usefulLife}
-                onChange={(e) => setUsefulLife(Number(e.target.value))}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Salvage Value</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                value={salvageValue}
-                onChange={(e) => setSalvageValue(Number(e.target.value))}
-              />
-            </div>
-            
-            {depreciationMethod === 'DECLINING_BALANCE' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Rate (%)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  value={depreciationRate}
-                  onChange={(e) => setDepreciationRate(Number(e.target.value))}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Depreciation Details */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-2">Depreciation Details</h2>
-          <div className="overflow-x-auto text-sm">
-            <table className="w-full border text-left">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 border">Date Acquired</th>
-                  <th className="p-2 border">Depreciable Cost</th>
-                  <th className="p-2 border">Salvage Value</th>
-                  <th className="p-2 border">Asset Life (months)</th>
-                  <th className="p-2 border">Depr. Method</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
-                  <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
-                  <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
-                  <td className="p-2 border">{usefulLife * 12} months</td>
-                  <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Depreciation Chart */}
-        <div className="mb-6">
-          <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
-          <div className="h-48 bg-white rounded-lg border p-2 mb-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart 
-                data={depreciationData}
-                margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
-              >
-                <XAxis 
-                  dataKey="year" 
-                  stroke="#666"
-                  tick={{ fontSize: 12 }}
-                />
-                <YAxis 
-                  stroke="#666"
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
-                />
-                <Tooltip 
-                  formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
-                  labelFormatter={(label) => `Year: ${label}`}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  dot={{ fill: '#3b82f6', r: 4 }}
-                  activeDot={{ r: 6, fill: '#2563eb' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Yearly Depreciation Table */}
-        <div className="overflow-x-auto text-sm mb-6">
-          <h3 className="text-md font-medium mb-2">Yearly Depreciation Schedule</h3>
-          <table className="w-full border text-left">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-2 border font-semibold">Year</th>
-                <th className="p-2 border font-semibold">Depreciation Expense</th>
-                <th className="p-2 border font-semibold">Accumulated Depreciation</th>
-                <th className="p-2 border font-semibold">Book Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {depreciationResults.map((result, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="p-2 border">{result.year}</td>
-                  <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
-                  <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
-                  <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        ))}
       </div>
+
+      {/* Tab Content */}
+      {renderTabContent()}
     </div>
   );
 } 
