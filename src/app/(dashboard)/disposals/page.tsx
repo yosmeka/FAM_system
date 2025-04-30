@@ -8,8 +8,25 @@ import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import type { DisposalRequest, DisposalStatus } from '@/types/disposals';
 import type { Column } from '@/types/reports';
 
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
+
 export default function DisposalsPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  if (status === 'loading') return null;
+  if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+    return null;
+  }
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+      router.replace('/dashboard');
+      toast.error('Access denied: Only Admins and Managers can view disposals.');
+    }
+  }, [session, status, router]);
+
   const [loading, setLoading] = useState(true);
   const [disposals, setDisposals] = useState<DisposalRequest[]>([]);
 

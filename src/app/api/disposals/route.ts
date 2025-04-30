@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/disposals
-export async function GET() {
+import { withRole } from '@/middleware/rbac';
+
+export const GET = withRole(['ADMIN', 'MANAGER'], async function GET() {
   try {
     const disposals = await prisma.disposal.findMany({
       include: {
@@ -27,10 +29,10 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/disposals
-export async function POST(request: Request) {
+export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
   try {
     const body = await request.json();
     const { assetId, reason, method, proceeds } = body;
@@ -71,4 +73,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

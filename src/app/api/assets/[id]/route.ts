@@ -2,18 +2,13 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { withRole } from '@/middleware/rbac';
 
-export async function GET(
+export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
@@ -29,19 +24,13 @@ export async function GET(
     console.error('Error fetching asset:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});
 
-export async function PUT(
+export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     
     const asset = await prisma.asset.update({
@@ -71,19 +60,13 @@ export async function PUT(
     console.error('Error updating asset:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await prisma.asset.delete({
       where: {
         id: params.id,
@@ -95,4 +78,4 @@ export async function DELETE(
     console.error('Error deleting asset:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-} 
+});

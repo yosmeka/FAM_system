@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; // Adjust the path if needed
+import { withRole } from '@/middleware/rbac';
 
-export async function DELETE(request, { params }) {
+export const DELETE = withRole(['ADMIN'], async function DELETE(request, { params }) {
   try {
     const { id } = params;
-
     const deletedUser = await prisma.user.delete({
       where: { id },
     });
-
     return NextResponse.json(deletedUser, { status: 200 });
   } catch (error) {
     console.error("Error deleting user:", error);
@@ -17,4 +16,4 @@ export async function DELETE(request, { params }) {
       { status: 500 }
     );
   }
-}
+});

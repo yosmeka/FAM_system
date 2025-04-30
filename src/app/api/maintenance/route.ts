@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/maintenance
-export async function GET() {
+import { withRole } from '@/middleware/rbac';
+
+export const GET = withRole(['ADMIN', 'MANAGER'], async function GET() {
   try {
     const maintenanceRequests = await prisma.maintenance.findMany({
       include: {
@@ -32,10 +34,10 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});
 
 // POST /api/maintenance
-export async function POST(request: Request) {
+export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
   try {
     const body = await request.json();
     const { assetId, description, requestedById } = body;
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
 
     // Create new maintenance request
     const maintenanceRequest = await prisma.maintenance.create({
@@ -80,4 +83,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});

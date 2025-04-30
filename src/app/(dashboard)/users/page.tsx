@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -12,6 +14,10 @@ type User = {
 };
 
 export default function UsersPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -39,8 +45,12 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (isAdmin) {
+      fetchUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
   const handleAddUser = async () => {
     try {
@@ -80,6 +90,26 @@ export default function UsersPage() {
     }
   };
 
+  // Show loading spinner until session is loaded
+  if (status === "loading") {
+    return <div className="p-6 max-w-4xl mx-auto text-center">Loading...</div>;
+  }
+
+  // Block access for non-admins
+  React.useEffect(() => {
+    if (status === "authenticated" && !isAdmin) {
+      toast.error("Access denied. Only for admin!", { autoClose: 2000 });
+      setTimeout(() => {
+        router.replace("/dashboard");
+      }, 2000);
+    }
+  }, [status, isAdmin, router]);
+
+  if (status === "authenticated" && !isAdmin) {
+    return <ToastContainer />;
+  }
+
+  // Admin UI
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -91,7 +121,6 @@ export default function UsersPage() {
           Add New User
         </button>
       </div>
-
       {loading ? (
         <p className="text-center text-gray-500">Loading users...</p>
       ) : error ? (
@@ -129,7 +158,6 @@ export default function UsersPage() {
           </table>
         </div>
       )}
-
       {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
@@ -184,7 +212,6 @@ export default function UsersPage() {
           </div>
         </div>
       )}
-
       {/* Delete Confirmation Modal */}
       {deleteUserId && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
@@ -208,7 +235,6 @@ export default function UsersPage() {
           </div>
         </div>
       )}
-
       {/* Toast Notification Container */}
       <ToastContainer />
     </div>

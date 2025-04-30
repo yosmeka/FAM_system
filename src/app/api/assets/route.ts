@@ -3,14 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+import { withRole } from '@/middleware/rbac';
 
+export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
+  try {
     const assets = await prisma.asset.findMany({
       orderBy: {
         createdAt: 'desc',
@@ -22,16 +18,10 @@ export async function GET() {
     console.error('Error fetching assets:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     
     const asset = await prisma.asset.create({
@@ -58,4 +48,4 @@ export async function POST(request: Request) {
     console.error('Error creating asset:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-} 
+});

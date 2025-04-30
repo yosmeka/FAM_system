@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/reports/assets
-export async function GET() {
+import { withRole } from '@/middleware/rbac';
+
+export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(req) {
   try {
     const now = new Date();
     const twelveMonthsAgo = new Date();
@@ -125,4 +127,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
+});

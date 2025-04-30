@@ -48,7 +48,7 @@ export async function GET() {
           status: 'COMPLETED',
         },
         _sum: {
-          proceeds: true,
+          actualValue: true,
         },
       }),
 
@@ -62,7 +62,7 @@ export async function GET() {
           status: 'COMPLETED',
         },
         _sum: {
-          proceeds: true,
+          actualValue: true,
         },
       }),
 
@@ -87,7 +87,7 @@ export async function GET() {
         select: {
           createdAt: true,
           status: true,
-          proceeds: true,
+          actualValue: true,
         },
       }),
 
@@ -95,13 +95,12 @@ export async function GET() {
       prisma.disposal.findMany({
         where: {
           status: 'COMPLETED',
-          asset: {
-            isNot: null,
-          },
+          asset: {}, // Only include disposals with a related asset
+
         },
         select: {
           method: true,
-          proceeds: true,
+          actualValue: true,
           asset: {
             select: {
               category: true,

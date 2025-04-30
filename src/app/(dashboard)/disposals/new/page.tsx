@@ -14,9 +14,22 @@ const DISPOSAL_METHODS = [
   'TRADE_IN',
 ];
 
+import { useSession } from 'next-auth/react';
+
 export default function NewDisposalPage() {
-  const [loading, setLoading] = useState(false);
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  if (status === 'loading') return null;
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+    if (typeof window !== 'undefined') {
+      router.replace('/dashboard');
+      toast.error('Access denied: Only Admins and Managers can create disposal requests.');
+    }
+    return null;
+  }
+
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (formData: FormData) => {
     try {
