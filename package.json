@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",
+    "@babel/runtime": "^7.27.0",
     "@headlessui/react": "^1.7.19",
     "@heroicons/react": "^2.1.1",
     "@hookform/resolvers": "^3.3.4",
@@ -26,6 +27,7 @@
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.4.9",
     "clsx": "^2.1.1",
+    "core-js": "^3.35.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.488.0",

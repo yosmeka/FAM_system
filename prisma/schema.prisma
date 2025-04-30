@@ -8,90 +8,89 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          Role      @default(USER)
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String        @id @default(cuid())
+  name                String?
+  email               String        @unique
+  password            String
+  role                Role          @default(USER)
+  emailVerified       DateTime?
+  image               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
-  transferRequests Transfer[] @relation("TransferRequestedBy")
-  disposalRequests Disposal[] @relation("DisposalRequestedBy")
+  transferRequests    Transfer[]    @relation("TransferRequestedBy")
 }
 
 model Asset {
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  serialNumber    String         @unique
-  purchaseDate    DateTime
-  purchasePrice   Float
-  currentValue    Float
-  status          String         @default("ACTIVE")
-  location        String?
-  department      String?
-  category        String?
-  supplier        String?
-  warrantyExpiry  DateTime?
-  lastMaintenance DateTime?
-  nextMaintenance DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  depreciations   Depreciation[]
-  documents       Document[]
-  maintenanceRequests Maintenance[] @relation
-  transferRequests Transfer[] @relation
-  disposalRequests Disposal[] @relation
+  id                  String         @id @default(cuid())
+  name                String
+  description         String?
+  serialNumber        String         @unique
+  purchaseDate        DateTime
+  purchasePrice       Float
+  currentValue        Float
+  status              String         @default("ACTIVE")
+  location            String?
+  department          String?
+  category            String?
+  supplier            String?
+  warrantyExpiry      DateTime?
+  lastMaintenance     DateTime?
+  nextMaintenance     DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  history             AssetHistory[]
+  depreciations       Depreciation[]
+  disposalRequests    Disposal[]
+  documents           Document[]
+  maintenanceRequests Maintenance[]
+  transferRequests    Transfer[]
 }
 
 model Transfer {
-  id            String        @id @default(cuid())
-  assetId       String
-  requesterId   String
+  id             String         @id @default(cuid())
+  assetId        String
+  reason         String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   fromDepartment String
-  toDepartment  String
-  reason        String
-  status        TransferStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  requester     User          @relation("TransferRequestedBy", fields: [requesterId], references: [id])
-  asset         Asset         @relation(fields: [assetId], references: [id])
+  requesterId    String
+  toDepartment   String
+  status         TransferStatus @default(PENDING)
+  asset          Asset          @relation(fields: [assetId], references: [id])
+  requester      User           @relation("TransferRequestedBy", fields: [requesterId], references: [id])
 }
 
 model Maintenance {
-  id            String            @id @default(cuid())
-  assetId       String
-  requesterId   String
-  description   String
-  priority      MaintenancePriority
-  status        MaintenanceStatus @default(PENDING)
-  cost          Float?
-  completedAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  requester     User              @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
-  asset         Asset             @relation(fields: [assetId], references: [id])
+  id          String              @id @default(cuid())
+  assetId     String
+  description String
+  cost        Float?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  completedAt DateTime?
+  priority    MaintenancePriority
+  requesterId String
+  status      MaintenanceStatus   @default(PENDING)
+  asset       Asset               @relation(fields: [assetId], references: [id])
+  requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
 }
 
 model Disposal {
   id            String         @id @default(cuid())
   assetId       String
-  requesterId   String
   reason        String
-  method        DisposalMethod
-  expectedValue Float
-  actualValue   Float?
-  status        DisposalStatus @default(PENDING)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  requester     User           @relation("DisposalRequestedBy", fields: [requesterId], references: [id])
+  actualValue   Float?
+  expectedValue Float
+  requesterId   String
+  method        DisposalMethod
+  status        DisposalStatus @default(PENDING)
   asset         Asset          @relation(fields: [assetId], references: [id])
+  requester     User           @relation("DisposalRequestedBy", fields: [requesterId], references: [id])
 }
-
-
 
 model Document {
   id        String       @id @default(cuid())
@@ -104,20 +103,32 @@ model Document {
 }
 
 model Depreciation {
-  id              String   @id @default(cuid())
-  assetId         String
-  amount          Float
-  date            DateTime
-  method          String
-  usefulLife      Int
-  salvageValue    Float
+  id               String   @id @default(cuid())
+  assetId          String
+  amount           Float
+  date             DateTime
+  createdAt        DateTime @default(now())
   depreciationRate Float
-  description     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  asset           Asset    @relation(fields: [assetId], references: [id])
+  description      String?
+  method           String
+  salvageValue     Float
+  updatedAt        DateTime @updatedAt
+  usefulLife       Int
+  asset            Asset    @relation(fields: [assetId], references: [id])
 }
 
+model AssetHistory {
+  id        String   @id @default(cuid())
+  assetId   String
+  field     String
+  oldValue  String?
+  newValue  String?
+  changedAt DateTime @default(now())
+  changedBy String?
+  asset     Asset    @relation(fields: [assetId], references: [id])
+
+  @@index([assetId])
+}
 
 enum AssetStatus {
   ACTIVE
