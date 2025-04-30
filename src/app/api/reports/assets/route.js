@@ -16,14 +16,14 @@ export async function GET() {
 
     // Assets by category
     const assetsByCategory = await prisma.asset.groupBy({
-      by: ['category'],
+      by: ['category', 'status'],
       _count: { id: true },
       _sum: { currentValue: true }
     });
 
     // Assets by department
     const assetsByDepartment = await prisma.asset.groupBy({
-      by: ['department'],
+      by: ['department', 'status'],
       _count: { id: true },
       _sum: { currentValue: true }
     });
@@ -35,21 +35,16 @@ export async function GET() {
     });
 
     // Depreciation data (last 12 months)
-    const depreciationData = await prisma.asset.findMany({
-      where: {
-        purchaseDate: {
-          gte: twelveMonthsAgo
-        }
-      },
-      select: {
-        purchaseDate: true,
-        currentValue: true,
-        purchasePrice: true
-      },
-      orderBy: {
-        purchaseDate: 'asc'
-      }
-    });
+    const depreciationData = await prisma.$queryRaw`
+      SELECT 
+        DATE_TRUNC('month', "purchaseDate") as month,
+        SUM("currentValue") as total_current_value,
+        SUM("purchasePrice") as total_purchase_price
+      FROM "Asset"
+      WHERE "purchaseDate" >= ${twelveMonthsAgo}
+      GROUP BY DATE_TRUNC('month', "purchaseDate")
+      ORDER BY month ASC
+    `;
 
     // Total current value
     const totalValue = await prisma.asset.aggregate({
@@ -86,7 +81,7 @@ export async function GET() {
     const valueGrowth = (totalValue._sum.currentValue ?? 0) - (pastValueResult._sum.currentValue ?? 0);
 
     const totalDepreciation = depreciationData.reduce((acc, item) => {
-      return acc + (item.purchasePrice - item.currentValue);
+      return acc + (item.total_purchase_price - item.total_current_value);
     }, 0);
 
     const formattedData = {
@@ -101,11 +96,13 @@ export async function GET() {
       },
       byCategory: assetsByCategory.map(item => ({
         category: item.category || 'Uncategorized',
+        status: item.status,
         count: item._count.id,
         value: item._sum.currentValue ?? 0
       })),
       byDepartment: assetsByDepartment.map(item => ({
         category: item.department || 'Unassigned',
+        status: item.status,
         count: item._count.id,
         value: item._sum.currentValue ?? 0
       })),
@@ -114,9 +111,9 @@ export async function GET() {
         count: item._count.id
       })),
       depreciation: depreciationData.map(item => ({
-        month: item.purchaseDate.toISOString().split('T')[0],
-        value: item.currentValue,
-        depreciation: item.purchasePrice - item.currentValue
+        month: item.month.toISOString().split('T')[0],
+        value: parseFloat(item.total_current_value),
+        depreciation: parseFloat(item.total_purchase_price - item.total_current_value)
       }))
     };
 
