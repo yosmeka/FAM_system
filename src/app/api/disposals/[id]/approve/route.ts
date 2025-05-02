@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/server/prisma';
+import { PrismaClient } from '@prisma/client';
 
 // POST /api/disposals/[id]/approve
 export async function POST(
@@ -8,9 +9,10 @@ export async function POST(
 ) {
   try {
     // Start a transaction since we need to update both disposal and asset
-    const result = await prisma.$transaction(async (tx) => {
+    let disposal;
+    try {
       // Update the disposal status
-      const disposal = await tx.disposal.update({
+      disposal = await prisma.disposal.update({
         where: { id: params.id },
         data: {
           status: 'APPROVED',
@@ -24,20 +26,30 @@ export async function POST(
       });
 
       // Update the asset status to DISPOSED
-      await tx.asset.update({
+      const asset = await prisma.asset.update({
         where: { id: disposal.assetId },
         data: {
           status: 'DISPOSED',
           currentValue: 0, // Asset is no longer valuable to the organization
         },
       });
+    } catch (error) {
+      console.error('Error updating asset:', error);
+      // Revert the disposal update
+      await prisma.disposal.update({
+        where: { id: params.id },
+        data: {
+          status: 'PENDING',
+          approvedAt: null,
+          approvedBy: null,
+        },
+      });
+      throw error;
+    }
 
-      return disposal;
-    });
-
-    return NextResponse.json(result);
+    return NextResponse.json(disposal!);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error updating disposal or asset:', error);
     return NextResponse.json(
       { error: 'Failed to approve disposal' },
       { status: 500 }

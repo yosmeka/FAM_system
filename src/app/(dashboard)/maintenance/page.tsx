@@ -26,7 +26,6 @@ export default function MaintenancePage() {
       toast.error('Access denied: Only Admins and Managers can view maintenance requests.');
     }
   }, [session, status, router]);
-  }
 
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState<MaintenanceRequest[]>([]);
@@ -49,6 +48,7 @@ export default function MaintenancePage() {
   };
 
   const getStatusVariant = (status: MaintenanceStatus): 'success' | 'warning' | 'danger' | 'default' => {
+
     switch (status) {
       case 'PENDING':
         return 'warning';
@@ -118,3 +118,4 @@ export default function MaintenancePage() {
       />
     </div>
   );
+}

@@ -26,7 +26,6 @@ export default function TransfersPage() {
       toast.error('Access denied: Only Admins and Managers can view transfers.');
     }
   }, [session, status, router]);
-  }
 
   const [loading, setLoading] = useState(true);
   const [transfers, setTransfers] = useState<TransferRequest[]>([]);
@@ -133,3 +132,4 @@ export default function TransfersPage() {
       />
     </div>
   );
+}

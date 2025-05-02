@@ -28,6 +28,16 @@ export default function MaintenanceRequestDetailsPage({
 }: {
   params: { id: string };
 }) {
+  const statusToVariant: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
+    'pending': 'warning',
+    'completed': 'success',
+    'cancelled': 'danger',
+    'in_progress': 'warning',
+    'approved': 'success',
+    'rejected': 'danger',
+    // Add other status variants as needed
+  };
+
   const [request, setRequest] = useState<MaintenanceRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -86,7 +96,10 @@ export default function MaintenanceRequestDetailsPage({
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold">Maintenance Request Details</h1>
-          <RoleBasedBadge status={request.status} />
+          <RoleBasedBadge 
+            label={request.status}
+            variant={statusToVariant[request.status as keyof typeof statusToVariant] || 'default'}
+          />
         </div>
 
         <div className="bg-white shadow rounded-lg p-6 space-y-4">

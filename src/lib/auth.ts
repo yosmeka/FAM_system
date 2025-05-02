@@ -3,6 +3,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { db } from "./db";
+import { PrismaClient } from '@prisma/client';
 import { Role } from "@/types/auth";
 
 export const authOptions: NextAuthOptions = {
@@ -61,26 +62,31 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async jwt({ token, user }) {
-      const dbUser = await db.user.findFirst({
-        where: {
-          email: token.email,
-        },
-      });
-
-      if (!dbUser) {
-        if (user) {
-          token.id = user?.id;
-          token.role = user?.role;
-        }
-        return token;
+      // If user is provided (during sign in), update token
+      if (user) {
+        token.id = user.id as string;
+        token.email = user.email as string;
+        token.name = user.name as string;
+        token.role = user.role as Role;
       }
 
-      return {
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        role: dbUser.role as Role,
-      };
+      // If we have a token but no user, try to get user from database
+      if (!user && token.email) {
+        const dbUser = await db.user.findUnique({
+          where: {
+            email: token.email,
+          },
+        });
+
+        if (dbUser) {
+          token.id = dbUser.id as string;
+          token.email = dbUser.email as string;
+          token.name = dbUser.name as string;
+          token.role = dbUser.role as Role;
+        }
+      }
+
+      return token;
     },
   },
 }; 

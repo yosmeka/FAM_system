@@ -23,6 +23,7 @@ model User {
 }
 
 model Asset {
+
   id              String         @id @default(cuid())
   name            String
   description     String?
@@ -117,7 +118,6 @@ model Depreciation {
   updatedAt       DateTime @updatedAt
   asset           Asset    @relation(fields: [assetId], references: [id])
 }
-
 
 enum AssetStatus {
   ACTIVE

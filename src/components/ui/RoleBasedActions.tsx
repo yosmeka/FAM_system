@@ -1,11 +1,11 @@
 import { usePermissions } from "@/hooks/usePermissions";
-import { Button } from "./button";
+import { RoleBasedButton as Button } from "@/components/ui/RoleBasedButton";
 
 interface Action {
   label: string;
   onClick: () => void;
   permission?: string;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  variant?: "primary" | "secondary" | "danger" | "success";
 }
 
 interface RoleBasedActionsProps {
@@ -29,11 +29,11 @@ export function RoleBasedActions({ actions }: RoleBasedActionsProps) {
         <Button
           key={index}
           onClick={action.onClick}
-          variant={action.variant || "default"}
+          variant={action.variant || "primary"}
         >
           {action.label}
         </Button>
       ))}
     </div>
   );
-} 
+}

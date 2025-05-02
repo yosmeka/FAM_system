@@ -87,11 +87,12 @@ export default function DisposalReportsPage() {
           <h2 className="text-lg font-semibold mb-4">Disposal Methods Distribution</h2>
           <RoleBasedChart
             type="pie"
-            data={methodDistribution}
-            options={{
+            data={{
               labels: methodDistribution.map((item) => item.method),
-              values: methodDistribution.map((item) => item.count),
-              colors: ['#22c55e', '#f59e0b', '#ef4444', '#9ca3af']
+              datasets: [{
+                data: methodDistribution.map((item) => item.count),
+                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#9ca3af']
+              }]
             }}
           />
         </div>
