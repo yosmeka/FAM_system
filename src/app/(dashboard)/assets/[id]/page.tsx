@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
+import { LinkAssetModal } from '@/components/LinkAssetModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -16,6 +17,9 @@ import {
   DepreciationMethod, 
   DepreciationResult 
 } from '@/utils/depreciation';
+import type { LinkedAsset } from '@/types';
+
+
 
 interface Asset {
   id: string;
@@ -29,23 +33,30 @@ interface Asset {
   location: string;
   department: string;
   category: string;
+  type: string;
   supplier: string;
   warrantyExpiry: string | null;
   lastMaintenance: string | null;
   nextMaintenance: string | null;
   createdAt: string;
   updatedAt: string;
+  linkedTo: LinkedAsset[];
+  depreciations: Array<{
+    usefulLife: number;
+  }>;
 }
 
-export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = React.use(params);
+export default function AssetDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { data: session } = useSession();
   const { canManageAssets } = usePermissions();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState('Details');
+  const [activeTab, setActiveTab] = useState('details');
+  const [isLinkingAsset, setIsLinkingAsset] = useState(false);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
+  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
+  const [selectedAssetId, setSelectedAssetId] = useState<string>('');
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -61,25 +72,117 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [depreciationMethod, setDepreciationMethod] = useState<DepreciationMethod>('STRAIGHT_LINE');
   const [depreciationRate, setDepreciationRate] = useState<number>(20);
 
+  const fetchAvailableAssets = async () => {
+    setIsLoadingAssets(true);
+    try {
+      const response = await fetch('/api/assets/available');
+      if (!response.ok) throw new Error('Failed to fetch available assets');
+      const data = await response.json();
+      // Filter out the current asset from the available assets
+      const filteredAssets = data.filter((a: Asset) => a.id !== params.id);
+      setAvailableAssets(filteredAssets);
+    } catch (error) {
+      console.error('Error fetching available assets:', error);
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  };
+
+  // Fetch initial asset data
   useEffect(() => {
     const fetchAsset = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch(`/api/assets/${resolvedParams.id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch asset');
-        }
+        const response = await fetch(`/api/assets/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
         setAsset(data);
       } catch (error) {
-        toast.error('Failed to fetch asset details');
         console.error('Error fetching asset:', error);
+        toast.error('Failed to fetch asset details');
       } finally {
         setIsLoading(false);
       }
     };
+    fetchAsset();
+  }, [params.id]);
+
+  // Handle tab changes and data fetching
+  useEffect(() => {
+    const fetchTabData = async () => {
+      if (!asset) return;
+
+      switch (activeTab) {
+        case 'linking':
+          if (isLinkingAsset) {
+            setIsLoadingAssets(true);
+            try {
+              const response = await fetch('/api/assets');
+              if (!response.ok) throw new Error('Failed to fetch assets');
+              const data = await response.json();
+              // Filter out current asset and already linked assets
+              const filteredAssets = data.filter((a: Asset) => 
+                a.id !== params.id && 
+                !asset?.linkedTo?.some(link => link.toAsset.id === a.id)
+              );
+              setAvailableAssets(filteredAssets);
+            } catch (error) {
+              console.error('Error fetching assets:', error);
+              toast.error('Failed to load available assets');
+            } finally {
+              setIsLoadingAssets(false);
+            }
+          }
+          break;
+
+        case 'history':
+          setIsHistoryLoading(true);
+          try {
+            const response = await fetch(`/api/assets/${params.id}/history`);
+            if (!response.ok) throw new Error('Failed to fetch history');
+            const data = await response.json();
+            setHistory(data);
+          } catch (error) {
+            console.error('Error fetching history:', error);
+            toast.error('Failed to fetch asset history');
+          } finally {
+            setIsHistoryLoading(false);
+          }
+          break;
+
+        case 'depreciation':
+          const results = calculateDepreciation({
+            purchasePrice: asset.purchasePrice,
+            purchaseDate: asset.purchaseDate,
+            salvageValue,
+            usefulLife,
+            method: depreciationMethod,
+            depreciationRate: depreciationRate
+          });
+          setDepreciationResults(results);
+          setDepreciationData(generateChartData(results));
+          break;
+      }
+    };
+
+    fetchTabData();
+  }, [activeTab, params.id, asset, isLinkingAsset, salvageValue, usefulLife, depreciationMethod, depreciationRate]);
+
+  const handleLinkSuccess = () => {
+    // Refetch the asset to get updated linked assets
+    const fetchAsset = async () => {
+      try {
+        const response = await fetch(`/api/assets/${params.id}`);
+        if (!response.ok) throw new Error('Failed to fetch asset');
+        const data = await response.json();
+        setAsset(data);
+      } catch (error) {
+        console.error('Error fetching asset:', error);
+      }
+    };
 
     fetchAsset();
-  }, [resolvedParams.id]);
+  };
 
   useEffect(() => {
     if (asset) {
@@ -89,10 +192,10 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (activeTab === 'History') {
+      if (activeTab === 'history') {
         setIsHistoryLoading(true);
         try {
-          const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
+          const response = await fetch(`/api/assets/${params.id}/history`);
           if (!response.ok) throw new Error('Failed to fetch history');
           const data = await response.json();
           setHistory(data);
@@ -106,7 +209,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     };
 
     fetchHistory();
-  }, [activeTab, resolvedParams.id]);
+  }, [activeTab, params.id]);
 
   const calculateAssetDepreciation = () => {
     if (!asset) return;
@@ -129,9 +232,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       return;
     }
 
-    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/assets/${resolvedParams.id}`, {
+      const response = await fetch(`/api/assets/${params.id}`, {
         method: 'DELETE',
       });
 
@@ -145,8 +247,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     } catch (error) {
       toast.error('Failed to delete asset');
       console.error('Error deleting asset:', error);
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -223,11 +323,117 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     );
   };
 
+  const renderLinkingTab = () => {
+    const totalValue = asset?.linkedTo?.reduce<number>((sum, link) => sum + link.toAsset.purchasePrice, 0) || 0;
+    const totalDepreciation = asset?.linkedTo?.reduce<number>((sum, link) => {
+      const depreciationToDate = link.toAsset.purchasePrice - link.toAsset.currentValue;
+      return sum + depreciationToDate;
+    }, 0) || 0;
+
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold">Linked Assets for: {asset?.name}</h2>
+          <button
+            onClick={() => setIsLinkingAsset(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            + Link New Asset
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asset Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acquisition</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Useful Life</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciation to Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {asset?.linkedTo?.map((link) => {
+                const linkedAsset = link.toAsset;
+                const depreciationToDate = linkedAsset.purchasePrice - linkedAsset.currentValue;
+                return (
+                  <tr key={link.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{linkedAsset.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{linkedAsset.type || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(linkedAsset.purchaseDate).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {linkedAsset.purchasePrice.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {linkedAsset.depreciations?.[0]?.usefulLife || 'N/A'} months
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {depreciationToDate.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
+                      <Link href={`/assets/${linkedAsset.id}`}>View</Link>
+                    </td>
+                  </tr>
+                );
+              })}
+              {(!asset?.linkedTo || asset.linkedTo.length === 0) && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No linked assets found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900">Total Linked Assets Value</h3>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">
+              {totalValue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900">Total Depreciation (Linked Items)</h3>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">
+              {totalDepreciation.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900">Combined Depreciation</h3>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">
+              {((asset?.purchasePrice || 0) - (asset?.currentValue || 0) + totalDepreciation).toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderTabContent = () => {
-    switch (activeTab) {
-      case 'History':
+    switch (activeTab.toLowerCase()) {
+      case 'history':
         return renderHistoryTab();
-      case 'Depreciation':
+      case 'linking':
+        return (
+          <div>
+            <LinkAssetModal
+              open={isLinkingAsset}
+              onClose={() => setIsLinkingAsset(false)}
+              onSuccess={handleLinkSuccess}
+              currentAssetId={params.id}
+              availableAssets={availableAssets}
+            />
+            {renderLinkingTab()}
+          </div>
+        );
+      case 'depreciation':
         return (
           <div ref={targetRef}>
             <div className="flex justify-between items-center mb-4">
@@ -505,15 +711,15 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['Details', 'Events', 'Photos', 'Docs', 'Depreciation', 'Warranty', 'Linking', 'Maint.', 'Contracts', 'Reserve', 'Audit', 'History'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'reserve', 'audit', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${
-              activeTab === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
             }`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab}
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
