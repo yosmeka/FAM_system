@@ -39,6 +39,12 @@ model Asset {
   warrantyExpiry      DateTime?
   lastMaintenance     DateTime?
   nextMaintenance     DateTime?
+  depreciableCost     Float?
+  salvageValue        Float?
+  usefulLifeMonths    Int?
+  depreciationMethod  DepreciationMethod?
+  depreciationStartDate DateTime?
+  assetDepreciations  AssetDepreciation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   history             AssetHistory[]
@@ -120,6 +126,23 @@ model Depreciation {
   asset            Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 }
 
+model AssetDepreciation {
+  id               String   @id @default(cuid())
+  asset            Asset    @relation(fields: [assetId], references: [id])
+  assetId          String
+  amount           Float
+  date             DateTime
+  method           String
+  usefulLife       Int
+  salvageValue     Float
+  depreciationRate Float?
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("asset_depreciations")
+}
+
 model AssetHistory {
   id        String   @id @default(cuid())
   assetId   String
@@ -182,17 +205,18 @@ enum DisposalMethod {
   SCRAP
 }
 
+enum DepreciationMethod {
+  STRAIGHT_LINE
+  DECLINING_BALANCE
+  SUM_OF_YEARS_DIGITS
+}
+
 enum DocumentType {
   INVOICE
   WARRANTY
   MANUAL
   MAINTENANCE_RECORD
   OTHER
-}
-
-enum DepreciationMethod {
-  STRAIGHT_LINE
-  DECLINING_BALANCE
 }
 
 enum Role {

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -27,13 +27,13 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     // Create the asset
     const asset = await prisma.asset.create({
       data: {
@@ -83,8 +83,25 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(asset);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating asset:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+
+    // Check for Prisma unique constraint error
+    if (error.code === 'P2002' && error.meta?.target?.includes('serialNumber')) {
+      return NextResponse.json(
+        {
+          error: 'Serial number already exists',
+          code: 'P2002',
+          field: 'serialNumber',
+          message: 'An asset with this serial number already exists in the system.'
+        },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      error: error.message || 'Internal Server Error',
+      code: error.code
+    }, { status: 500 });
   }
-} 
+}
