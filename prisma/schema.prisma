@@ -8,73 +8,72 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String
-  role          Role      @default(USER)
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                  String        @id @default(cuid())
+  name                String?
+  email               String        @unique
+  password            String
+  role                Role          @default(USER)
+  emailVerified       DateTime?
+  image               String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
-  transferRequests Transfer[] @relation("TransferRequestedBy")
-  disposalRequests Disposal[] @relation("DisposalRequestedBy")
+  transferRequests    Transfer[]    @relation("TransferRequestedBy")
+  disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
 }
 
 model Asset {
-
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  serialNumber    String         @unique
-  purchaseDate    DateTime
-  purchasePrice   Float
-  currentValue    Float
-  status          String         @default("ACTIVE")
-  location        String?
-  department      String?
-  category        String?
-  supplier        String?
-  warrantyExpiry  DateTime?
-  lastMaintenance DateTime?
-  nextMaintenance DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  depreciations   Depreciation[]
-  documents       Document[]
-  maintenanceRequests Maintenance[] @relation
-  transferRequests Transfer[] @relation
-  disposalRequests Disposal[] @relation
+  id                  String         @id @default(cuid())
+  name                String
+  description         String?
+  serialNumber        String         @unique
+  purchaseDate        DateTime
+  purchasePrice       Float
+  currentValue        Float
+  status              String         @default("ACTIVE")
+  location            String?
+  department          String?
+  category            String?
+  supplier            String?
+  warrantyExpiry      DateTime?
+  lastMaintenance     DateTime?
+  nextMaintenance     DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  depreciations       Depreciation[]
+  documents           Document[]
+  maintenanceRequests Maintenance[]  @relation
+  transferRequests    Transfer[]     @relation
+  disposalRequests    Disposal[]     @relation
 }
 
 model Transfer {
-  id            String        @id @default(cuid())
-  assetId       String
-  requesterId   String
+  id             String         @id @default(cuid())
+  assetId        String
+  requesterId    String
   fromDepartment String
-  toDepartment  String
-  reason        String
-  status        TransferStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  requester     User          @relation("TransferRequestedBy", fields: [requesterId], references: [id])
-  asset         Asset         @relation(fields: [assetId], references: [id])
+  toDepartment   String
+  reason         String
+  status         TransferStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  requester      User           @relation("TransferRequestedBy", fields: [requesterId], references: [id])
+  asset          Asset          @relation(fields: [assetId], references: [id])
 }
 
 model Maintenance {
-  id            String            @id @default(cuid())
-  assetId       String
-  requesterId   String
-  description   String
-  priority      MaintenancePriority
-  status        MaintenanceStatus @default(PENDING)
-  cost          Float?
-  completedAt   DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  requester     User              @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
-  asset         Asset             @relation(fields: [assetId], references: [id])
+  id          String              @id @default(cuid())
+  assetId     String
+  requesterId String
+  description String
+  priority    MaintenancePriority
+  status      MaintenanceStatus   @default(PENDING)
+  cost        Float?
+  completedAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  asset       Asset               @relation(fields: [assetId], references: [id])
 }
 
 model Disposal {
@@ -92,8 +91,6 @@ model Disposal {
   asset         Asset          @relation(fields: [assetId], references: [id])
 }
 
-
-
 model Document {
   id        String       @id @default(cuid())
   assetId   String
@@ -105,18 +102,18 @@ model Document {
 }
 
 model Depreciation {
-  id              String   @id @default(cuid())
-  assetId         String
-  amount          Float
-  date            DateTime
-  method          String
-  usefulLife      Int
-  salvageValue    Float
+  id               String   @id @default(cuid())
+  assetId          String
+  amount           Float
+  date             DateTime
+  method           String
+  usefulLife       Int
+  salvageValue     Float
   depreciationRate Float
-  description     String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  asset           Asset    @relation(fields: [assetId], references: [id])
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  asset            Asset    @relation(fields: [assetId], references: [id])
 }
 
 enum AssetStatus {
@@ -185,4 +182,19 @@ enum Role {
   ADMIN
   MANAGER
   USER
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  @@unique([role, permissionId])
 }

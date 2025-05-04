@@ -9,7 +9,9 @@ import { toast } from 'react-hot-toast';
 export default function NewAssetPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { canManageAssets } = usePermissions();
+  const { checkPermission, getPermissions } = usePermissions();
+  // Debug: Log current permissions
+  console.log('Current permissions:', getPermissions());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -77,7 +79,7 @@ export default function NewAssetPage() {
     }));
   };
 
-  if (!canManageAssets()) {
+  if (!checkPermission('Asset create')) {
     return (
       <div className="p-4">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>

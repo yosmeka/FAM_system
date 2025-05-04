@@ -13,7 +13,13 @@ type User = {
   role: string;
 };
 
+import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissionsContext } from "@/contexts/PermissionsContext";
+
 export default function UsersPage() {
+  const { permissions } = usePermissionsContext();
+  console.log('Current permissions:', permissions);
+  const { checkPermission } = usePermissions();
   const { data: session, status } = useSession();
   const router = useRouter();
   const isAdmin = session?.user?.role === "ADMIN";
@@ -29,6 +35,57 @@ export default function UsersPage() {
     role: "USER",
   });
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'USER' });
+
+  // Open edit modal and prefill form
+  const handleEditClick = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || '',
+      email: user.email,
+      role: user.role,
+    });
+  };
+
+  // Close edit modal
+  const handleCloseEditModal = () => {
+    setEditingUser(null);
+    setEditForm({ name: '', email: '', role: 'USER' });
+  };
+
+  // Submit edit form
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+      const res = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        let errorMsg = 'Failed to update user';
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await res.json();
+            errorMsg = errorData.error || errorMsg;
+          }
+        } catch (e) {
+          // Ignore JSON parse errors, fallback to default errorMsg
+        }
+        throw new Error(errorMsg);
+      }
+      toast.success('User updated successfully!');
+      fetchUsers();
+      handleCloseEditModal();
+    } catch (err: any) {
+      toast.error('Error updating user');
+      console.error(err);
+    }
+  };
+
 
   const fetchUsers = async () => {
     try {
@@ -45,12 +102,26 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    if (isAdmin) {
+    if (checkPermission('User view (list and detail)')) {
       fetchUsers();
     } else {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [checkPermission]);
+
+  // Conditional returns AFTER all hooks
+  if (!checkPermission('User view (list and detail)')) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto text-center">
+        <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
+        <p className="mt-2 text-gray-600">You do not have permission to view users.</p>
+      </div>
+    );
+  }
+
+  if (status === "loading") {
+    return <div className="p-6 max-w-4xl mx-auto text-center">Loading...</div>;
+  }
 
   const handleAddUser = async () => {
     try {
@@ -90,36 +161,21 @@ export default function UsersPage() {
     }
   };
 
-  // Show loading spinner until session is loaded
-  if (status === "loading") {
-    return <div className="p-6 max-w-4xl mx-auto text-center">Loading...</div>;
-  }
 
-  // Block access for non-admins
-  React.useEffect(() => {
-    if (status === "authenticated" && !isAdmin) {
-      toast.error("Access denied. Only for admin!", { autoClose: 2000 });
-      setTimeout(() => {
-        router.replace("/dashboard");
-      }, 2000);
-    }
-  }, [status, isAdmin, router]);
-
-  if (status === "authenticated" && !isAdmin) {
-    return <ToastContainer />;
-  }
 
   // Admin UI
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">User Management</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Add New User
-        </button>
+        {checkPermission('User create/invite') && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Add New User
+          </button>
+        )}
       </div>
       {loading ? (
         <p className="text-center text-gray-500">Loading users...</p>
@@ -145,12 +201,22 @@ export default function UsersPage() {
                   <td className="border px-4 py-2">{user.email}</td>
                   <td className="border px-4 py-2 capitalize">{user.role}</td>
                   <td className="border px-4 py-2">
-                    <button
-                      onClick={() => setDeleteUserId(user.id)}
-                      className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
+                    {checkPermission('User edit/update') && (
+                      <button
+                        onClick={() => handleEditClick(user)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 mr-2"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {checkPermission('User delete') && (
+                      <button
+                        onClick={() => setDeleteUserId(user.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -158,6 +224,55 @@ export default function UsersPage() {
           </table>
         </div>
       )}
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Name"
+                value={editForm.name}
+                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={editForm.email}
+                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              />
+              <select
+                value={editForm.role}
+                onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              >
+                <option value="USER">User</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add User Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
@@ -230,6 +345,67 @@ export default function UsersPage() {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit User Modal */}
+      {editingUser && checkPermission('User edit') && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Name"
+                value={editForm.name}
+                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={editForm.email}
+                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              />
+              <select
+                value={editForm.role}
+                onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                className="w-full border px-3 py-2 rounded"
+              >
+                <option value="USER">User</option>
+                <option value="MANAGER">Manager</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+            <div className="mt-6 flex justify-end space-x-2">
+              <button
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/users/${editingUser.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(editForm),
+                    });
+                    if (!res.ok) throw new Error('Failed to update user');
+                    toast.success('User updated successfully!');
+                    setEditingUser(null);
+                    fetchUsers();
+                  } catch (err) {
+                    toast.error('Error updating user');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save Changes
               </button>
             </div>
           </div>

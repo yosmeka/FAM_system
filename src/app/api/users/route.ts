@@ -4,10 +4,11 @@ import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
+import { hasPermission } from './[id]/route';
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  if (!session?.user || !(await hasPermission(session.user, 'User view (list and detail)'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -33,8 +34,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  if (!session?.user || !(await hasPermission(session.user, 'User create'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

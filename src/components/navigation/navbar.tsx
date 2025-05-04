@@ -43,6 +43,7 @@ const navigation = [
     roles: ["ADMIN", "MANAGER",],
   },
   { name: "Users", href: "/users", roles: ["ADMIN"] },
+  { name: "Role & Permission Management", href: "/role-permission", roles: ["ADMIN"] },
 ];
 
 function classNames(...classes: string[]) {

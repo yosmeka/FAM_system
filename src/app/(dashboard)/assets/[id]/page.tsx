@@ -38,10 +38,18 @@ interface Asset {
 }
 
 export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { checkPermission } = usePermissions();
+  if (!checkPermission('Asset view (list and detail)')) {
+    return (
+      <div className="p-4">
+        <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
+        <p className="mt-2 text-gray-600">You do not have permission to view asset details.</p>
+      </div>
+    );
+  }
   const resolvedParams = React.use(params);
   const router = useRouter();
   const { data: session } = useSession();
-  const { canManageAssets } = usePermissions();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -187,12 +195,20 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             <p className="text-sm">Asset Tag ID: {asset.serialNumber} • Site: {asset.location}</p>
           </div>
         </div>
-        {canManageAssets() && (
+        {checkPermission('Asset edit') && (
           <button 
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
             Edit
+          </button>
+        )}
+        {checkPermission('Asset delete') && (
+          <button 
+            onClick={handleDelete}
+            className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
+          >
+            Delete
           </button>
         )}
       </div>

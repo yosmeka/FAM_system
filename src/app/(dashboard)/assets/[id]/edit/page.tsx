@@ -11,7 +11,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const resolvedParams = React.use(params);
   const router = useRouter();
   const { data: session } = useSession();
-  const { canManageAssets } = usePermissions();
+  const { checkPermission } = usePermissions();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -100,7 +100,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
     }));
   };
 
-  if (!canManageAssets()) {
+  if (!checkPermission('Asset create')) {
     return (
       <div className="p-4">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
