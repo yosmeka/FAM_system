@@ -72,6 +72,9 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   // Define the tab order for sequential navigation
   const tabOrder = ["basic", "financial", "classification", "maintenance"]
 
+  // Log the initial data to see what's coming in
+  console.log("Initial Asset Data:", initialData);
+
   // Convert date strings to Date objects for the form
   const formattedInitialData = initialData
     ? {
@@ -89,6 +92,10 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
     purchaseDate: new Date(),
     ...formattedInitialData,
   }
+
+  // Log the formatted data and default values
+  console.log("Formatted Initial Data:", formattedInitialData);
+  console.log("Form Default Values:", defaultValues);
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetFormSchema),

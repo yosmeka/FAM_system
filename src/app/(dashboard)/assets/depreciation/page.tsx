@@ -67,6 +67,8 @@ export async function GET(
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { Settings } from 'lucide-react';
+import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 
 interface Asset {
   id: string;
@@ -104,16 +106,55 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
   const [salvageValue, setSalvageValue] = useState<number>(0);
   const [depreciationMethod, setDepreciationMethod] = useState<'STRAIGHT_LINE' | 'DECLINING_BALANCE'>('STRAIGHT_LINE');
   const [depreciationRate, setDepreciationRate] = useState<number>(20); // Default 20% for declining balance
+  const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
+  const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
+    isDepreciable: true,
+    depreciableCost: 0,
+    salvageValue: 0,
+    usefulLifeMonths: 60,
+    depreciationMethod: 'STRAIGHT_LINE',
+    dateAcquired: new Date().toISOString().split('T')[0]
+  });
 
   useEffect(() => {
-    const fetchAsset = async () => {
+    const fetchAssetAndDepreciation = async () => {
       try {
-        const response = await fetch(`/api/assets/${searchParams.assetId}`);
-        if (!response.ok) {
+        // First fetch the asset
+        const assetResponse = await fetch(`/api/assets/${searchParams.assetId}`);
+        if (!assetResponse.ok) {
           throw new Error('Failed to fetch asset');
         }
-        const data = await response.json();
-        setAsset(data);
+        const assetData = await assetResponse.json();
+        setAsset(assetData);
+
+        // Then fetch the depreciation data
+        const depreciationResponse = await fetch(`/api/assets/${searchParams.assetId}/depreciation`);
+        if (!depreciationResponse.ok) {
+          throw new Error('Failed to fetch depreciation data');
+        }
+        const depreciationData = await depreciationResponse.json();
+
+        // Update state with the fetched depreciation settings
+        setSalvageValue(depreciationData.depreciationSettings.salvageValue);
+        setUsefulLife(depreciationData.depreciationSettings.usefulLifeYears);
+        setDepreciationMethod(depreciationData.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+        if (depreciationData.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
+          setDepreciationRate(depreciationData.depreciationSettings.depreciationRate || 20);
+        }
+
+        // Set the depreciation results
+        setDepreciationResults(depreciationData.depreciationResults);
+
+        // Update the depreciation settings for the modal
+        setDepreciationSettings({
+          isDepreciable: true,
+          depreciableCost: depreciationData.depreciationSettings.depreciableCost,
+          salvageValue: depreciationData.depreciationSettings.salvageValue,
+          usefulLifeMonths: depreciationData.depreciationSettings.usefulLifeMonths,
+          depreciationMethod: depreciationData.depreciationSettings.depreciationMethod,
+          dateAcquired: new Date(depreciationData.depreciationSettings.startDate).toISOString().split('T')[0]
+        });
       } catch (error) {
         toast.error('Failed to fetch asset details');
         console.error('Error fetching asset:', error);
@@ -123,64 +164,129 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
     };
 
     if (searchParams.assetId) {
-      fetchAsset();
+      fetchAssetAndDepreciation();
     }
   }, [searchParams.assetId]);
 
+  // Recalculate depreciation when settings change
   useEffect(() => {
-    if (asset) {
+    if (asset && !isLoading) {
       calculateDepreciation();
     }
-  }, [asset, usefulLife, salvageValue, depreciationMethod, depreciationRate]);
+  }, [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, searchParams.assetId]);
 
-  const calculateDepreciation = () => {
+  const calculateDepreciation = async () => {
     if (!asset) return;
 
-    const results: DepreciationResult[] = [];
-    const purchasePrice = asset.purchasePrice;
-    
-    if (depreciationMethod === 'STRAIGHT_LINE') {
-      const annualDepreciation = (purchasePrice - salvageValue) / usefulLife;
-      
-      for (let year = 1; year <= usefulLife; year++) {
-        const bookValue = purchasePrice - (annualDepreciation * year);
-        results.push({
-          year,
-          depreciation: annualDepreciation,
-          bookValue: Math.max(bookValue, salvageValue),
-          method: 'STRAIGHT_LINE'
-        });
-      }
-    } else {
-      let currentBookValue = purchasePrice;
-      const rate = depreciationRate / 100;
+    try {
+      // Call the API with the current settings
+      const response = await fetch(`/api/assets/${searchParams.assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
 
-      for (let year = 1; year <= usefulLife; year++) {
-        const depreciation = currentBookValue * rate;
-        currentBookValue -= depreciation;
-        
-        if (currentBookValue < salvageValue) {
-          currentBookValue = salvageValue;
+      if (!response.ok) throw new Error('Failed to fetch depreciation data');
+
+      const data = await response.json();
+      setDepreciationResults(data.depreciationResults);
+
+      toast.success('Depreciation recalculated successfully');
+    } catch (error) {
+      console.error('Error calculating depreciation:', error);
+      toast.error('Failed to calculate depreciation');
+
+      // Fallback to client-side calculation if API fails
+      const results: DepreciationResult[] = [];
+      const purchasePrice = asset.purchasePrice;
+
+      if (depreciationMethod === 'STRAIGHT_LINE') {
+        const annualDepreciation = (purchasePrice - salvageValue) / usefulLife;
+
+        for (let year = 1; year <= usefulLife; year++) {
+          const bookValue = purchasePrice - (annualDepreciation * year);
+          results.push({
+            year,
+            depreciation: annualDepreciation,
+            bookValue: Math.max(bookValue, salvageValue),
+            method: 'STRAIGHT_LINE'
+          });
         }
+      } else {
+        let currentBookValue = purchasePrice;
+        const rate = depreciationRate / 100;
 
-        results.push({
-          year,
-          depreciation,
-          bookValue: currentBookValue,
-          method: 'DECLINING_BALANCE'
-        });
+        for (let year = 1; year <= usefulLife; year++) {
+          const depreciation = currentBookValue * rate;
+          currentBookValue -= depreciation;
 
-        if (currentBookValue <= salvageValue) break;
+          if (currentBookValue < salvageValue) {
+            currentBookValue = salvageValue;
+          }
+
+          results.push({
+            year,
+            depreciation,
+            bookValue: currentBookValue,
+            method: 'DECLINING_BALANCE'
+          });
+
+          if (currentBookValue <= salvageValue) break;
+        }
       }
-    }
 
-    setDepreciationResults(results);
+      setDepreciationResults(results);
+    }
+  };
+
+  const handleSaveDepreciationSettings = async (settings: DepreciationSettings) => {
+    if (!asset) return;
+
+    try {
+      // Convert months to years for the API
+      const usefulLifeYears = Math.ceil(settings.usefulLifeMonths / 12);
+
+      // Call the API with the new settings using PUT method to update the asset
+      const response = await fetch(
+        `/api/assets/${searchParams.assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to update depreciation settings');
+
+      const data = await response.json();
+      setDepreciationResults(data.depreciationResults);
+
+      // Update local state
+      setSalvageValue(settings.salvageValue);
+      setUsefulLife(usefulLifeYears);
+      setDepreciationMethod(settings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+      if (settings.depreciationMethod !== 'STRAIGHT_LINE') {
+        setDepreciationRate(settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20);
+      }
+
+      // Update the depreciation settings state
+      setDepreciationSettings({
+        ...settings,
+        usefulLifeMonths: settings.usefulLifeMonths,
+      });
+
+      // Close the modal
+      setIsManagingDepreciation(false);
+
+      toast.success('Depreciation settings updated successfully');
+    } catch (error) {
+      console.error('Error updating depreciation settings:', error);
+      toast.error('Failed to update depreciation settings');
+    }
   };
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Asset Depreciation Calculator</h1>
-      
+
       {isLoading ? (
         <div>Loading...</div>
       ) : asset ? (
@@ -193,57 +299,25 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Depreciation Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Depreciation Method</label>
-                <select
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={depreciationMethod}
-                  onChange={(e) => setDepreciationMethod(e.target.value as 'STRAIGHT_LINE' | 'DECLINING_BALANCE')}
-                >
-                  <option value="STRAIGHT_LINE">Straight Line</option>
-                  <option value="DECLINING_BALANCE">Declining Balance</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Useful Life (Years)</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={usefulLife}
-                  onChange={(e) => setUsefulLife(Number(e.target.value))}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Salvage Value</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  value={salvageValue}
-                  onChange={(e) => setSalvageValue(Number(e.target.value))}
-                />
-              </div>
-
-              {depreciationMethod === 'DECLINING_BALANCE' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Depreciation Rate (%)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={depreciationRate}
-                    onChange={(e) => setDepreciationRate(Number(e.target.value))}
-                  />
-                </div>
-              )}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Depreciation Settings</h2>
+              <button
+                onClick={() => setIsManagingDepreciation(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Settings size={16} />
+                Manage
+              </button>
             </div>
           </div>
+
+          <ManageDepreciationModal
+            open={isManagingDepreciation}
+            onClose={() => setIsManagingDepreciation(false)}
+            onSave={handleSaveDepreciationSettings}
+            initialSettings={depreciationSettings}
+            assetId={searchParams.assetId}
+          />
 
           <div className="bg-white p-6 rounded-lg shadow overflow-x-auto">
             <h2 className="text-xl font-semibold mb-4">Depreciation Schedule</h2>

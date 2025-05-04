@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -19,6 +19,8 @@ export async function GET(
         id: params.id,
       },
     });
+
+    console.log("API GET asset data:", asset);
 
     if (!asset) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
@@ -37,13 +39,13 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     // First get the current asset to compare changes
     const currentAsset = await prisma.asset.findUnique({
       where: { id: params.id }
@@ -68,11 +70,18 @@ export async function PUT(
         location: body.location,
         department: body.department,
         category: body.category,
+        type: body.type,
         supplier: body.supplier,
         description: body.description,
         warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
         lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
         nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
+        // Depreciation fields
+        depreciableCost: body.depreciableCost ? parseFloat(body.depreciableCost) : null,
+        salvageValue: body.salvageValue ? parseFloat(body.salvageValue) : null,
+        usefulLifeMonths: body.usefulLifeMonths ? parseInt(body.usefulLifeMonths) : null,
+        depreciationMethod: body.depreciationMethod || null,
+        depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
       },
     });
 
@@ -80,8 +89,9 @@ export async function PUT(
     const changes = [];
     const fields = [
       'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
-      'status', 'location', 'department', 'category', 'supplier', 'description',
-      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance'
+      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
+      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
+      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
     ];
 
     console.log('Current asset:', currentAsset);
@@ -90,9 +100,9 @@ export async function PUT(
     for (const field of fields) {
       const oldValue = currentAsset[field];
       const newValue = updatedAsset[field];
-      
+
       console.log(`Field: ${field}, Old: ${oldValue}, New: ${newValue}`);
-      
+
       if (oldValue?.toString() !== newValue?.toString()) {
         changes.push({
           assetId: params.id,
@@ -130,7 +140,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -155,11 +165,11 @@ export async function DELETE(
   } catch (error) {
     console.error('Error deleting asset:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to delete asset',
         details: error instanceof Error ? error.message : 'Unknown error'
-      }, 
+      },
       { status: 500 }
     );
   }
-} 
+}

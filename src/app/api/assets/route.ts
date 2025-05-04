@@ -34,6 +34,8 @@ export async function POST(request: Request) {
 
     const body = await request.json();
 
+    console.log("Creating asset with data:", body);
+
     // Create the asset
     const asset = await prisma.asset.create({
       data: {
@@ -46,19 +48,27 @@ export async function POST(request: Request) {
         location: body.location,
         department: body.department,
         category: body.category,
+        type: body.type,
         supplier: body.supplier,
         description: body.description,
         warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
         lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
         nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
+        // Depreciation fields
+        depreciableCost: body.depreciableCost ? parseFloat(body.depreciableCost) : null,
+        salvageValue: body.salvageValue ? parseFloat(body.salvageValue) : null,
+        usefulLifeMonths: body.usefulLifeMonths ? parseInt(body.usefulLifeMonths) : null,
+        depreciationMethod: body.depreciationMethod || null,
+        depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
       },
     });
 
     // Track initial asset creation in history
     const fields = [
       'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
-      'status', 'location', 'department', 'category', 'supplier', 'description',
-      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance'
+      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
+      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
+      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
     ];
 
     console.log('New asset created:', asset);

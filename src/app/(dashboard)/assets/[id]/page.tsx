@@ -3,19 +3,20 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { LinkAssetModal } from '@/components/LinkAssetModal';
+import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
-import { 
-  calculateDepreciation, 
-  generateChartData, 
-  DepreciationMethod, 
-  DepreciationResult 
+import {
+  calculateDepreciation,
+  generateChartData,
+  DepreciationMethod,
+  DepreciationResult
 } from '@/utils/depreciation';
 import type { LinkedAsset } from '@/types';
 
@@ -54,6 +55,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
   const [isLinkingAsset, setIsLinkingAsset] = useState(false);
+  const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
   const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [isLoadingAssets, setIsLoadingAssets] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string>('');
@@ -61,7 +63,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  
+
   const { toPDF, targetRef } = usePDF({
     filename: `depreciation-report-${asset?.name || 'asset'}.pdf`,
   });
@@ -71,6 +73,14 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   const [salvageValue, setSalvageValue] = useState<number>(0);
   const [depreciationMethod, setDepreciationMethod] = useState<DepreciationMethod>('STRAIGHT_LINE');
   const [depreciationRate, setDepreciationRate] = useState<number>(20);
+  const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
+    isDepreciable: true,
+    depreciableCost: 0,
+    salvageValue: 0,
+    usefulLifeMonths: 60,
+    depreciationMethod: 'STRAIGHT_LINE',
+    dateAcquired: new Date().toISOString().split('T')[0]
+  });
 
   const fetchAvailableAssets = async () => {
     setIsLoadingAssets(true);
@@ -121,8 +131,8 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
               if (!response.ok) throw new Error('Failed to fetch assets');
               const data = await response.json();
               // Filter out current asset and already linked assets
-              const filteredAssets = data.filter((a: Asset) => 
-                a.id !== params.id && 
+              const filteredAssets = data.filter((a: Asset) =>
+                a.id !== params.id &&
                 !asset?.linkedTo?.some(link => link.toAsset.id === a.id)
               );
               setAvailableAssets(filteredAssets);
@@ -151,22 +161,67 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
           break;
 
         case 'depreciation':
-          const results = calculateDepreciation({
-            purchasePrice: asset.purchasePrice,
-            purchaseDate: asset.purchaseDate,
-            salvageValue,
-            usefulLife,
-            method: depreciationMethod,
-            depreciationRate: depreciationRate
-          });
-          setDepreciationResults(results);
-          setDepreciationData(generateChartData(results));
+          try {
+            // Fetch depreciation data from the API
+            const response = await fetch(`/api/assets/${params.id}/depreciation`);
+            if (!response.ok) throw new Error('Failed to fetch depreciation data');
+            const data = await response.json();
+
+            // Update state with the fetched data
+            setDepreciationResults(data.depreciationResults);
+            setDepreciationData(data.chartData);
+
+            // Update the form controls with the asset's depreciation settings
+            setSalvageValue(data.depreciationSettings.salvageValue);
+            setUsefulLife(data.depreciationSettings.usefulLifeYears);
+            setDepreciationMethod(data.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+            // Set depreciation rate if it's declining balance
+            if (data.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
+              setDepreciationRate(data.depreciationSettings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20);
+            }
+
+            // Update the depreciation settings for the modal
+            setDepreciationSettings({
+              isDepreciable: true,
+              depreciableCost: data.depreciationSettings.depreciableCost,
+              salvageValue: data.depreciationSettings.salvageValue,
+              usefulLifeMonths: data.depreciationSettings.usefulLifeMonths,
+              depreciationMethod: data.depreciationSettings.depreciationMethod,
+              dateAcquired: new Date(data.depreciationSettings.startDate).toISOString().split('T')[0]
+            });
+          } catch (error) {
+            console.error('Error fetching depreciation data:', error);
+            toast.error('Failed to fetch depreciation data');
+
+            // Fallback to client-side calculation if API fails
+            const results = calculateDepreciation({
+              purchasePrice: asset.purchasePrice,
+              purchaseDate: asset.purchaseDate,
+              salvageValue,
+              usefulLife,
+              method: depreciationMethod,
+              depreciationRate: depreciationRate
+            });
+            setDepreciationResults(results);
+            setDepreciationData(generateChartData(results));
+
+            // Set default depreciation settings
+            setDepreciationSettings({
+              isDepreciable: true,
+              depreciableCost: asset.purchasePrice,
+              salvageValue: asset.purchasePrice * 0.1,
+              usefulLifeMonths: 60,
+              depreciationMethod: 'STRAIGHT_LINE',
+              dateAcquired: new Date(asset.purchaseDate).toISOString().split('T')[0]
+            });
+          }
           break;
       }
     };
 
     fetchTabData();
-  }, [activeTab, params.id, asset, isLinkingAsset, salvageValue, usefulLife, depreciationMethod, depreciationRate]);
+  }, [activeTab, params.id, asset, isLinkingAsset]);
 
   const handleLinkSuccess = () => {
     // Refetch the asset to get updated linked assets
@@ -184,11 +239,8 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     fetchAsset();
   };
 
-  useEffect(() => {
-    if (asset) {
-      calculateAssetDepreciation();
-    }
-  }, [asset, usefulLife, salvageValue, depreciationMethod, depreciationRate]);
+  // Remove the useEffect that recalculates depreciation when settings change
+  // We'll handle this with a recalculate button instead
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -211,20 +263,86 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     fetchHistory();
   }, [activeTab, params.id]);
 
-  const calculateAssetDepreciation = () => {
+  const calculateAssetDepreciation = async () => {
     if (!asset) return;
-    
-    const results = calculateDepreciation({
-      purchasePrice: asset.purchasePrice,
-      purchaseDate: asset.purchaseDate,
-      usefulLife,
-      salvageValue: salvageValue || asset.purchasePrice * 0.1, // Default to 10% of purchase price if not set
-      method: depreciationMethod,
-      depreciationRate
-    });
-    
-    setDepreciationResults(results);
-    setDepreciationData(generateChartData(results));
+
+    try {
+      // Call the API with the current settings
+      const response = await fetch(`/api/assets/${params.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
+
+      if (!response.ok) throw new Error('Failed to fetch depreciation data');
+
+      const data = await response.json();
+      setDepreciationResults(data.depreciationResults);
+      setDepreciationData(data.chartData);
+
+      toast.success('Depreciation recalculated successfully');
+    } catch (error) {
+      console.error('Error calculating depreciation:', error);
+      toast.error('Failed to calculate depreciation');
+
+      // Fallback to client-side calculation
+      const results = calculateDepreciation({
+        purchasePrice: asset.purchasePrice,
+        purchaseDate: asset.purchaseDate,
+        usefulLife,
+        salvageValue: salvageValue || asset.purchasePrice * 0.1,
+        method: depreciationMethod,
+        depreciationRate
+      });
+
+      setDepreciationResults(results);
+      setDepreciationData(generateChartData(results));
+    }
+  };
+
+  const handleSaveDepreciationSettings = async (settings: DepreciationSettings) => {
+    if (!asset) return;
+
+    try {
+      // Convert months to years for the API
+      const usefulLifeYears = Math.ceil(settings.usefulLifeMonths / 12);
+
+      // Call the API with the new settings using PUT method to update the asset
+      const response = await fetch(
+        `/api/assets/${params.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to update depreciation settings');
+
+      const data = await response.json();
+      setDepreciationResults(data.depreciationResults);
+      setDepreciationData(data.chartData);
+
+      // Update local state
+      setSalvageValue(settings.salvageValue);
+      setUsefulLife(usefulLifeYears);
+      setDepreciationMethod(settings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+      if (settings.depreciationMethod !== 'STRAIGHT_LINE') {
+        setDepreciationRate(settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20);
+      }
+
+      // Update the depreciation settings state
+      setDepreciationSettings({
+        ...settings,
+        usefulLifeMonths: settings.usefulLifeMonths,
+      });
+
+      // Close the modal
+      setIsManagingDepreciation(false);
+
+      toast.success('Depreciation settings updated successfully');
+    } catch (error) {
+      console.error('Error updating depreciation settings:', error);
+      toast.error('Failed to update depreciation settings');
+    }
   };
 
   const handleDelete = async () => {
@@ -449,59 +567,25 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
             {/* Depreciation Settings */}
             <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-              <h2 className="text-lg font-semibold mb-4">Depreciation Settings</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Method</label>
-                  <select
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    value={depreciationMethod}
-                    onChange={(e) => setDepreciationMethod(e.target.value as DepreciationMethod)}
-                  >
-                    <option value="STRAIGHT_LINE">Straight Line</option>
-                    <option value="DECLINING_BALANCE">Declining Balance</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Useful Life (Years)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    value={usefulLife}
-                    onChange={(e) => setUsefulLife(Number(e.target.value))}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Salvage Value</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    value={salvageValue}
-                    onChange={(e) => setSalvageValue(Number(e.target.value))}
-                  />
-                </div>
-                
-                {depreciationMethod === 'DECLINING_BALANCE' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Depreciation Rate (%)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      value={depreciationRate}
-                      onChange={(e) => setDepreciationRate(Number(e.target.value))}
-                    />
-                  </div>
-                )}
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Depreciation Settings</h2>
+                <button
+                  onClick={() => setIsManagingDepreciation(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Settings size={16} />
+                  Manage
+                </button>
               </div>
             </div>
+
+            <ManageDepreciationModal
+              open={isManagingDepreciation}
+              onClose={() => setIsManagingDepreciation(false)}
+              onSave={handleSaveDepreciationSettings}
+              initialSettings={depreciationSettings}
+              assetId={params.id}
+            />
 
             {/* Depreciation Details */}
             <div className="mb-6">
@@ -535,34 +619,34 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
               <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
               <div className="h-48 bg-white rounded-lg border p-2 mb-4">
                 <ResponsiveContainer width="100%" height={200}>
-                  <LineChart 
+                  <LineChart
                     data={depreciationData}
                     margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
                   >
-                    <XAxis 
-                      dataKey="year" 
+                    <XAxis
+                      dataKey="year"
                       stroke="#666"
                       tick={{ fontSize: 12 }}
                     />
-                    <YAxis 
+                    <YAxis
                       stroke="#666"
                       tick={{ fontSize: 12 }}
                       tickFormatter={(value) => `$${value.toLocaleString()}`}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
                       labelFormatter={(label) => `Year: ${label}`}
-                      contentStyle={{ 
+                      contentStyle={{
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
                         border: '1px solid #ccc',
                         borderRadius: '4px',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }}
                     />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#3b82f6" 
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#3b82f6"
                       strokeWidth={2}
                       dot={{ fill: '#3b82f6', r: 4 }}
                       activeDot={{ r: 6, fill: '#2563eb' }}
@@ -677,7 +761,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
           </div>
         </div>
         {canManageAssets() && (
-          <button 
+          <button
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
@@ -728,4 +812,4 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       {renderTabContent()}
     </div>
   );
-} 
+}
