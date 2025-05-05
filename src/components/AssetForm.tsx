@@ -844,7 +844,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <SelectItem value="DECLINING_BALANCE">Declining Balance</SelectItem>
                           <SelectItem value="DOUBLE_DECLINING">Double Declining</SelectItem>
                           <SelectItem value="SUM_OF_YEARS_DIGITS">Sum of Years Digits</SelectItem>
-                          <SelectItem value="UNITS_OF_PRODUCTION">Units of Production</SelectItem>
+                          <SelectItem value="UNITS_OF_ACTIVITY">Units of Activity</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

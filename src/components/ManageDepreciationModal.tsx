@@ -17,6 +17,8 @@ export interface DepreciationSettings {
   usefulLifeMonths: number;
   depreciationMethod: string;
   dateAcquired: string;
+  totalUnits?: number;
+  unitsPerYear?: number[];
 }
 
 export function ManageDepreciationModal({
@@ -26,15 +28,27 @@ export function ManageDepreciationModal({
   initialSettings,
   assetId
 }: ManageDepreciationModalProps) {
-  const [settings, setSettings] = useState<DepreciationSettings>(initialSettings);
+  const [settings, setSettings] = useState<DepreciationSettings>({
+    ...initialSettings,
+    totalUnits: initialSettings.totalUnits || 10000,
+    unitsPerYear: initialSettings.unitsPerYear || Array(Math.ceil(initialSettings.usefulLifeMonths / 12)).fill(
+      (initialSettings.totalUnits || 10000) / Math.ceil(initialSettings.usefulLifeMonths / 12)
+    )
+  });
 
   useEffect(() => {
-    setSettings(initialSettings);
+    setSettings({
+      ...initialSettings,
+      totalUnits: initialSettings.totalUnits || 10000,
+      unitsPerYear: initialSettings.unitsPerYear || Array(Math.ceil(initialSettings.usefulLifeMonths / 12)).fill(
+        (initialSettings.totalUnits || 10000) / Math.ceil(initialSettings.usefulLifeMonths / 12)
+      )
+    });
   }, [initialSettings, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const checkbox = e.target as HTMLInputElement;
       setSettings({
@@ -46,6 +60,52 @@ export function ManageDepreciationModal({
         ...settings,
         [name]: parseFloat(value)
       });
+
+      // If changing totalUnits, update unitsPerYear with even distribution
+      if (name === 'totalUnits') {
+        const totalUnits = parseFloat(value);
+        const yearsCount = Math.ceil(settings.usefulLifeMonths / 12);
+        const unitsPerYear = Array(yearsCount).fill(totalUnits / yearsCount);
+
+        setSettings(prev => ({
+          ...prev,
+          totalUnits,
+          unitsPerYear
+        }));
+      }
+
+      // If changing usefulLifeMonths, update unitsPerYear array length
+      if (name === 'usefulLifeMonths') {
+        const months = parseFloat(value);
+        const yearsCount = Math.ceil(months / 12);
+        const totalUnits = settings.totalUnits || 10000;
+        const unitsPerYear = Array(yearsCount).fill(totalUnits / yearsCount);
+
+        setSettings(prev => ({
+          ...prev,
+          usefulLifeMonths: months,
+          unitsPerYear
+        }));
+      }
+    } else if (name === 'depreciationMethod') {
+      // If changing to Units of Activity, make sure we have default values
+      if (value === 'UNITS_OF_ACTIVITY') {
+        const totalUnits = settings.totalUnits || 10000;
+        const yearsCount = Math.ceil(settings.usefulLifeMonths / 12);
+        const unitsPerYear = settings.unitsPerYear || Array(yearsCount).fill(totalUnits / yearsCount);
+
+        setSettings({
+          ...settings,
+          depreciationMethod: value,
+          totalUnits,
+          unitsPerYear
+        });
+      } else {
+        setSettings({
+          ...settings,
+          depreciationMethod: value
+        });
+      }
     } else {
       setSettings({
         ...settings,
@@ -70,9 +130,9 @@ export function ManageDepreciationModal({
         >
           <X size={24} />
         </button>
-        
+
         <h2 className="text-xl font-bold mb-6">Manage Asset Depreciation</h2>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
             <label className="flex items-center justify-between mb-2">
@@ -101,7 +161,7 @@ export function ManageDepreciationModal({
               </div>
             </label>
           </div>
-          
+
           {settings.isDepreciable && (
             <>
               <div className="mb-6">
@@ -122,7 +182,7 @@ export function ManageDepreciationModal({
                 </div>
                 <p className="text-sm text-gray-400 mt-1">including sales tax, freight and installation</p>
               </div>
-              
+
               <div className="mb-6">
                 <label className="block mb-2">Salvage Value</label>
                 <div className="flex">
@@ -140,7 +200,7 @@ export function ManageDepreciationModal({
                   />
                 </div>
               </div>
-              
+
               <div className="mb-6">
                 <label className="block mb-2">Asset Life (months)</label>
                 <input
@@ -152,7 +212,7 @@ export function ManageDepreciationModal({
                   min="1"
                 />
               </div>
-              
+
               <div className="mb-6">
                 <label className="block mb-2">Depreciation Method</label>
                 <select
@@ -164,9 +224,54 @@ export function ManageDepreciationModal({
                   <option value="STRAIGHT_LINE">Straight Line</option>
                   <option value="DECLINING_BALANCE">Declining Balance</option>
                   <option value="DOUBLE_DECLINING">Double Declining</option>
+                  <option value="SUM_OF_YEARS_DIGITS">Sum of Years Digits</option>
+                  <option value="UNITS_OF_ACTIVITY">Units of Activity</option>
                 </select>
               </div>
-              
+
+              {settings.depreciationMethod === 'UNITS_OF_ACTIVITY' && (
+                <>
+                  <div className="mb-6">
+                    <label className="block mb-2">Total Units</label>
+                    <input
+                      type="number"
+                      name="totalUnits"
+                      value={settings.totalUnits || 10000}
+                      onChange={handleChange}
+                      className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      min="1"
+                    />
+                    <p className="text-sm text-gray-400 mt-1">Total units the asset is expected to produce over its lifetime</p>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block mb-2">Units Per Year</label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto p-2 border border-gray-700 rounded-md">
+                      {(settings.unitsPerYear || []).map((units, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-sm text-gray-400 w-16">Year {index + 1}:</span>
+                          <input
+                            type="number"
+                            value={units}
+                            onChange={(e) => {
+                              const newUnitsPerYear = [...(settings.unitsPerYear || [])];
+                              newUnitsPerYear[index] = parseFloat(e.target.value);
+                              setSettings({
+                                ...settings,
+                                unitsPerYear: newUnitsPerYear
+                              });
+                            }}
+                            className="flex-1 rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                            min="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-400 mt-1">Estimated units to be used each year</p>
+                  </div>
+                </>
+              )}
+
               <div className="mb-6">
                 <label className="block mb-2">Date Acquired</label>
                 <div className="relative">
@@ -184,7 +289,7 @@ export function ManageDepreciationModal({
               </div>
             </>
           )}
-          
+
           <div className="flex justify-end space-x-4 mt-8">
             <button
               type="button"

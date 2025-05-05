@@ -33,7 +33,7 @@ model Asset {
   status              String         @default("ACTIVE")
   location            String?
   department          String?
-  category            String?  
+  category            String?
   type                String?
   supplier            String?
   warrantyExpiry      DateTime?
@@ -209,6 +209,7 @@ enum DepreciationMethod {
   STRAIGHT_LINE
   DECLINING_BALANCE
   SUM_OF_YEARS_DIGITS
+  UNITS_OF_ACTIVITY
 }
 
 enum DocumentType {

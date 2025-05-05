@@ -68,14 +68,50 @@ export async function GET(
       ? new Date(queryDateAcquired)
       : (asset.depreciationStartDate || asset.purchaseDate);
 
+    // Get total units and units per year for Units of Activity method
+    const totalUnits = url.searchParams.get('totalUnits')
+      ? parseInt(url.searchParams.get('totalUnits')!)
+      : 10000; // Default value
+
+    const unitsPerYearParam = url.searchParams.get('unitsPerYear');
+    const unitsPerYear = unitsPerYearParam
+      ? JSON.parse(unitsPerYearParam)
+      : Array(usefulLifeYears).fill(totalUnits / usefulLifeYears); // Default to even distribution
+
+    // Map the depreciation method from the database to the utility function
+    let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+
+    // Use the query method if provided, otherwise use the stored method
+    const methodToUse = queryMethod || depreciationMethod;
+
+    switch(methodToUse) {
+      case 'STRAIGHT_LINE':
+        calculationMethod = 'STRAIGHT_LINE';
+        break;
+      case 'DECLINING_BALANCE':
+      case 'DOUBLE_DECLINING':
+        calculationMethod = 'DECLINING_BALANCE';
+        break;
+      case 'SUM_OF_YEARS_DIGITS':
+        calculationMethod = 'SUM_OF_YEARS_DIGITS';
+        break;
+      case 'UNITS_OF_ACTIVITY':
+        calculationMethod = 'UNITS_OF_ACTIVITY';
+        break;
+      default:
+        calculationMethod = 'STRAIGHT_LINE'; // Default
+    }
+
     // Calculate depreciation
     const depreciationResults = calculateDepreciation({
       purchasePrice: depreciableCost,
       purchaseDate: startDate.toISOString(),
       usefulLife: usefulLifeYears,
       salvageValue: salvageValue,
-      method: depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE',
+      method: calculationMethod,
       depreciationRate: depreciationRate,
+      totalUnits: totalUnits,
+      unitsPerYear: unitsPerYear
     });
 
     // Generate chart data
@@ -95,9 +131,12 @@ export async function GET(
         salvageValue,
         usefulLifeYears,
         usefulLifeMonths: asset.usefulLifeMonths || usefulLifeYears * 12,
-        depreciationMethod,
+        // Use the query method if provided, otherwise use the stored method
+        depreciationMethod: queryMethod || depreciationMethod,
         depreciationRate,
         startDate,
+        totalUnits,
+        unitsPerYear,
       },
       depreciationResults,
       chartData,
@@ -145,6 +184,21 @@ export async function PUT(
     const depreciableCost = url.searchParams.get('depreciableCost');
     const dateAcquired = url.searchParams.get('dateAcquired');
 
+    // Map the method to handle special cases like DOUBLE_DECLINING
+    let depreciationMethodValue = null;
+    if (method) {
+      // Handle special case for DOUBLE_DECLINING which isn't in the enum
+      if (method === 'DOUBLE_DECLINING') {
+        depreciationMethodValue = 'DECLINING_BALANCE';
+      } else {
+        // Use the method directly for all other cases
+        depreciationMethodValue = method;
+      }
+    }
+
+    // Store the original method for our calculations
+    const originalMethod = method;
+
     // Update the asset with the new depreciation settings
     const updatedAsset = await prisma.asset.update({
       where: {
@@ -154,10 +208,41 @@ export async function PUT(
         depreciableCost: depreciableCost ? parseFloat(depreciableCost) : null,
         salvageValue: salvageValue ? parseFloat(salvageValue) : null,
         usefulLifeMonths: usefulLifeYears ? parseInt(usefulLifeYears) * 12 : null,
-        depreciationMethod: method || null,
+        depreciationMethod: depreciationMethodValue,
         depreciationStartDate: dateAcquired ? new Date(dateAcquired) : null,
       },
     });
+
+    // Get total units and units per year for Units of Activity method
+    const totalUnits = url.searchParams.get('totalUnits')
+      ? parseInt(url.searchParams.get('totalUnits')!)
+      : 10000; // Default value
+
+    const unitsPerYearParam = url.searchParams.get('unitsPerYear');
+    const unitsPerYear = unitsPerYearParam
+      ? JSON.parse(unitsPerYearParam)
+      : Array(parseInt(usefulLifeYears || '5')).fill(totalUnits / parseInt(usefulLifeYears || '5')); // Default to even distribution
+
+    // Use the original method for calculation
+    let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+
+    switch(originalMethod) {
+      case 'STRAIGHT_LINE':
+        calculationMethod = 'STRAIGHT_LINE';
+        break;
+      case 'DECLINING_BALANCE':
+      case 'DOUBLE_DECLINING':
+        calculationMethod = 'DECLINING_BALANCE';
+        break;
+      case 'SUM_OF_YEARS_DIGITS':
+        calculationMethod = 'SUM_OF_YEARS_DIGITS';
+        break;
+      case 'UNITS_OF_ACTIVITY':
+        calculationMethod = 'UNITS_OF_ACTIVITY';
+        break;
+      default:
+        calculationMethod = 'STRAIGHT_LINE'; // Default
+    }
 
     // Calculate depreciation with the updated settings
     const depreciationResults = calculateDepreciation({
@@ -165,8 +250,10 @@ export async function PUT(
       purchaseDate: (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate).toISOString(),
       usefulLife: usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
       salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
-      method: updatedAsset.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE',
-      depreciationRate: depreciationRate ? parseInt(depreciationRate) : (updatedAsset.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20),
+      method: calculationMethod,
+      depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
+      totalUnits: totalUnits,
+      unitsPerYear: unitsPerYear
     });
 
     // Generate chart data
@@ -236,9 +323,12 @@ export async function PUT(
         salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
         usefulLifeYears: Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
         usefulLifeMonths: updatedAsset.usefulLifeMonths || 60,
-        depreciationMethod: updatedAsset.depreciationMethod || 'STRAIGHT_LINE',
-        depreciationRate: depreciationRate ? parseInt(depreciationRate) : (updatedAsset.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20),
+        // Use the original method from the request, not the one stored in the database
+        depreciationMethod: originalMethod || 'STRAIGHT_LINE',
+        depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
         startDate: updatedAsset.depreciationStartDate || updatedAsset.purchaseDate,
+        totalUnits,
+        unitsPerYear,
       },
       depreciationResults,
       chartData,
