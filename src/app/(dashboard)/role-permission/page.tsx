@@ -10,7 +10,15 @@ interface Permission {
   description?: string;
 }
 
+import { useSession } from 'next-auth/react';
+
 export default function RolePermissionPage() {
+  const { data: session, status } = useSession();
+
+  if (status === 'loading') return <div>Loading...</div>;
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return <div className="p-8 text-center text-red-600 text-xl font-bold">Access Denied</div>;
+  }
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [selectedRole, setSelectedRole] = useState('ADMIN');
@@ -75,56 +83,221 @@ export default function RolePermissionPage() {
     }
   };
 
+  // --- Permission Categories ---
+  const permissionCategories: { [category: string]: string[] } = {
+    'Asset Management': [
+      'Asset view (list and detail)',
+      'Asset create',
+      'Asset edit',
+      'Asset delete',
+      'Asset depreciation view',
+      'Asset document upload/view',
+      'Asset document delete',
+    ],
+    'Asset Disposal': [
+      'Disposal approval',
+      'Disposal rejection',
+    ],
+    'Maintenance': [
+      'Maintenance request create',
+      'Maintenance request view',
+      'Maintenance request edit/update',
+      'Maintenance request delete/cancel',
+    ],
+    'User Management': [
+      'User view (list and detail)',
+      'User create/invite',
+      'User edit/update',
+      'User delete',
+      'User role assignment/change',
+      'Assign role to user',
+      'Password reset',
+    ],
+    'Dashboard & Settings': [
+      'Dashboard view',
+      'Settings view/update',
+      'Notifications (e.g. toast messages for actions)',
+      'Access denied handling (UI feedback, redirects)',
+    ],
+  };
+
+  // Group permissions by category
+  const categorizedPermissions: { [category: string]: Permission[] } = {};
+  Object.entries(permissionCategories).forEach(([category, permNames]) => {
+    categorizedPermissions[category] = permissions.filter(p => permNames.includes(p.name));
+  });
+  // Unassigned permissions
+  const assignedPerms = Object.values(permissionCategories).flat();
+  const uncategorized = permissions.filter(p => !assignedPerms.includes(p.name));
+
   return (
-    <div style={{ padding: 32, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: 24 }}>
-        Role & Permission Management
-      </h1>
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+    <div className="rp-container">
+      <h1 className="rp-title">Role & Permission Management</h1>
+      <div className="rp-rolebar">
         {roles.length === 0 ? (
-          <span style={{ color: 'red', marginRight: 16 }}>
+          <span className="rp-rolebar__error">
             No roles found. Please check your API or database.
           </span>
         ) : (
           <select
             value={selectedRole}
             onChange={e => setSelectedRole(e.target.value)}
-            style={{ fontSize: 16, padding: '8px 12px' }}
+            className="rp-rolebar__select"
           >
             {roles.map(role => (
               <option key={role} value={role}>{role}</option>
             ))}
           </select>
         )}
-        <Button onClick={handleSave} style={{ marginLeft: 16 }} disabled={saving}>
+        <Button onClick={handleSave} className="rp-rolebar__save" disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
-      <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 24, background: '#fff' }}>
+      <div className="rp-permissions-card">
         {loading ? (
           <div>Loading permissions...</div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 24,
-          }}>
-            {permissions.map(perm => (
-              <div key={perm.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                <Switch
-                  checked={rolePermissions.has(perm.id)}
-                  onCheckedChange={() => handleToggle(perm.id)}
-                  id={`perm-${perm.id}`}
-                />
-                <label htmlFor={`perm-${perm.id}`} style={{ marginLeft: 12 }}>
-                  <strong>{perm.name}</strong>
-                  {perm.description && <span style={{ color: '#888', marginLeft: 6 }}>({perm.description})</span>}
-                </label>
-              </div>
+          <div className="rp-permissions-grid">
+            {Object.entries(categorizedPermissions).map(([category, perms]) => (
+              perms.length > 0 && (
+                <div key={category} className="rp-permissions-section">
+                  <h2 className="rp-permissions-section__title">{category}</h2>
+                  {perms.map(perm => (
+                    <div key={perm.id} className="rp-permission-row">
+                      <Switch
+                        checked={rolePermissions.has(perm.id)}
+                        onCheckedChange={() => handleToggle(perm.id)}
+                        id={`perm-${perm.id}`}
+                      />
+                      <label htmlFor={`perm-${perm.id}`} className="rp-permission-label">
+                        <strong>{perm.name}</strong>
+                        {perm.description && <span className="rp-permission-desc">({perm.description})</span>}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )
             ))}
+            {uncategorized.length > 0 && (
+              <div className="rp-permissions-section">
+                <h2 className="rp-permissions-section__title">Other Permissions</h2>
+                {uncategorized.map(perm => (
+                  <div key={perm.id} className="rp-permission-row">
+                    <Switch
+                      checked={rolePermissions.has(perm.id)}
+                      onCheckedChange={() => handleToggle(perm.id)}
+                      id={`perm-${perm.id}`}
+                    />
+                    <label htmlFor={`perm-${perm.id}`} className="rp-permission-label">
+                      <strong>{perm.name}</strong>
+                      {perm.description && <span className="rp-permission-desc">({perm.description})</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
+      <style jsx>{`
+        .rp-container {
+          padding: 32px;
+          max-width: 1100px;
+          margin: 0 auto;
+        }
+        .rp-title {
+          text-align: center;
+          margin-bottom: 24px;
+          font-size: 2.2rem;
+          font-weight: 700;
+          color: #234;
+        }
+        .rp-rolebar {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 24px;
+          gap: 16px;
+        }
+        .rp-rolebar__error {
+          color: #e53e3e;
+          margin-right: 16px;
+        }
+        .rp-rolebar__select {
+          font-size: 1rem;
+          padding: 8px 14px;
+          border-radius: 6px;
+          border: 1px solid #cbd5e1;
+          background: #f8fafc;
+          outline: none;
+          transition: border 0.2s;
+        }
+        .rp-rolebar__select:focus {
+          border: 1.5px solid #2563eb;
+        }
+        .rp-rolebar__save {
+          margin-left: 8px;
+          min-width: 90px;
+        }
+        .rp-permissions-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 32px 24px;
+          background: #fff;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .rp-permissions-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          gap: 32px;
+        }
+        .rp-permissions-section {
+          background: #f8fafc;
+          border-radius: 10px;
+          padding: 20px 18px 16px 18px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .rp-permissions-section__title {
+          font-size: 1.18rem;
+          font-weight: 600;
+          margin-bottom: 14px;
+          color: #2563eb;
+        }
+        .rp-permission-row {
+          display: flex;
+          align-items: center;
+          margin-bottom: 10px;
+          padding: 8px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .rp-permission-row:last-child {
+          border-bottom: none;
+        }
+        .rp-permission-label {
+          margin-left: 14px;
+          font-size: 1rem;
+          color: #222;
+        }
+        .rp-permission-desc {
+          color: #888;
+          margin-left: 6px;
+          font-size: 0.98em;
+        }
+        @media (max-width: 700px) {
+          .rp-container {
+            padding: 10px;
+          }
+          .rp-permissions-card {
+            padding: 14px 4px;
+          }
+          .rp-permissions-grid {
+            gap: 14px;
+          }
+          .rp-permissions-section {
+            padding: 12px 8px 8px 8px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
