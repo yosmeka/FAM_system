@@ -3,6 +3,8 @@
 import React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { LinkAssetModal } from '@/components/LinkAssetModal';
+import { UnlinkAssetButton } from '@/components/UnlinkAssetButton';
+import { AssetLinkingTable } from '@/components/AssetLinkingTable';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -42,6 +44,7 @@ interface Asset {
   createdAt: string;
   updatedAt: string;
   linkedTo: LinkedAsset[];
+  linkedFrom: LinkedAsset[];
   depreciations: Array<{
     usefulLife: number;
   }>;
@@ -103,9 +106,36 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     const fetchAsset = async () => {
       setIsLoading(true);
       try {
+        console.log("INITIAL FETCH - Fetching asset data for ID:", params.id);
         const response = await fetch(`/api/assets/${params.id}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
+        console.log("INITIAL FETCH - Fetched asset data:", data);
+        console.log("INITIAL FETCH - Linked assets (linkedTo):", data.linkedTo);
+        console.log("INITIAL FETCH - Linked assets length:", data.linkedTo ? data.linkedTo.length : 0);
+        console.log("INITIAL FETCH - Linked from assets (linkedFrom):", data.linkedFrom);
+        console.log("INITIAL FETCH - Linked from length:", data.linkedFrom ? data.linkedFrom.length : 0);
+
+        // Check if the asset has any linked assets
+        if (data.linkedTo && data.linkedTo.length > 0) {
+          console.log("INITIAL FETCH - Asset has linked child assets:", data.linkedTo.length);
+          data.linkedTo.forEach((link, index) => {
+            console.log(`INITIAL FETCH - Child ${index + 1}:`, link.toAsset);
+          });
+        } else {
+          console.log("INITIAL FETCH - Asset has no linked child assets");
+        }
+
+        // Check if the asset is linked to any other assets
+        if (data.linkedFrom && data.linkedFrom.length > 0) {
+          console.log("INITIAL FETCH - Asset is linked to parent assets:", data.linkedFrom.length);
+          data.linkedFrom.forEach((link, index) => {
+            console.log(`INITIAL FETCH - Parent ${index + 1}:`, link.fromAsset);
+          });
+        } else {
+          console.log("INITIAL FETCH - Asset is not linked to any parent assets");
+        }
+
         setAsset(data);
       } catch (error) {
         console.error('Error fetching asset:', error);
@@ -130,11 +160,22 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
               const response = await fetch('/api/assets');
               if (!response.ok) throw new Error('Failed to fetch assets');
               const data = await response.json();
-              // Filter out current asset and already linked assets
-              const filteredAssets = data.filter((a: Asset) =>
-                a.id !== params.id &&
-                !asset?.linkedTo?.some(link => link.toAsset.id === a.id)
-              );
+              // Filter out current asset, already linked assets, and assets that are already parents
+              const filteredAssets = data.filter((a: Asset) => {
+                // Don't include the current asset
+                if (a.id === params.id) return false;
+
+                // Don't include assets that are already linked as children
+                if (asset?.linkedTo?.some(link => link.toAsset.id === a.id)) return false;
+
+                // Don't include assets that are already parents (have their own linked assets)
+                if (a.linkedTo && a.linkedTo.length > 0) return false;
+
+                // Don't include assets that are already children of other assets
+                if (a.linkedFrom && a.linkedFrom.length > 0) return false;
+
+                return true;
+              });
               setAvailableAssets(filteredAssets);
             } catch (error) {
               console.error('Error fetching assets:', error);
@@ -224,15 +265,23 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   }, [activeTab, params.id, asset, isLinkingAsset]);
 
   const handleLinkSuccess = () => {
-    // Refetch the asset to get updated linked assets
+    // Refresh the asset data without reloading the page
+    console.log("Link/unlink operation successful, refreshing data...");
+
+    // Refetch the asset data
     const fetchAsset = async () => {
       try {
+        setIsLoading(true);
         const response = await fetch(`/api/assets/${params.id}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
+        console.log("Refreshed asset data:", data);
         setAsset(data);
       } catch (error) {
         console.error('Error fetching asset:', error);
+        toast.error('Failed to refresh asset data');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -356,14 +405,22 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete asset');
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+
+        if (errorData.code === 'P2003') {
+          toast.error(errorData.details || 'This asset has related records that need to be deleted first.');
+        } else {
+          toast.error(errorData.details || 'Failed to delete asset');
+        }
+
+        throw new Error(errorData.details || 'Failed to delete asset');
       }
 
       toast.success('Asset deleted successfully');
       router.push('/assets');
       router.refresh();
     } catch (error) {
-      toast.error('Failed to delete asset');
       console.error('Error deleting asset:', error);
     }
   };
@@ -442,94 +499,20 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   };
 
   const renderLinkingTab = () => {
-    const totalValue = asset?.linkedTo?.reduce<number>((sum, link) => sum + link.toAsset.purchasePrice, 0) || 0;
-    const totalDepreciation = asset?.linkedTo?.reduce<number>((sum, link) => {
-      const depreciationToDate = link.toAsset.purchasePrice - link.toAsset.currentValue;
-      return sum + depreciationToDate;
-    }, 0) || 0;
-
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">Linked Assets for: {asset?.name}</h2>
-          <button
-            onClick={() => setIsLinkingAsset(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            + Link New Asset
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asset Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acquisition</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Useful Life</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciation to Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {asset?.linkedTo?.map((link) => {
-                const linkedAsset = link.toAsset;
-                const depreciationToDate = linkedAsset.purchasePrice - linkedAsset.currentValue;
-                return (
-                  <tr key={link.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{linkedAsset.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{linkedAsset.type || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(linkedAsset.purchaseDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {linkedAsset.purchasePrice.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {linkedAsset.depreciations?.[0]?.usefulLife || 'N/A'} months
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {depreciationToDate.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
-                      <Link href={`/assets/${linkedAsset.id}`}>View</Link>
-                    </td>
-                  </tr>
-                );
-              })}
-              {(!asset?.linkedTo || asset.linkedTo.length === 0) && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
-                    No linked assets found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Total Linked Assets Value</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">
-              {totalValue.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Total Depreciation (Linked Items)</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">
-              {totalDepreciation.toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
-            </p>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900">Combined Depreciation</h3>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">
-              {((asset?.purchasePrice || 0) - (asset?.currentValue || 0) + totalDepreciation).toLocaleString('en-US', { style: 'currency', currency: 'ETB' })}
-            </p>
-          </div>
-        </div>
+      <div>
+        <LinkAssetModal
+          open={isLinkingAsset}
+          onClose={() => setIsLinkingAsset(false)}
+          onSuccess={handleLinkSuccess}
+          currentAssetId={params.id}
+          availableAssets={availableAssets}
+        />
+        <AssetLinkingTable
+          asset={asset}
+          onLinkClick={() => setIsLinkingAsset(true)}
+          onUnlinkSuccess={handleLinkSuccess}
+        />
       </div>
     );
   };
@@ -539,18 +522,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       case 'history':
         return renderHistoryTab();
       case 'linking':
-        return (
-          <div>
-            <LinkAssetModal
-              open={isLinkingAsset}
-              onClose={() => setIsLinkingAsset(false)}
-              onSuccess={handleLinkSuccess}
-              currentAssetId={params.id}
-              availableAssets={availableAssets}
-            />
-            {renderLinkingTab()}
-          </div>
-        );
+        return renderLinkingTab();
       case 'depreciation':
         return (
           <div ref={targetRef}>

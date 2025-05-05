@@ -14,13 +14,91 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // First, clean up any self-referencing links
+    await cleanupSelfReferencingLinks(params.id);
+
+    // Fetch the asset with its linked assets
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
       },
+      include: {
+        linkedTo: {
+          include: {
+            toAsset: true
+          }
+        },
+        linkedFrom: {
+          include: {
+            fromAsset: true
+          }
+        }
+      }
     });
 
+    console.log("API DEBUGGING - GET ASSET");
+    console.log("Asset ID:", params.id);
+    console.log("Asset found:", !!asset);
+    if (asset) {
+      console.log("LinkedTo count:", asset.linkedTo?.length || 0);
+      console.log("LinkedFrom count:", asset.linkedFrom?.length || 0);
+
+      // Check if linkedTo has the expected structure
+      if (asset.linkedTo && asset.linkedTo.length > 0) {
+        console.log("First linkedTo item:", JSON.stringify(asset.linkedTo[0]));
+      }
+
+      // Check if linkedFrom has the expected structure
+      if (asset.linkedFrom && asset.linkedFrom.length > 0) {
+        console.log("First linkedFrom item:", JSON.stringify(asset.linkedFrom[0]));
+      }
+    }
+
     console.log("API GET asset data:", asset);
+    console.log("API GET linkedTo:", asset?.linkedTo);
+    console.log("API GET linkedTo length:", asset?.linkedTo?.length || 0);
+
+    // Check if there are any linked assets in the database
+    const linkedAssetsCount = await prisma.linkedAsset.count({
+      where: {
+        fromAssetId: params.id
+      }
+    });
+
+    console.log("Direct DB query linkedAssets count:", linkedAssetsCount);
+
+    // Helper function to clean up self-referencing links
+    async function cleanupSelfReferencingLinks(assetId: string) {
+      try {
+        // Find any self-referencing links
+        const selfLinks = await prisma.linkedAsset.findMany({
+          where: {
+            AND: [
+              { fromAssetId: assetId },
+              { toAssetId: assetId }
+            ]
+          }
+        });
+
+        if (selfLinks.length > 0) {
+          console.log(`Found ${selfLinks.length} self-referencing links for asset ${assetId}. Cleaning up...`);
+
+          // Delete all self-referencing links
+          await prisma.linkedAsset.deleteMany({
+            where: {
+              AND: [
+                { fromAssetId: assetId },
+                { toAssetId: assetId }
+              ]
+            }
+          });
+
+          console.log(`Successfully deleted ${selfLinks.length} self-referencing links.`);
+        }
+      } catch (error) {
+        console.error("Error cleaning up self-referencing links:", error);
+      }
+    }
 
     if (!asset) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
@@ -154,7 +232,55 @@ export async function DELETE(
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    // Delete the asset (cascade will handle related records)
+    // First delete all related records manually to avoid foreign key constraint issues
+    console.log(`Deleting all related records for asset ${params.id}`);
+
+    // Delete asset depreciations
+    await prisma.assetDepreciation.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete depreciation records
+    await prisma.depreciation.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete linked assets (both directions)
+    await prisma.linkedAsset.deleteMany({
+      where: {
+        OR: [
+          { fromAssetId: params.id },
+          { toAssetId: params.id }
+        ]
+      }
+    });
+
+    // Delete history records
+    await prisma.assetHistory.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete maintenance records
+    await prisma.maintenance.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete transfer records
+    await prisma.transfer.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete disposal records
+    await prisma.disposal.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Delete document records
+    await prisma.document.deleteMany({
+      where: { assetId: params.id }
+    });
+
+    // Finally delete the asset itself
     await prisma.asset.delete({
       where: {
         id: params.id,
@@ -164,10 +290,25 @@ export async function DELETE(
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Error deleting asset:', error);
+
+    // Check for specific Prisma errors
+    if (error.code === 'P2003') {
+      return NextResponse.json(
+        {
+          error: 'Failed to delete asset',
+          code: 'P2003',
+          details: 'This asset has related records that need to be deleted first. Please contact support.',
+          technicalDetails: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
         error: 'Failed to delete asset',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },
       { status: 500 }
     );

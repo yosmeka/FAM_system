@@ -15,6 +15,18 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        linkedTo: {
+          include: {
+            toAsset: true
+          }
+        },
+        linkedFrom: {
+          include: {
+            fromAsset: true
+          }
+        }
+      }
     });
 
     return NextResponse.json(assets);

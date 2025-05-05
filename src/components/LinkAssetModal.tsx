@@ -28,6 +28,10 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
 
   const handleLinkAsset = async (toAssetId: string) => {
     try {
+      console.log("DEBUGGING - Linking asset");
+      console.log("DEBUGGING - Current asset ID:", currentAssetId);
+      console.log("DEBUGGING - Target asset ID:", toAssetId);
+
       setIsLoading(true);
       const response = await fetch(`/api/assets/${currentAssetId}/link`, {
         method: 'POST',
@@ -37,15 +41,25 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
         body: JSON.stringify({ toAssetId }),
       });
 
+      console.log("DEBUGGING - Link response status:", response.status);
+
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        const errorText = await response.text();
+        console.error("DEBUGGING - Link error:", errorText);
+        throw new Error(errorText);
       }
 
+      const data = await response.json();
+      console.log("DEBUGGING - Link success response:", data);
+
       toast.success('Asset linked successfully');
+
+      // Call onSuccess to refresh the parent component
+      console.log("DEBUGGING - Calling onSuccess to refresh data");
       onSuccess();
       onClose();
     } catch (error) {
+      console.error("DEBUGGING - Link error:", error);
       toast.error(error instanceof Error ? error.message : 'Failed to link asset');
     } finally {
       setIsLoading(false);
