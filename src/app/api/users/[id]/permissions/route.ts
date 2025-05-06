@@ -3,6 +3,7 @@ import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+
 // GET: List all permissions for a user (explicit + effective)
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
