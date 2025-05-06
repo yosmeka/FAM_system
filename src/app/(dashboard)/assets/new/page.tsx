@@ -97,7 +97,7 @@ export default function NewAssetPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 bg-white shadow-md rounded-2xl p-8 border border-red-100"
+        className="space-y-6 bg-white dark:bg-gray-900 shadow-md rounded-2xl p-8 border border-red-100"
       >
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {/* Input fields */}
@@ -115,7 +115,7 @@ export default function NewAssetPage() {
             { id: 'nextMaintenance', label: 'Next Maintenance Date', type: 'date' },
           ].map(({ id, label, type }) => (
             <div key={id}>
-              <label htmlFor={id} className="block text-sm font-semibold text-gray-800 mb-1">
+              <label htmlFor={id} className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">
                 {label}
               </label>
               <input
@@ -125,7 +125,7 @@ export default function NewAssetPage() {
                 required
                 value={formData[id as keyof typeof formData] as string | number | undefined}
                 onChange={handleChange}
-                className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white shadow-sm text-sm placeholder:text-gray-400"
+                className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white dark:bg-gray-900 shadow-sm text-sm placeholder:text-gray-400"
                 placeholder={`Enter ${label.toLowerCase()}`}
               />
             </div>
@@ -133,7 +133,7 @@ export default function NewAssetPage() {
 
           {/* Category dropdown */}
           <div>
-            <label htmlFor="category" className="block text-sm font-semibold text-gray-800 mb-1">
+            <label htmlFor="category" className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">
               Category
             </label>
             <select
@@ -142,7 +142,7 @@ export default function NewAssetPage() {
               required
               value={formData.category}
               onChange={handleChange}
-              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
+              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white dark:bg-gray-900 hover:bg-gray-100 shadow-sm text-sm"
             >
               <option value="">Select category</option>
               <option value="Computer">Computer</option>
@@ -156,7 +156,7 @@ export default function NewAssetPage() {
 
           {/* Status dropdown */}
           <div>
-            <label htmlFor="status" className="block text-sm font-semibold text-gray-800 mb-1">
+            <label htmlFor="status" className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">
               Status
             </label>
             <select
@@ -165,7 +165,7 @@ export default function NewAssetPage() {
               required
               value={formData.status}
               onChange={handleChange}
-              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
+              className="block w-full h-10 px-3 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white dark:bg-gray-900 hover:bg-gray-100 shadow-sm text-sm"
             >
               <option value="">Select status</option>
               <option value="ACTIVE">Active</option>
@@ -178,7 +178,7 @@ export default function NewAssetPage() {
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-semibold text-gray-800 mb-1">
+          <label htmlFor="description" className="block text-sm font-semibold text-gray-800 dark:text-gray-100 mb-1">
             Description
           </label>
           <textarea
@@ -188,7 +188,7 @@ export default function NewAssetPage() {
             value={formData.description}
             onChange={handleChange}
             placeholder="Add a short description of the asset..."
-            className="block w-full px-3 py-2 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white hover:bg-gray-100 shadow-sm text-sm"
+            className="block w-full px-3 py-2 rounded-md border border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-white dark:bg-gray-900 hover:bg-gray-100 shadow-sm text-sm"
           />
         </div>
 
@@ -197,7 +197,7 @@ export default function NewAssetPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
           >
             Cancel
           </button>

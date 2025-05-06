@@ -4,6 +4,9 @@ import React, { Fragment } from "react";
 import { Disclosure, Menu, Transition } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
+
+import NotificationBell from "./NotificationBell";
+import AccountInfoModal from "./AccountInfoModal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -53,6 +56,7 @@ function classNames(...classes: string[]) {
 export default function Navbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const [showAccountInfo, setShowAccountInfo] = React.useState(false);
 
   if (!session) return null;
 
@@ -102,6 +106,11 @@ export default function Navbar() {
                 </div>
               </div>
               <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+                {/* Theme Switcher */}
+                
+                {/* Notification Bell */}
+                <NotificationBell />
+                {/* Profile Dropdown */}
                 <Menu as="div" className="relative ml-3">
                   <div>
                     <Menu.Button className="relative flex rounded-full bg-red-600 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-red-600">
@@ -121,14 +130,45 @@ export default function Navbar() {
                     leaveFrom="transform opacity-100 scale-100"
                     leaveTo="transform opacity-0 scale-95"
                   >
-                    <Menu.Items className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                    <Menu.Items className="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-xl bg-white py-2 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <div className="font-semibold text-gray-900 text-base">{session.user?.name}</div>
+                        <div className="text-xs text-gray-500">{session.user?.email}</div>
+                      </div>
+                      <Menu.Item>
+                        {({ active }: { active: boolean }) => (
+                          <button
+                            className={classNames(
+                              active ? "bg-gray-100" : "",
+                              "block w-full px-4 py-2 text-left text-sm text-gray-700"
+                            )}
+                            onClick={() => setShowAccountInfo(true)}
+                          >
+                            Account Information
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }: { active: boolean }) => (
+                          <Link
+                            href="/account-settings"
+                            className={classNames(
+                              active ? "bg-gray-100" : "",
+                              "block w-full px-4 py-2 text-left text-sm text-gray-700"
+                            )}
+                          >
+                            Account Settings
+                          </Link>
+                        )}
+                      </Menu.Item>
+                      <div className="border-t border-gray-100 my-1" />
                       <Menu.Item>
                         {({ active }: { active: boolean }) => (
                           <button
                             onClick={() => signOut()}
                             className={classNames(
                               active ? "bg-gray-100" : "",
-                              "block w-full px-4 py-2 text-left text-sm text-gray-700"
+                              "block w-full px-4 py-2 text-left text-sm text-red-600 font-semibold"
                             )}
                           >
                             Sign out

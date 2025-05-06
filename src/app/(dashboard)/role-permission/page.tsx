@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Switch } from '@/components/ui/Switch';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'react-hot-toast';
 
@@ -164,9 +163,10 @@ export default function RolePermissionPage() {
                   <h2 className="rp-permissions-section__title">{category}</h2>
                   {perms.map(perm => (
                     <div key={perm.id} className="rp-permission-row">
-                      <Switch
+                      <input
+                        type="checkbox"
                         checked={rolePermissions.has(perm.id)}
-                        onCheckedChange={() => handleToggle(perm.id)}
+                        onChange={() => handleToggle(perm.id)}
                         id={`perm-${perm.id}`}
                       />
                       <label htmlFor={`perm-${perm.id}`} className="rp-permission-label">
@@ -183,9 +183,10 @@ export default function RolePermissionPage() {
                 <h2 className="rp-permissions-section__title">Other Permissions</h2>
                 {uncategorized.map(perm => (
                   <div key={perm.id} className="rp-permission-row">
-                    <Switch
+                    <input
+                      type="checkbox"
                       checked={rolePermissions.has(perm.id)}
-                      onCheckedChange={() => handleToggle(perm.id)}
+                      onChange={() => handleToggle(perm.id)}
                       id={`perm-${perm.id}`}
                     />
                     <label htmlFor={`perm-${perm.id}`} className="rp-permission-label">

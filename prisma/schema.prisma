@@ -8,6 +8,8 @@ datasource db {
 }
 
 model User {
+  // ...existing fields...
+  userPermissions   UserPermission[]
   id                  String        @id @default(cuid())
   name                String?
   email               String        @unique
@@ -185,10 +187,22 @@ enum Role {
 }
 
 model Permission {
+  // ...existing fields...
+  userPermissions   UserPermission[]
   id              String           @id @default(cuid())
   name            String           @unique
   description     String?
   rolePermissions RolePermission[]
+}
+
+model UserPermission {
+  id           String      @id @default(cuid())
+  userId       String
+  permissionId String
+  granted      Boolean     // true = explicitly granted, false = explicitly denied
+  user         User        @relation(fields: [userId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+  @@unique([userId, permissionId])
 }
 
 model RolePermission {

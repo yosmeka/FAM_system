@@ -22,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${inter.className}`}>
         <SessionProvider>
           <AuthProvider>
             <PermissionsProvider>

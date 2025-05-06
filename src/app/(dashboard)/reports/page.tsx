@@ -32,7 +32,7 @@ export default function ReportsPage() {
   const router = useRouter();
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
       <h1 className="text-2xl font-semibold mb-6">Reports Dashboard</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

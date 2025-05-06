@@ -27,9 +27,9 @@ export default function AssetsPage() {
   const { checkPermission } = usePermissions();
   if (!checkPermission('Asset view (list and detail)')) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
-        <p className="mt-2 text-gray-600">You do not have permission to view assets.</p>
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+        <h1 className="text-2xl font-semibold">Access Denied</h1>
+        <p className="mt-2">You do not have permission to view assets.</p>
       </div>
     );
   }

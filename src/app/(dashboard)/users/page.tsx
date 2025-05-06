@@ -15,6 +15,7 @@ type User = {
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { usePermissionsContext } from "@/contexts/PermissionsContext";
+import UserPermissionsModal from "./UserPermissionsModal";
 
 export default function UsersPage() {
   const { permissions } = usePermissionsContext();
@@ -37,6 +38,7 @@ export default function UsersPage() {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', role: 'USER' });
+  const [permissionsModalUser, setPermissionsModalUser] = useState<{id: string, email: string} | null>(null);
 
   // Open edit modal and prefill form
   const handleEditClick = (user: User) => {
@@ -217,6 +219,13 @@ export default function UsersPage() {
                         Delete
                       </button>
                     )}
+                    {/* Permissions Button */}
+                    <button
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 mr-2"
+                      onClick={() => setPermissionsModalUser({id: user.id, email: user.email})}
+                    >
+                      Permissions
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -410,6 +419,15 @@ export default function UsersPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* User Permissions Modal */}
+      {permissionsModalUser && (
+        <UserPermissionsModal
+          userId={permissionsModalUser.id}
+          userEmail={permissionsModalUser.email}
+          open={!!permissionsModalUser}
+          onClose={() => setPermissionsModalUser(null)}
+        />
       )}
       {/* Toast Notification Container */}
       <ToastContainer />
