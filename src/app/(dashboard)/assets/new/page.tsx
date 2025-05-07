@@ -5,9 +5,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { AssetForm } from '@/components/AssetForm';
 
 export default function NewAssetPage() {
-  const { canManageAssets } = usePermissions();
+  const { checkPermission } = usePermissions();
 
-  if (!canManageAssets()) {
+  if (!checkPermission('Asset create')) {
     return (
       <div className="p-4">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>

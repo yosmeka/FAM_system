@@ -68,55 +68,59 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Link Asset</DialogTitle>
+      <DialogContent className="max-w-2xl bg-white rounded-lg shadow-lg">
+        <DialogHeader className="border-b pb-4 mb-4">
+          <DialogTitle className="text-xl font-bold text-gray-900">Link Child Asset</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="search">Search Assets</Label>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="search" className="text-sm font-medium text-gray-700">Search Assets</Label>
             <Input
               id="search"
               placeholder="Search by name or serial number..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
 
-          <ScrollArea className="h-[400px] rounded-md border p-4">
-            <div className="space-y-4">
-              {filteredAssets.length === 0 ? (
-                <p className="text-center text-gray-500">No assets found</p>
-              ) : (
-                filteredAssets.map((asset) => (
-                  <div
-                    key={asset.id}
-                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50"
-                  >
-                    <div>
-                      <h3 className="font-medium">{asset.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        Serial: {asset.serialNumber} | Type: {asset.type}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Value: {asset.purchasePrice.toLocaleString('en-US', {
-                          style: 'currency',
-                          currency: 'ETB',
-                        })}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={() => handleLinkAsset(asset.id)}
-                      disabled={isLoading}
+          <div className="border rounded-md shadow-sm">
+            <ScrollArea className="h-[400px] p-4">
+              <div className="space-y-4">
+                {filteredAssets.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">No assets found</p>
+                ) : (
+                  filteredAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50 transition-colors"
                     >
-                      Link
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
+                      <div>
+                        <h3 className="font-medium text-gray-900">{asset.name}</h3>
+                        <p className="text-sm text-gray-500">
+                          Serial: {asset.serialNumber} {asset.type && `| Type: ${asset.type}`}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Value: {asset.purchasePrice.toLocaleString('en-US', {
+                            style: 'currency',
+                            currency: 'ETB',
+                          })}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => handleLinkAsset(asset.id)}
+                        disabled={isLoading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md"
+                      >
+                        {isLoading ? 'Linking...' : 'Link'}
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

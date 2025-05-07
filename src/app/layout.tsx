@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast"; // ✅ Use the one from react-hot-toa
 import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/query-provider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
+import { PermissionsProvider } from "@/contexts/PermissionsContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,13 +22,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${inter.className}`}>
         <SessionProvider>
           <AuthProvider>
-            <QueryProvider>
-              {children}
-              <Toaster position="top-right" />
-            </QueryProvider>
+            <PermissionsProvider>
+              <QueryProvider>
+                {children}
+                <Toaster position="top-right" />
+              </QueryProvider>
+            </PermissionsProvider>
           </AuthProvider>
         </SessionProvider>
       </body>

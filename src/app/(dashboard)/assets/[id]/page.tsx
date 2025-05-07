@@ -50,10 +50,19 @@ interface Asset {
   }>;
 }
 
-export default function AssetDetailsPage({ params }: { params: { id: string } }) {
+export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { checkPermission } = usePermissions();
+  if (!checkPermission('Asset view (list and detail)')) {
+    return (
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
+        <h1 className="text-2xl font-semibold">Access Denied</h1>
+        <p className="mt-2">You do not have permission to view asset details.</p>
+      </div>
+    );
+  }
+  const resolvedParams = React.use(params);
   const router = useRouter();
   const { data: session } = useSession();
-  const { canManageAssets } = usePermissions();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
@@ -688,8 +697,8 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
   if (!asset) {
     return (
       <div className="p-4">
-        <h1 className="text-2xl font-semibold text-gray-900">Asset Not Found</h1>
-        <p className="mt-2 text-gray-600">The requested asset could not be found.</p>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Asset Not Found</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-300">The requested asset could not be found.</p>
       </div>
     );
   }
@@ -717,12 +726,12 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       case 'DISPOSED':
         return 'text-red-600';
       default:
-        return 'text-gray-600';
+        return 'text-gray-600 dark:text-gray-300';
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 bg-white shadow-md rounded-lg">
+    <div className="max-w-6xl mx-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-md rounded-lg">
       {/* Header Bar */}
       <div className="bg-red-500 text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <div className="flex items-center gap-4 mb-2 md:mb-0">
@@ -732,19 +741,27 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
             <p className="text-sm">Asset Tag ID: {asset.serialNumber} • Site: {asset.location}</p>
           </div>
         </div>
-        {canManageAssets() && (
-          <button
+        {checkPermission('Asset edit') && (
+          <button 
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
             Edit
           </button>
         )}
+        {checkPermission('Asset delete') && (
+          <button 
+            onClick={handleDelete}
+            className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
+          >
+            Delete
+          </button>
+        )}
       </div>
 
       {/* Asset Info Section */}
       <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <div className="w-48 h-48 bg-gray-100 border rounded flex items-center justify-center">
+        <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 border rounded flex items-center justify-center">
           <span className="text-gray-400">No image</span>
         </div>
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">

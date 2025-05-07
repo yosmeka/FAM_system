@@ -8,8 +8,25 @@ import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import type { MaintenanceRequest, MaintenanceStatus } from '@/types/maintenance';
 import type { Column } from '@/types/reports';
 
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
+
 export default function MaintenancePage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  if (status === 'loading') return null;
+  if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+    return null;
+  }
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+      router.replace('/dashboard');
+      toast.error('Access denied: Only Admins and Managers can view maintenance requests.');
+    }
+  }, [session, status, router]);
+
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState<MaintenanceRequest[]>([]);
 
@@ -31,6 +48,7 @@ export default function MaintenancePage() {
   };
 
   const getStatusVariant = (status: MaintenanceStatus): 'success' | 'warning' | 'danger' | 'default' => {
+
     switch (status) {
       case 'PENDING':
         return 'warning';

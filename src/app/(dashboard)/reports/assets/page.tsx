@@ -51,9 +51,12 @@ export default function AssetReportsPage() {
   };
 
   const getFilterOptions = () => {
-    const data = filterType === 'category' ? assetsByCategory : assetsByDepartment;
-    // Get unique categories/departments
-    return Array.from(new Set(data.map(item => item.category)));
+    if (filterType === 'category') {
+      // Remove duplicates for unique keys
+      return Array.from(new Set(assetsByCategory.map(item => item.category)));
+    }
+    return Array.from(new Set(assetsByDepartment.map(item => item.category)));
+
   };
 
   const getFilteredData = () => {
@@ -127,8 +130,8 @@ export default function AssetReportsPage() {
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
           >
             <option value="all">All {filterType}s</option>
-            {getFilterOptions().map((option) => (
-              <option key={option} value={option}>
+            {getFilterOptions().map((option, idx) => (
+              <option key={option + '-' + idx} value={option}>
                 {option}
               </option>
             ))}

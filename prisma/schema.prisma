@@ -8,6 +8,8 @@ datasource db {
 }
 
 model User {
+  // ...existing fields...
+  userPermissions   UserPermission[]
   id                  String        @id @default(cuid())
   name                String?
   email               String        @unique
@@ -17,9 +19,9 @@ model User {
   image               String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
-  disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
+  disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
 }
 
 model Asset {
@@ -156,6 +158,7 @@ model AssetHistory {
   @@index([assetId])
 }
 
+
 enum AssetStatus {
   ACTIVE
   TRANSFERRED
@@ -238,4 +241,30 @@ model LinkedAsset {
   @@unique([fromAssetId, toAssetId])
   @@index([fromAssetId])
   @@index([toAssetId])
+}
+model Permission {
+  // ...existing fields...
+  userPermissions   UserPermission[]
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+}
+
+model UserPermission {
+  id           String      @id @default(cuid())
+  userId       String
+  permissionId String
+  granted      Boolean     // true = explicitly granted, false = explicitly denied
+  user         User        @relation(fields: [userId], references: [id])
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+  @@unique([userId, permissionId])
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  @@unique([role, permissionId])
 }
