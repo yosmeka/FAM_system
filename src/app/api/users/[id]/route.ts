@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 // Permission check helper
-async function hasPermission(user: { role: string }, permissionName: string): Promise<boolean> {
+export async function hasPermission(user: { role: string }, permissionName: string): Promise<boolean> {
   if (user.role === 'ADMIN') return true;
   const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
   if (!permission) return false;
