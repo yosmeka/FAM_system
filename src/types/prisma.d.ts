@@ -9,4 +9,4 @@ declare module '@prisma/client' {
     $connect(): Promise<void>;
     $disconnect(): Promise<void>;
   }
-} 
+}

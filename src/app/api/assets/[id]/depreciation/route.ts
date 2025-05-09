@@ -12,7 +12,7 @@ export async function GET(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Fetch the asset with its depreciation settings and linked assets
+    // Fetch the asset with its depreciation settings, linked assets, and capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
@@ -28,6 +28,12 @@ export async function GET(
         usefulLifeMonths: true,
         depreciationMethod: true,
         depreciationStartDate: true,
+        // Get capital improvements
+        capitalImprovements: {
+          orderBy: {
+            improvementDate: 'asc',
+          },
+        },
         // Get child assets (assets linked from this asset)
         linkedFrom: {
           include: {
@@ -40,6 +46,7 @@ export async function GET(
                 currentValue: true,
                 depreciableCost: true,
                 salvageValue: true,
+                capitalImprovements: true,
               }
             }
           }
@@ -56,6 +63,7 @@ export async function GET(
                 currentValue: true,
                 depreciableCost: true,
                 salvageValue: true,
+                capitalImprovements: true,
               }
             }
           }
@@ -76,10 +84,14 @@ export async function GET(
     const queryDateAcquired = url.searchParams.get('dateAcquired');
     const queryCalculateAsGroup = url.searchParams.get('calculateAsGroup');
 
+    // Calculate total capital improvements cost
+    const capitalImprovementsCost = asset.capitalImprovements?.reduce((sum, improvement) => sum + improvement.cost, 0) || 0;
+    console.log("Total capital improvements cost:", capitalImprovementsCost);
+
     // Use query parameters if provided, otherwise use asset's settings
     const depreciableCost = queryDepreciableCost
       ? parseFloat(queryDepreciableCost)
-      : (asset.depreciableCost || asset.purchasePrice);
+      : (asset.depreciableCost || asset.purchasePrice) + capitalImprovementsCost;
 
     const salvageValue = querySalvageValue
       ? parseFloat(querySalvageValue)
@@ -174,7 +186,8 @@ export async function GET(
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear,
       calculateAsGroup: calculateAsGroup,
-      linkedAssets: linkedAssets
+      linkedAssets: linkedAssets,
+      capitalImprovements: asset.capitalImprovements || []
     });
 
     // Generate chart data
@@ -230,12 +243,18 @@ export async function PUT(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Check if the asset exists and fetch linked assets
+    // Check if the asset exists and fetch linked assets and capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
       },
       include: {
+        // Get capital improvements
+        capitalImprovements: {
+          orderBy: {
+            improvementDate: 'asc',
+          },
+        },
         // Get child assets (assets linked from this asset)
         linkedFrom: {
           include: {
@@ -248,6 +267,7 @@ export async function PUT(
                 currentValue: true,
                 depreciableCost: true,
                 salvageValue: true,
+                capitalImprovements: true,
               }
             }
           }
@@ -264,6 +284,7 @@ export async function PUT(
                 currentValue: true,
                 depreciableCost: true,
                 salvageValue: true,
+                capitalImprovements: true,
               }
             }
           }
@@ -301,6 +322,10 @@ export async function PUT(
 
     // Store the original method for our calculations
     const originalMethod = method;
+
+    // Calculate total capital improvements cost
+    const capitalImprovementsCost = asset.capitalImprovements?.reduce((sum: number, improvement: any) => sum + improvement.cost, 0) || 0;
+    console.log("PUT: Total capital improvements cost:", capitalImprovementsCost);
 
     // Update the asset with the new depreciation settings
     const updatedAsset = await prisma.asset.update({
@@ -371,7 +396,7 @@ export async function PUT(
 
     // Calculate depreciation with the updated settings
     const depreciationResults = calculateGroupDepreciation({
-      purchasePrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
+      purchasePrice: (updatedAsset.depreciableCost || updatedAsset.purchasePrice) + capitalImprovementsCost,
       purchaseDate: (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate).toISOString(),
       usefulLife: usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
       salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
@@ -380,7 +405,8 @@ export async function PUT(
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear,
       calculateAsGroup: calculateAsGroup,
-      linkedAssets: linkedAssets
+      linkedAssets: linkedAssets,
+      capitalImprovements: asset.capitalImprovements || []
     });
 
     // Generate chart data

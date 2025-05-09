@@ -57,6 +57,7 @@ model Asset {
   transferRequests    Transfer[]
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
+  capitalImprovements CapitalImprovement[]
 }
 
 model Transfer {
@@ -267,4 +268,20 @@ model RolePermission {
   permissionId String
   permission   Permission @relation(fields: [permissionId], references: [id])
   @@unique([role, permissionId])
+}
+
+model CapitalImprovement {
+  id                String   @id @default(cuid())
+  assetId           String
+  description       String
+  improvementDate   DateTime
+  cost              Float
+  usefulLifeMonths  Int?
+  depreciationMethod DepreciationMethod?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
 }

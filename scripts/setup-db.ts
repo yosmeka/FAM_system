@@ -15,7 +15,7 @@ async function main() {
     // Create admin user
     console.log('👤 Creating admin user...');
     const password = await hash('admin123', 12);
-    
+
     const admin = await prisma.user.upsert({
       where: { email: 'admin@example.com' },
       update: {},
@@ -38,4 +38,4 @@ async function main() {
   }
 }
 
-main(); 
+main();

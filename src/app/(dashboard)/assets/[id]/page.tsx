@@ -6,6 +6,7 @@ import { LinkAssetModal } from '@/components/LinkAssetModal';
 import { UnlinkAssetButton } from '@/components/UnlinkAssetButton';
 import { AssetLinkingTable } from '@/components/AssetLinkingTable';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
+import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -592,6 +593,8 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         return renderHistoryTab();
       case 'linking':
         return renderLinkingTab();
+      case 'capital_improvment':
+        return <CapitalImprovementsTab assetId={params.id} />;
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -1031,7 +1034,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'reserve', 'audit', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'Capital_Improvment', 'audit', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${

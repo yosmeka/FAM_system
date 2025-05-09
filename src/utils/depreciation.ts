@@ -7,6 +7,16 @@ export interface DepreciationResult {
   bookValue: number;
 }
 
+export interface CapitalImprovement {
+  id: string;
+  description: string;
+  improvementDate: string;
+  cost: number;
+  usefulLifeMonths?: number | null;
+  depreciationMethod?: string | null;
+  notes?: string | null;
+}
+
 export interface DepreciationInput {
   purchasePrice: number;
   purchaseDate: string;
@@ -18,6 +28,7 @@ export interface DepreciationInput {
   unitsPerYear?: number[]; // for units of activity method - estimated usage per year
   calculateAsGroup?: boolean; // whether to calculate as a group with linked assets
   linkedAssets?: LinkedAssetForDepreciation[]; // linked assets for group calculation
+  capitalImprovements?: CapitalImprovement[]; // capital improvements that increase the asset value
 }
 
 export interface LinkedAssetForDepreciation {
@@ -203,14 +214,18 @@ export function calculateGroupDepreciation(input: DepreciationInput): Depreciati
   console.log("calculateGroupDepreciation called with:", {
     calculateAsGroup: input.calculateAsGroup,
     linkedAssetsCount: input.linkedAssets?.length || 0,
+    capitalImprovementsCount: input.capitalImprovements?.length || 0,
     purchasePrice: input.purchasePrice,
     salvageValue: input.salvageValue,
     method: input.method
   });
 
-  if (!input.calculateAsGroup || !input.linkedAssets || input.linkedAssets.length === 0) {
-    console.log("Not calculating as group - using regular calculation");
-    // If not calculating as group or no linked assets, just use regular calculation
+  // Check if we have capital improvements
+  const hasCapitalImprovements = input.capitalImprovements && input.capitalImprovements.length > 0;
+
+  // If not calculating as group and no capital improvements, just use regular calculation
+  if ((!input.calculateAsGroup || !input.linkedAssets || input.linkedAssets.length === 0) && !hasCapitalImprovements) {
+    console.log("Not calculating as group and no capital improvements - using regular calculation");
     return calculateDepreciation(input);
   }
 
@@ -220,30 +235,39 @@ export function calculateGroupDepreciation(input: DepreciationInput): Depreciati
   let totalSalvageValue = input.salvageValue;
   let earliestPurchaseDate = new Date(input.purchaseDate);
 
-  // Add values from linked assets
-  input.linkedAssets.forEach(asset => {
-    totalPurchasePrice += asset.purchasePrice;
+  // Add values from linked assets if calculating as group
+  if (input.calculateAsGroup && input.linkedAssets && input.linkedAssets.length > 0) {
+    input.linkedAssets.forEach(asset => {
+      totalPurchasePrice += asset.purchasePrice;
 
-    // Use asset's depreciable cost if available, otherwise use purchase price
-    const assetDepreciableCost = asset.depreciableCost !== undefined ?
-      asset.depreciableCost :
-      asset.purchasePrice;
+      // Use asset's depreciable cost if available, otherwise use purchase price
+      const assetDepreciableCost = asset.depreciableCost !== undefined ?
+        asset.depreciableCost :
+        asset.purchasePrice;
 
-    totalDepreciableCost += assetDepreciableCost;
+      totalDepreciableCost += assetDepreciableCost;
 
-    // Use asset's salvage value if available, otherwise estimate as 10% of purchase price
-    const assetSalvageValue = asset.salvageValue !== undefined ?
-      asset.salvageValue :
-      asset.purchasePrice * 0.1;
+      // Use asset's salvage value if available, otherwise estimate as 10% of purchase price
+      const assetSalvageValue = asset.salvageValue !== undefined ?
+        asset.salvageValue :
+        asset.purchasePrice * 0.1;
 
-    totalSalvageValue += assetSalvageValue;
+      totalSalvageValue += assetSalvageValue;
 
-    // Track earliest purchase date for depreciation start
-    const assetPurchaseDate = new Date(asset.purchaseDate);
-    if (assetPurchaseDate < earliestPurchaseDate) {
-      earliestPurchaseDate = assetPurchaseDate;
-    }
-  });
+      // Track earliest purchase date for depreciation start
+      const assetPurchaseDate = new Date(asset.purchaseDate);
+      if (assetPurchaseDate < earliestPurchaseDate) {
+        earliestPurchaseDate = assetPurchaseDate;
+      }
+    });
+  }
+
+  // We'll handle capital improvements differently - we won't add them to the initial cost
+  // Instead, we'll track them separately to apply them at the correct dates
+  const capitalImprovements = hasCapitalImprovements ?
+    [...(input.capitalImprovements || [])].sort((a, b) =>
+      new Date(a.improvementDate).getTime() - new Date(b.improvementDate).getTime()
+    ) : [];
 
   // Create a new input with aggregated values
   const groupInput: DepreciationInput = {
@@ -254,12 +278,13 @@ export function calculateGroupDepreciation(input: DepreciationInput): Depreciati
     // Keep the same depreciation method, useful life, etc.
   };
 
-  console.log("Calculating group depreciation with aggregated values:", {
+  console.log("Calculating depreciation with aggregated values:", {
     totalPurchasePrice,
     totalDepreciableCost,
     totalSalvageValue,
     earliestPurchaseDate: earliestPurchaseDate.toISOString(),
-    linkedAssetsCount: input.linkedAssets.length
+    linkedAssetsCount: input.linkedAssets?.length || 0,
+    capitalImprovementsCount: input.capitalImprovements?.length || 0
   });
 
   // Calculate depreciation with the aggregated values
