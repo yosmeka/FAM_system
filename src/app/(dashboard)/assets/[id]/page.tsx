@@ -50,7 +50,7 @@ interface Asset {
   }>;
 }
 
-export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AssetDetailsPage({ params }: { params: { id: string } }) {
   const { checkPermission } = usePermissions();
   if (!checkPermission('Asset view (list and detail)')) {
     return (
@@ -60,7 +60,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       </div>
     );
   }
-  const resolvedParams = React.use(params);
+  // No need to use React.use since params is already resolved
   const router = useRouter();
   const { data: session } = useSession();
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -238,7 +238,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               salvageValue: data.depreciationSettings.salvageValue,
               usefulLifeMonths: data.depreciationSettings.usefulLifeMonths,
               depreciationMethod: data.depreciationSettings.depreciationMethod,
-              dateAcquired: new Date(data.depreciationSettings.startDate).toISOString().split('T')[0]
+              dateAcquired: new Date(data.depreciationSettings.startDate).toISOString().split('T')[0],
+              calculateAsGroup: data.depreciationSettings.calculateAsGroup || false
             });
           } catch (error) {
             console.error('Error fetching depreciation data:', error);
@@ -263,7 +264,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               salvageValue: asset.purchasePrice * 0.1,
               usefulLifeMonths: 60,
               depreciationMethod: 'STRAIGHT_LINE',
-              dateAcquired: new Date(asset.purchaseDate).toISOString().split('T')[0]
+              dateAcquired: new Date(asset.purchaseDate).toISOString().split('T')[0],
+              calculateAsGroup: false
             });
           }
           break;
@@ -325,12 +327,43 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     if (!asset) return;
 
     try {
+      console.log("Recalculating depreciation with settings:", {
+        usefulLife,
+        salvageValue,
+        depreciationMethod,
+        depreciationRate,
+        calculateAsGroup: depreciationSettings.calculateAsGroup,
+        linkedAssetsCount: asset.linkedTo?.length || 0
+      });
+
+      // Log linked assets details
+      if (asset.linkedTo && asset.linkedTo.length > 0) {
+        console.log("Linked assets for group calculation:", asset.linkedTo.map(link => ({
+          id: link.toAsset.id,
+          name: link.toAsset.name,
+          purchasePrice: link.toAsset.purchasePrice,
+          depreciableCost: link.toAsset.depreciableCost || link.toAsset.purchasePrice
+        })));
+      }
+
       // Call the API with the current settings
-      const response = await fetch(`/api/assets/${params.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
+      const response = await fetch(`/api/assets/${params.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}&calculateAsGroup=${depreciationSettings.calculateAsGroup || false}`);
 
       if (!response.ok) throw new Error('Failed to fetch depreciation data');
 
       const data = await response.json();
+      console.log("Received depreciation data:", {
+        resultsCount: data.depreciationResults.length,
+        chartDataCount: data.chartData.length,
+        calculateAsGroup: data.depreciationSettings.calculateAsGroup,
+        linkedAssetsCount: data.depreciationSettings.linkedAssetsCount
+      });
+
+      // Log the first few depreciation results to see the values
+      if (data.depreciationResults && data.depreciationResults.length > 0) {
+        console.log("First few depreciation results:", data.depreciationResults.slice(0, 3));
+      }
+
       setDepreciationResults(data.depreciationResults);
       setDepreciationData(data.chartData);
 
@@ -361,9 +394,19 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       // Convert months to years for the API
       const usefulLifeYears = Math.ceil(settings.usefulLifeMonths / 12);
 
+      console.log("Saving depreciation settings:", {
+        usefulLifeYears,
+        salvageValue: settings.salvageValue,
+        depreciationMethod: settings.depreciationMethod,
+        depreciableCost: settings.depreciableCost,
+        dateAcquired: settings.dateAcquired,
+        calculateAsGroup: settings.calculateAsGroup,
+        linkedAssetsCount: asset.linkedTo?.length || 0
+      });
+
       // Call the API with the new settings using PUT method to update the asset
       const response = await fetch(
-        `/api/assets/${params.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        `/api/assets/${params.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}&calculateAsGroup=${settings.calculateAsGroup || false}`,
         {
           method: 'PUT',
           headers: {
@@ -375,6 +418,18 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       if (!response.ok) throw new Error('Failed to update depreciation settings');
 
       const data = await response.json();
+
+      console.log("Received updated depreciation data:", {
+        resultsCount: data.depreciationResults.length,
+        chartDataCount: data.chartData.length,
+        calculateAsGroup: data.depreciationSettings.calculateAsGroup,
+        linkedAssetsCount: data.depreciationSettings.linkedAssetsCount
+      });
+
+      // Log the first few depreciation results to see the values
+      if (data.depreciationResults && data.depreciationResults.length > 0) {
+        console.log("First few updated depreciation results:", data.depreciationResults.slice(0, 3));
+      }
       setDepreciationResults(data.depreciationResults);
       setDepreciationData(data.chartData);
 
@@ -393,8 +448,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         usefulLifeMonths: settings.usefulLifeMonths,
       });
 
-      // Close the modal
-      setIsManagingDepreciation(false);
+      // Only close the modal if this wasn't triggered by the calculateAsGroup checkbox
+      // This allows the user to see the immediate effect of toggling the checkbox
+      if (settings.calculateAsGroup === depreciationSettings.calculateAsGroup) {
+        setIsManagingDepreciation(false);
+      }
 
       toast.success('Depreciation settings updated successfully');
     } catch (error) {
@@ -517,11 +575,13 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           currentAssetId={params.id}
           availableAssets={availableAssets}
         />
-        <AssetLinkingTable
-          asset={asset}
-          onLinkClick={() => setIsLinkingAsset(true)}
-          onUnlinkSuccess={handleLinkSuccess}
-        />
+        {asset && (
+          <AssetLinkingTable
+            asset={asset}
+            onLinkClick={() => setIsLinkingAsset(true)}
+            onUnlinkSuccess={handleLinkSuccess}
+          />
+        )}
       </div>
     );
   };
@@ -536,7 +596,22 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return (
           <div ref={targetRef}>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Depreciation</h2>
+              <div>
+                <h2 className="text-lg font-semibold">Depreciation</h2>
+                {/* Show group calculation status for parent assets */}
+                {depreciationSettings.calculateAsGroup && asset?.linkedFrom && asset.linkedFrom.length > 0 && (
+                  <div className="text-sm text-green-600 font-medium mt-1">
+                    Group calculation enabled ({asset.linkedFrom.length} linked {asset.linkedFrom.length === 1 ? 'asset' : 'assets'})
+                  </div>
+                )}
+
+                {/* Show message for child assets */}
+                {asset?.linkedTo && asset.linkedTo.length > 0 && (
+                  <div className="text-sm text-blue-600 font-medium mt-1">
+                    This is a child asset linked to {asset.linkedTo.length} parent {asset.linkedTo.length === 1 ? 'asset' : 'assets'}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => toPDF()}
                 className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
@@ -550,13 +625,86 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             <div className="mb-6 bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Depreciation Settings</h2>
-                <button
-                  onClick={() => setIsManagingDepreciation(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <Settings size={16} />
-                  Manage
-                </button>
+                <div className="flex gap-2">
+                  {/* Only show group calculation button on parent assets (assets with children linked to them)
+                      and not on child assets (assets that are linked to a parent) */}
+                  {asset?.linkedFrom && asset.linkedFrom.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        // Toggle the group calculation mode
+                        const newSettings = {
+                          ...depreciationSettings,
+                          calculateAsGroup: !depreciationSettings.calculateAsGroup
+                        };
+
+                        console.log("Toggling group calculation mode to:", newSettings.calculateAsGroup);
+
+                        // Update the UI immediately to show the change
+                        setDepreciationSettings(newSettings);
+
+                        // Force a refresh of the depreciation data
+                        try {
+                          // Call the API directly with the new setting
+                          const response = await fetch(
+                            `/api/assets/${params.id}/depreciation?calculateAsGroup=${newSettings.calculateAsGroup}`,
+                            { method: 'GET' }
+                          );
+
+                          if (!response.ok) throw new Error('Failed to fetch depreciation data');
+
+                          const data = await response.json();
+                          console.log("Received fresh depreciation data after toggle:", {
+                            resultsCount: data.depreciationResults.length,
+                            calculateAsGroup: data.depreciationSettings.calculateAsGroup,
+                            linkedAssetsCount: data.depreciationSettings.linkedAssetsCount,
+                            firstResult: data.depreciationResults[0]
+                          });
+
+                          // Update the state with the new data
+                          setDepreciationResults(data.depreciationResults);
+                          setDepreciationData(data.chartData);
+
+                          // Also save the settings to persist the change
+                          handleSaveDepreciationSettings(newSettings);
+
+                          toast.success(`Group calculation mode ${newSettings.calculateAsGroup ? 'enabled' : 'disabled'}`);
+                        } catch (error) {
+                          console.error('Error refreshing depreciation data:', error);
+                          toast.error('Failed to update depreciation data');
+                        }
+                      }}
+                      className={`px-4 py-2 text-white rounded-md transition-colors flex items-center gap-2 ${
+                        depreciationSettings.calculateAsGroup
+                          ? 'bg-yellow-600 hover:bg-yellow-700'
+                          : 'bg-gray-600 hover:bg-gray-700'
+                      }`}
+                    >
+                      {depreciationSettings.calculateAsGroup
+                        ? 'Group Calculation: ON'
+                        : 'Group Calculation: OFF'}
+                    </button>
+                  )}
+
+                  {/* Show a message if this is a child asset linked to a parent */}
+                  {asset?.linkedTo && asset.linkedTo.length > 0 && (
+                    <div className="text-sm text-blue-600 font-medium">
+                      This is a child asset. Group calculation is managed by the parent asset.
+                    </div>
+                  )}
+                  <button
+                    onClick={calculateAssetDepreciation}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Recalculate
+                  </button>
+                  <button
+                    onClick={() => setIsManagingDepreciation(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <Settings size={16} />
+                    Manage
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -580,15 +728,83 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                       <th className="p-2 border">Salvage Value</th>
                       <th className="p-2 border">Asset Life (months)</th>
                       <th className="p-2 border">Depr. Method</th>
+                      <th className="p-2 border">Group Calculation</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
-                      <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
-                      <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
+                      <td className="p-2 border">
+                        {depreciationSettings.calculateAsGroup && asset?.linkedFrom && asset.linkedFrom.length > 0 ? (
+                          <>
+                            <div className="font-medium text-green-600">
+                              {formatCurrency(
+                                (asset?.purchasePrice || 0) +
+                                asset.linkedFrom.reduce((sum, link) => sum + (link.fromAsset?.purchasePrice || 0), 0)
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Parent: {formatCurrency(asset?.purchasePrice || 0)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Children: {formatCurrency(
+                                asset.linkedFrom.reduce((sum, link) => sum + (link.fromAsset?.purchasePrice || 0), 0)
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          formatCurrency(asset?.purchasePrice || 0)
+                        )}
+                      </td>
+                      <td className="p-2 border">
+                        {depreciationSettings.calculateAsGroup && asset?.linkedFrom && asset.linkedFrom.length > 0 ? (
+                          <>
+                            <div className="font-medium text-green-600">
+                              {formatCurrency(
+                                (salvageValue || (asset?.purchasePrice || 0) * 0.1) +
+                                asset.linkedFrom.reduce((sum, link) =>
+                                  sum + ((link.fromAsset as any)?.salvageValue || (link.fromAsset?.purchasePrice || 0) * 0.1), 0)
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Parent: {formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Children: {formatCurrency(
+                                asset.linkedFrom.reduce((sum, link) =>
+                                  sum + ((link.fromAsset as any)?.salvageValue || (link.fromAsset?.purchasePrice || 0) * 0.1), 0)
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)
+                        )}
+                      </td>
                       <td className="p-2 border">{usefulLife * 12} months</td>
                       <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
+                      <td className="p-2 border">
+                        {asset?.linkedTo && asset.linkedTo.length > 0 ? (
+                          <div>
+                            <span className="text-blue-600 font-medium">Child Asset</span>
+                            <div className="text-xs mt-1">
+                              Group calculation managed by parent
+                            </div>
+                          </div>
+                        ) : asset?.linkedFrom && asset.linkedFrom.length > 0 ? (
+                          <div>
+                            {depreciationSettings.calculateAsGroup ? (
+                              <span className="text-green-600 font-medium">Enabled</span>
+                            ) : (
+                              <span className="text-gray-500">Disabled</span>
+                            )}
+                            <div className="text-xs mt-1">
+                              {asset.linkedFrom.length} linked {asset.linkedFrom.length === 1 ? 'asset' : 'assets'}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">N/A</span>
+                        )}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -597,8 +813,20 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
             {/* Depreciation Chart */}
             <div className="mb-6">
-              <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
-              <div className="h-48 bg-white rounded-lg border p-2 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-md font-medium">Depreciation yearly stats…</h3>
+                {depreciationSettings.calculateAsGroup && asset?.linkedFrom && asset.linkedFrom.length > 0 && (
+                  <div className="text-sm text-green-600 font-medium">
+                    Group calculation enabled - showing combined values
+                  </div>
+                )}
+                {asset?.linkedTo && asset.linkedTo.length > 0 && (
+                  <div className="text-sm text-blue-600 font-medium">
+                    Child asset - group calculation managed by parent
+                  </div>
+                )}
+              </div>
+              <div className={`h-48 bg-white rounded-lg border p-2 mb-4 ${depreciationSettings.calculateAsGroup ? 'border-green-300' : ''}`}>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart
                     data={depreciationData}
@@ -615,7 +843,10 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                       tickFormatter={(value) => `$${value.toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Value']}
+                      formatter={(value) => [
+                        `$${Number(value).toLocaleString()}`,
+                        depreciationSettings.calculateAsGroup ? 'Group Value' : 'Value'
+                      ]}
                       labelFormatter={(label) => `Year: ${label}`}
                       contentStyle={{
                         backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -627,10 +858,10 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                     <Line
                       type="monotone"
                       dataKey="value"
-                      stroke="#3b82f6"
+                      stroke={depreciationSettings.calculateAsGroup ? "#10b981" : "#3b82f6"}
                       strokeWidth={2}
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                      activeDot={{ r: 6, fill: '#2563eb' }}
+                      dot={{ fill: depreciationSettings.calculateAsGroup ? "#10b981" : "#3b82f6", r: 4 }}
+                      activeDot={{ r: 6, fill: depreciationSettings.calculateAsGroup ? "#059669" : "#2563eb" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -639,9 +870,21 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
             {/* Yearly Depreciation Table */}
             <div className="overflow-x-auto text-sm mb-6">
-              <h3 className="text-md font-medium mb-2">Yearly Depreciation Schedule</h3>
-              <table className="w-full border text-left">
-                <thead className="bg-gray-100">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-md font-medium">Yearly Depreciation Schedule</h3>
+                {depreciationSettings.calculateAsGroup && asset?.linkedFrom && asset.linkedFrom.length > 0 && (
+                  <div className="text-sm text-green-600 font-medium">
+                    Group calculation enabled - showing combined depreciation
+                  </div>
+                )}
+                {asset?.linkedTo && asset.linkedTo.length > 0 && (
+                  <div className="text-sm text-blue-600 font-medium">
+                    Child asset - group calculation managed by parent
+                  </div>
+                )}
+              </div>
+              <table className={`w-full border text-left ${depreciationSettings.calculateAsGroup ? 'border-green-300' : ''}`}>
+                <thead className={depreciationSettings.calculateAsGroup ? "bg-green-50" : "bg-gray-100"}>
                   <tr>
                     <th className="p-2 border font-semibold">Year</th>
                     <th className="p-2 border font-semibold">Depreciation Expense</th>
@@ -651,7 +894,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                 </thead>
                 <tbody>
                   {depreciationResults.map((result, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr
+                      key={index}
+                      className={`${index % 2 === 0 ? 'bg-white' : depreciationSettings.calculateAsGroup ? 'bg-green-50/30' : 'bg-gray-50'}
+                                  ${depreciationSettings.calculateAsGroup ? 'hover:bg-green-50' : 'hover:bg-gray-100'}`}
+                    >
                       <td className="p-2 border">{result.year}</td>
                       <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
                       <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
@@ -742,7 +989,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         {checkPermission('Asset edit') && (
-          <button 
+          <button
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
@@ -750,7 +997,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           </button>
         )}
         {checkPermission('Asset delete') && (
-          <button 
+          <button
             onClick={handleDelete}
             className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
           >

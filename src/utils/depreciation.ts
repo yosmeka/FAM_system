@@ -16,6 +16,16 @@ export interface DepreciationInput {
   depreciationRate?: number; // for declining balance method
   totalUnits?: number; // for units of activity method
   unitsPerYear?: number[]; // for units of activity method - estimated usage per year
+  calculateAsGroup?: boolean; // whether to calculate as a group with linked assets
+  linkedAssets?: LinkedAssetForDepreciation[]; // linked assets for group calculation
+}
+
+export interface LinkedAssetForDepreciation {
+  id: string;
+  purchasePrice: number;
+  purchaseDate: string;
+  salvageValue?: number;
+  depreciableCost?: number;
 }
 
 /**
@@ -184,6 +194,76 @@ export function calculateDepreciation(input: DepreciationInput): DepreciationRes
     default:
       throw new Error(`Unsupported depreciation method: ${input.method}`);
   }
+}
+
+/**
+ * Calculate group depreciation by aggregating values from parent and child assets
+ */
+export function calculateGroupDepreciation(input: DepreciationInput): DepreciationResult[] {
+  console.log("calculateGroupDepreciation called with:", {
+    calculateAsGroup: input.calculateAsGroup,
+    linkedAssetsCount: input.linkedAssets?.length || 0,
+    purchasePrice: input.purchasePrice,
+    salvageValue: input.salvageValue,
+    method: input.method
+  });
+
+  if (!input.calculateAsGroup || !input.linkedAssets || input.linkedAssets.length === 0) {
+    console.log("Not calculating as group - using regular calculation");
+    // If not calculating as group or no linked assets, just use regular calculation
+    return calculateDepreciation(input);
+  }
+
+  // Calculate total purchase price and weighted average purchase date
+  let totalPurchasePrice = input.purchasePrice;
+  let totalDepreciableCost = input.purchasePrice; // Use purchase price as depreciable cost if not specified
+  let totalSalvageValue = input.salvageValue;
+  let earliestPurchaseDate = new Date(input.purchaseDate);
+
+  // Add values from linked assets
+  input.linkedAssets.forEach(asset => {
+    totalPurchasePrice += asset.purchasePrice;
+
+    // Use asset's depreciable cost if available, otherwise use purchase price
+    const assetDepreciableCost = asset.depreciableCost !== undefined ?
+      asset.depreciableCost :
+      asset.purchasePrice;
+
+    totalDepreciableCost += assetDepreciableCost;
+
+    // Use asset's salvage value if available, otherwise estimate as 10% of purchase price
+    const assetSalvageValue = asset.salvageValue !== undefined ?
+      asset.salvageValue :
+      asset.purchasePrice * 0.1;
+
+    totalSalvageValue += assetSalvageValue;
+
+    // Track earliest purchase date for depreciation start
+    const assetPurchaseDate = new Date(asset.purchaseDate);
+    if (assetPurchaseDate < earliestPurchaseDate) {
+      earliestPurchaseDate = assetPurchaseDate;
+    }
+  });
+
+  // Create a new input with aggregated values
+  const groupInput: DepreciationInput = {
+    ...input,
+    purchasePrice: totalDepreciableCost, // Use the aggregated depreciable cost for calculation
+    purchaseDate: earliestPurchaseDate.toISOString(),
+    salvageValue: totalSalvageValue,
+    // Keep the same depreciation method, useful life, etc.
+  };
+
+  console.log("Calculating group depreciation with aggregated values:", {
+    totalPurchasePrice,
+    totalDepreciableCost,
+    totalSalvageValue,
+    earliestPurchaseDate: earliestPurchaseDate.toISOString(),
+    linkedAssetsCount: input.linkedAssets.length
+  });
+
+  // Calculate depreciation with the aggregated values
+  return calculateDepreciation(groupInput);
 }
 
 /**
