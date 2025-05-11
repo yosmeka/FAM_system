@@ -269,26 +269,196 @@ export function calculateGroupDepreciation(input: DepreciationInput): Depreciati
       new Date(a.improvementDate).getTime() - new Date(b.improvementDate).getTime()
     ) : [];
 
-  // Create a new input with aggregated values
-  const groupInput: DepreciationInput = {
-    ...input,
-    purchasePrice: totalDepreciableCost, // Use the aggregated depreciable cost for calculation
-    purchaseDate: earliestPurchaseDate.toISOString(),
-    salvageValue: totalSalvageValue,
-    // Keep the same depreciation method, useful life, etc.
-  };
+  // If we don't have capital improvements, use the standard calculation
+  if (!hasCapitalImprovements) {
+    // Create a new input with aggregated values (without capital improvements)
+    const groupInput: DepreciationInput = {
+      ...input,
+      purchasePrice: totalDepreciableCost, // Use the aggregated depreciable cost for calculation
+      purchaseDate: earliestPurchaseDate.toISOString(),
+      salvageValue: totalSalvageValue,
+      // Keep the same depreciation method, useful life, etc.
+    };
 
-  console.log("Calculating depreciation with aggregated values:", {
-    totalPurchasePrice,
-    totalDepreciableCost,
-    totalSalvageValue,
-    earliestPurchaseDate: earliestPurchaseDate.toISOString(),
-    linkedAssetsCount: input.linkedAssets?.length || 0,
-    capitalImprovementsCount: input.capitalImprovements?.length || 0
+    console.log("Calculating depreciation with aggregated values (no capital improvements):", {
+      totalPurchasePrice,
+      totalDepreciableCost,
+      totalSalvageValue,
+      earliestPurchaseDate: earliestPurchaseDate.toISOString(),
+      linkedAssetsCount: input.linkedAssets?.length || 0
+    });
+
+    // Calculate depreciation with the aggregated values
+    return calculateDepreciation(groupInput);
+  }
+
+  // If we have capital improvements, use the time-based calculation
+  console.log("Calculating time-based depreciation with capital improvements:", {
+    baseAssetCost: totalDepreciableCost,
+    improvementsCount: capitalImprovements.length,
+    method: input.method
   });
 
-  // Calculate depreciation with the aggregated values
-  return calculateDepreciation(groupInput);
+  return calculateTimeBasedDepreciationWithImprovements({
+    baseAsset: {
+      purchasePrice: totalDepreciableCost,
+      purchaseDate: earliestPurchaseDate.toISOString(),
+      salvageValue: totalSalvageValue,
+      usefulLife: input.usefulLife,
+      method: input.method,
+      depreciationRate: input.depreciationRate
+    },
+    capitalImprovements: capitalImprovements
+  });
+}
+
+/**
+ * Interface for time-based depreciation calculation with capital improvements
+ */
+interface TimeBasedDepreciationInput {
+  baseAsset: {
+    purchasePrice: number;
+    purchaseDate: string;
+    salvageValue: number;
+    usefulLife: number;
+    method: DepreciationMethod;
+    depreciationRate?: number;
+  };
+  capitalImprovements: CapitalImprovement[];
+}
+
+/**
+ * Calculate depreciation with time-based capital improvements
+ * This function handles the case where improvements are added at different points in time
+ */
+export function calculateTimeBasedDepreciationWithImprovements(
+  input: TimeBasedDepreciationInput
+): DepreciationResult[] {
+  const { baseAsset, capitalImprovements } = input;
+
+  // Start with the base asset's purchase date
+  const startYear = new Date(baseAsset.purchaseDate).getFullYear();
+
+  // Find the last year we need to calculate (base asset useful life + latest improvement)
+  const baseAssetEndYear = startYear + baseAsset.usefulLife;
+
+  // Find the latest year from capital improvements
+  const latestImprovementYear = capitalImprovements.length > 0
+    ? Math.max(...capitalImprovements.map(imp => {
+        const improvementYear = new Date(imp.improvementDate).getFullYear();
+        // Add the useful life of the improvement, or use the base asset's useful life
+        const improvementUsefulLife = imp.usefulLifeMonths
+          ? Math.ceil(imp.usefulLifeMonths / 12)
+          : baseAsset.usefulLife;
+        return improvementYear + improvementUsefulLife;
+      }))
+    : 0;
+
+  // Use the later of the two end years
+  const endYear = Math.max(baseAssetEndYear, latestImprovementYear);
+
+  console.log("Time-based depreciation calculation:", {
+    startYear,
+    baseAssetEndYear,
+    latestImprovementYear,
+    endYear
+  });
+
+  // Calculate base asset depreciation
+  const baseAssetDepreciation = calculateDepreciation({
+    purchasePrice: baseAsset.purchasePrice,
+    purchaseDate: baseAsset.purchaseDate,
+    usefulLife: baseAsset.usefulLife,
+    salvageValue: baseAsset.salvageValue,
+    method: baseAsset.method,
+    depreciationRate: baseAsset.depreciationRate
+  });
+
+  // Calculate depreciation for each capital improvement
+  const improvementDepreciations = capitalImprovements.map(improvement => {
+    // Use the improvement's useful life if specified, otherwise use the base asset's
+    const usefulLife = improvement.usefulLifeMonths
+      ? Math.ceil(improvement.usefulLifeMonths / 12)
+      : baseAsset.usefulLife;
+
+    // Use the improvement's depreciation method if specified, otherwise use the base asset's
+    const method = improvement.depreciationMethod as DepreciationMethod || baseAsset.method;
+
+    // Calculate salvage value (10% of cost if not specified)
+    const salvageValue = improvement.cost * 0.1;
+
+    return {
+      improvement,
+      depreciation: calculateDepreciation({
+        purchasePrice: improvement.cost,
+        purchaseDate: improvement.improvementDate,
+        usefulLife,
+        salvageValue,
+        method,
+        depreciationRate: baseAsset.depreciationRate
+      })
+    };
+  });
+
+  // Combine all depreciation results by year
+  const yearlyResults: DepreciationResult[] = [];
+
+  for (let year = startYear; year <= endYear; year++) {
+    // Find base asset depreciation for this year
+    const baseAssetYearResult = baseAssetDepreciation.find(r => r.year === year);
+
+    // Find improvement depreciations for this year
+    const improvementYearResults = improvementDepreciations
+      .map(({ depreciation }) => {
+        return depreciation.find(r => r.year === year);
+      })
+      .filter(Boolean) as DepreciationResult[];
+
+    // Calculate combined values for this year
+    let depreciationExpense = 0;
+    let accumulatedDepreciation = 0;
+    let bookValue = 0;
+
+    // Add base asset values if available for this year
+    if (baseAssetYearResult) {
+      depreciationExpense += baseAssetYearResult.depreciationExpense;
+      accumulatedDepreciation += baseAssetYearResult.accumulatedDepreciation;
+      bookValue += baseAssetYearResult.bookValue;
+    } else if (year > baseAssetEndYear) {
+      // If we're past the base asset's useful life, use the salvage value
+      bookValue += baseAsset.salvageValue;
+      accumulatedDepreciation += baseAsset.purchasePrice - baseAsset.salvageValue;
+    } else {
+      // If we're before the base asset's start year, use the purchase price
+      bookValue += baseAsset.purchasePrice;
+    }
+
+    // Add improvement values
+    improvementYearResults.forEach(result => {
+      depreciationExpense += result.depreciationExpense;
+      accumulatedDepreciation += result.accumulatedDepreciation;
+      bookValue += result.bookValue;
+    });
+
+    // Add improvements that haven't started depreciating yet
+    capitalImprovements.forEach(improvement => {
+      const improvementYear = new Date(improvement.improvementDate).getFullYear();
+      if (year < improvementYear) {
+        // If the improvement hasn't been made yet in this year, add its full cost
+        bookValue += improvement.cost;
+      }
+    });
+
+    // Add the combined result for this year
+    yearlyResults.push({
+      year,
+      depreciationExpense,
+      accumulatedDepreciation,
+      bookValue
+    });
+  }
+
+  return yearlyResults;
 }
 
 /**

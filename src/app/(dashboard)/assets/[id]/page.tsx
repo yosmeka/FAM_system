@@ -7,6 +7,7 @@ import { UnlinkAssetButton } from '@/components/UnlinkAssetButton';
 import { AssetLinkingTable } from '@/components/AssetLinkingTable';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
+import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -25,6 +26,37 @@ import type { LinkedAsset } from '@/types';
 
 
 
+interface CapitalImprovement {
+  id: string;
+  description: string;
+  improvementDate: string;
+  cost: number;
+  usefulLifeMonths: number | null;
+  depreciationMethod: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AssetAudit {
+  id: string;
+  auditDate: string;
+  auditedBy: string;
+  status: string;
+  condition: string;
+  locationVerified: boolean;
+  notes: string | null;
+  discrepancies: string | null;
+  discrepancyResolved: boolean;
+  resolvedDate: string | null;
+  resolvedBy: string | null;
+  resolutionNotes: string | null;
+  photoUrls: string | null;
+  nextAuditDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface Asset {
   id: string;
   name: string;
@@ -42,10 +74,19 @@ interface Asset {
   warrantyExpiry: string | null;
   lastMaintenance: string | null;
   nextMaintenance: string | null;
+  lastAuditDate?: string | null;
+  nextAuditDate?: string | null;
+  depreciableCost?: number;
+  salvageValue?: number;
+  usefulLifeMonths?: number;
+  depreciationMethod?: string;
+  depreciationStartDate?: string;
   createdAt: string;
   updatedAt: string;
   linkedTo: LinkedAsset[];
   linkedFrom: LinkedAsset[];
+  capitalImprovements?: CapitalImprovement[];
+  audits?: AssetAudit[];
   depreciations: Array<{
     usefulLife: number;
   }>;
@@ -595,6 +636,14 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         return renderLinkingTab();
       case 'capital_improvment':
         return <CapitalImprovementsTab assetId={params.id} />;
+      case 'audit':
+        return <AssetAuditTab
+          assetId={params.id}
+          assetName={asset?.name || ''}
+          assetLocation={asset?.location}
+          lastAuditDate={asset?.lastAuditDate}
+          nextAuditDate={asset?.nextAuditDate}
+        />;
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -732,6 +781,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
                       <th className="p-2 border">Asset Life (months)</th>
                       <th className="p-2 border">Depr. Method</th>
                       <th className="p-2 border">Group Calculation</th>
+                      <th className="p-2 border">Capital Improvements</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -806,6 +856,30 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
                           </div>
                         ) : (
                           <span className="text-gray-500">N/A</span>
+                        )}
+                      </td>
+                      <td className="p-2 border">
+                        {asset?.capitalImprovements && asset.capitalImprovements.length > 0 ? (
+                          <div>
+                            <span className="text-purple-600 font-medium">
+                              {asset.capitalImprovements.length} {asset.capitalImprovements.length === 1 ? 'Improvement' : 'Improvements'}
+                            </span>
+                            <div className="text-xs mt-1">
+                              Total Value: {formatCurrency(
+                                asset.capitalImprovements.reduce((sum, imp) => sum + imp.cost, 0)
+                              )}
+                            </div>
+                            <div className="text-xs text-blue-600 cursor-pointer" onClick={() => setActiveTab('capital_improvment')}>
+                              View Details →
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="text-gray-500">None</span>
+                            <div className="text-xs text-blue-600 cursor-pointer mt-1" onClick={() => setActiveTab('capital_improvment')}>
+                              Add Improvement →
+                            </div>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -1034,15 +1108,17 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'Capital_Improvment', 'audit', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${
-              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+              activeTab.toLowerCase() === tab.toLowerCase() ? 'border-b-2 border-yellow-500 font-medium' : ''
             }`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'capital_improvment' ? 'Capital Improvement' :
+             tab === 'maint' ? 'Maintenance' :
+             tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>

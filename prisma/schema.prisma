@@ -46,6 +46,8 @@ model Asset {
   usefulLifeMonths    Int?
   depreciationMethod  DepreciationMethod?
   depreciationStartDate DateTime?
+  lastAuditDate       DateTime?
+  nextAuditDate       DateTime?
   assetDepreciations  AssetDepreciation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -58,6 +60,7 @@ model Asset {
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
   capitalImprovements CapitalImprovement[]
+  audits              AssetAudit[]
 }
 
 model Transfer {
@@ -284,4 +287,45 @@ model CapitalImprovement {
   asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
+}
+
+enum AuditStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum AuditCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  CRITICAL
+  MISSING
+}
+
+model AssetAudit {
+  id                String        @id @default(cuid())
+  assetId           String
+  auditDate         DateTime
+  auditedBy         String
+  status            AuditStatus   @default(COMPLETED)
+  condition         AuditCondition
+  locationVerified  Boolean       @default(true)
+  notes             String?
+  discrepancies     String?
+  discrepancyResolved Boolean     @default(false)
+  resolvedDate      DateTime?
+  resolvedBy        String?
+  resolutionNotes   String?
+  photoUrls         String?       // Comma-separated URLs
+  nextAuditDate     DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  asset             Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([auditDate])
+  @@index([status])
 }
