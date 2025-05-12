@@ -60,7 +60,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       </div>
     );
   }
-  const resolvedParams = React.use(params);
+  const resolvedParams = React.use(params); // Unwrap params Promise for Next.js App Router
   const router = useRouter();
   const { data: session } = useSession();
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -101,7 +101,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       if (!response.ok) throw new Error('Failed to fetch available assets');
       const data = await response.json();
       // Filter out the current asset from the available assets
-      const filteredAssets = data.filter((a: Asset) => a.id !== params.id);
+      const filteredAssets = data.filter((a: Asset) => a.id !== resolvedParams.id);
       setAvailableAssets(filteredAssets);
     } catch (error) {
       console.error('Error fetching available assets:', error);
@@ -115,8 +115,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     const fetchAsset = async () => {
       setIsLoading(true);
       try {
-        console.log("INITIAL FETCH - Fetching asset data for ID:", params.id);
-        const response = await fetch(`/api/assets/${params.id}`);
+        console.log("INITIAL FETCH - Fetching asset data for ID:", resolvedParams.id);
+        const response = await fetch(`/api/assets/${resolvedParams.id}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
         console.log("INITIAL FETCH - Fetched asset data:", data);
@@ -128,7 +128,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         // Check if the asset has any linked assets
         if (data.linkedTo && data.linkedTo.length > 0) {
           console.log("INITIAL FETCH - Asset has linked child assets:", data.linkedTo.length);
-          data.linkedTo.forEach((link, index) => {
+          data.linkedTo.forEach((link: LinkedAsset, index: number) => {
             console.log(`INITIAL FETCH - Child ${index + 1}:`, link.toAsset);
           });
         } else {
@@ -138,7 +138,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         // Check if the asset is linked to any other assets
         if (data.linkedFrom && data.linkedFrom.length > 0) {
           console.log("INITIAL FETCH - Asset is linked to parent assets:", data.linkedFrom.length);
-          data.linkedFrom.forEach((link, index) => {
+          data.linkedFrom.forEach((link: LinkedAsset, index: number) => {
             console.log(`INITIAL FETCH - Parent ${index + 1}:`, link.fromAsset);
           });
         } else {
@@ -154,7 +154,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       }
     };
     fetchAsset();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   // Handle tab changes and data fetching
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               // Filter out current asset, already linked assets, and assets that are already parents
               const filteredAssets = data.filter((a: Asset) => {
                 // Don't include the current asset
-                if (a.id === params.id) return false;
+                if (a.id === resolvedParams.id) return false;
 
                 // Don't include assets that are already linked as children
                 if (asset?.linkedTo?.some(link => link.toAsset.id === a.id)) return false;
@@ -198,7 +198,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         case 'history':
           setIsHistoryLoading(true);
           try {
-            const response = await fetch(`/api/assets/${params.id}/history`);
+            const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
             if (!response.ok) throw new Error('Failed to fetch history');
             const data = await response.json();
             setHistory(data);
@@ -213,7 +213,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         case 'depreciation':
           try {
             // Fetch depreciation data from the API
-            const response = await fetch(`/api/assets/${params.id}/depreciation`);
+            const response = await fetch(`/api/assets/${resolvedParams.id}/depreciation`);
             if (!response.ok) throw new Error('Failed to fetch depreciation data');
             const data = await response.json();
 
@@ -271,7 +271,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     };
 
     fetchTabData();
-  }, [activeTab, params.id, asset, isLinkingAsset]);
+  }, [activeTab, resolvedParams.id, asset, isLinkingAsset]);
 
   const handleLinkSuccess = () => {
     // Refresh the asset data without reloading the page
@@ -281,7 +281,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     const fetchAsset = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/assets/${params.id}`);
+        const response = await fetch(`/api/assets/${resolvedParams.id}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
         console.log("Refreshed asset data:", data);
@@ -305,7 +305,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       if (activeTab === 'history') {
         setIsHistoryLoading(true);
         try {
-          const response = await fetch(`/api/assets/${params.id}/history`);
+          const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
           if (!response.ok) throw new Error('Failed to fetch history');
           const data = await response.json();
           setHistory(data);
@@ -319,14 +319,14 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     };
 
     fetchHistory();
-  }, [activeTab, params.id]);
+  }, [activeTab, resolvedParams.id]);
 
   const calculateAssetDepreciation = async () => {
     if (!asset) return;
 
     try {
       // Call the API with the current settings
-      const response = await fetch(`/api/assets/${params.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
+      const response = await fetch(`/api/assets/${resolvedParams.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
 
       if (!response.ok) throw new Error('Failed to fetch depreciation data');
 
@@ -363,7 +363,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       // Call the API with the new settings using PUT method to update the asset
       const response = await fetch(
-        `/api/assets/${params.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        `/api/assets/${resolvedParams.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
         {
           method: 'PUT',
           headers: {
@@ -409,7 +409,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     }
 
     try {
-      const response = await fetch(`/api/assets/${params.id}`, {
+      const response = await fetch(`/api/assets/${resolvedParams.id}`, {
         method: 'DELETE',
       });
 
@@ -514,11 +514,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           open={isLinkingAsset}
           onClose={() => setIsLinkingAsset(false)}
           onSuccess={handleLinkSuccess}
-          currentAssetId={params.id}
+          currentAssetId={resolvedParams.id}
           availableAssets={availableAssets}
         />
         <AssetLinkingTable
-          asset={asset}
+          asset={asset!} // Ensure asset is not null, or add a null check if needed
           onLinkClick={() => setIsLinkingAsset(true)}
           onUnlinkSuccess={handleLinkSuccess}
         />
@@ -565,7 +565,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               onClose={() => setIsManagingDepreciation(false)}
               onSave={handleSaveDepreciationSettings}
               initialSettings={depreciationSettings}
-              assetId={params.id}
+              assetId={resolvedParams.id}
             />
 
             {/* Depreciation Details */}

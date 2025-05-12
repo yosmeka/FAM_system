@@ -6,8 +6,9 @@ import { withRole } from '@/middleware/rbac';
 
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { params } = context;
   try {
     const session = await getServerSession(authOptions);
 
@@ -107,7 +108,11 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 
     return NextResponse.json(asset);
   } catch (error) {
-    console.error('Error fetching asset:', error);
+    if (error instanceof Error) {
+      console.error('Error fetching asset:', error.message);
+    } else {
+      console.error('Unknown error fetching asset:', error);
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
@@ -208,7 +213,11 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
 
     return NextResponse.json(updatedAsset);
   } catch (error) {
-    console.error('Error updating asset:', error);
+    if (error instanceof Error) {
+      console.error('Error updating asset:', error.message);
+    } else {
+      console.error('Unknown error updating asset:', error);
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
@@ -290,10 +299,14 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting asset:', error);
+    if (error instanceof Error) {
+      console.error('Error deleting asset:', error.message);
+    } else {
+      console.error('Unknown error deleting asset:', error);
+    }
 
     // Check for specific Prisma errors
-    if (error.code === 'P2003') {
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2003') {
       return NextResponse.json(
         {
           error: 'Failed to delete asset',
@@ -309,7 +322,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
       {
         error: 'Failed to delete asset',
         details: error instanceof Error ? error.message : 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       },
       { status: 500 }
     );
