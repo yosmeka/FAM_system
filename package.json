@@ -44,8 +44,10 @@
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.488.0",
+    "multer": "^1.4.5-lts.2",
     "next": "^15.3.1",
     "next-auth": "^4.24.5",
+    "next-connect": "^1.0.0",
     "next-themes": "^0.4.6",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",
@@ -63,6 +65,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/multer": "^1.4.12",
     "@types/next-auth": "^3.15.0",
     "@types/node": "^20.17.32",
     "@types/react": "^18.2.57",

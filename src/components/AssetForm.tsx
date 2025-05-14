@@ -89,7 +89,23 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
   const defaultValues: Partial<AssetFormValues> = {
     status: "ACTIVE",
-    purchaseDate: new Date(),
+    purchaseDate: undefined,
+    purchasePrice: 0,
+    currentValue: 0,
+    depreciableCost: 0,
+    salvageValue: 0,
+    description: "",
+    location: "",
+    department: "",
+    category: "",
+    type: "",
+    supplier: "",
+    warrantyExpiry: undefined,
+    lastMaintenance: undefined,
+    nextMaintenance: undefined,
+    depreciationMethod: "",
+    usefulLifeMonths: 0,
+    depreciationStartDate: undefined,
     ...formattedInitialData,
   }
 
@@ -419,7 +435,9 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                         <Textarea
                           placeholder="Enter a detailed description of the asset"
                           className="min-h-[120px]"
-                          {...field}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
                           value={field.value || ""}
                         />
                       </FormControl>
@@ -463,25 +481,17 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Purchase Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <input
+                            type="date"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              field.onChange(date);
+                            }}
+                            value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -494,7 +504,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Purchase Price</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            value={field.value || ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -509,7 +527,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     <FormItem>
                       <FormLabel>Current Value</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -538,7 +564,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           </div>
                         </FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            value={field.value || ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -566,7 +600,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           </div>
                         </FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            value={field.value || ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -607,7 +649,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select status" />
@@ -634,7 +676,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          <Input placeholder="Asset location" {...field} value={field.value || ""} />
+                          <Input
+                            placeholder="Asset location"
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            value={field.value || ""}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -733,25 +781,17 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Warranty Expiry Date</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className={cn(
-                                "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground",
-                              )}
-                            >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <input
+                          type="date"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          onChange={(e) => {
+                            const date = e.target.value ? new Date(e.target.value) : undefined;
+                            field.onChange(date);
+                          }}
+                          value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -764,25 +804,17 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Last Maintenance Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <input
+                            type="date"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              field.onChange(date);
+                            }}
+                            value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -794,25 +826,17 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Next Maintenance Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <input
+                            type="date"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              field.onChange(date);
+                            }}
+                            value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -873,25 +897,17 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Depreciation Start Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
+                        <FormControl>
+                          <input
+                            type="date"
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            onChange={(e) => {
+                              const date = e.target.value ? new Date(e.target.value) : undefined;
+                              field.onChange(date);
+                            }}
+                            value={field.value ? format(field.value, "yyyy-MM-dd") : ""}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

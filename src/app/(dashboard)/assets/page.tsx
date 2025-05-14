@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { Toaster } from "react-hot-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "react-hot-toast";
@@ -24,7 +24,11 @@ interface Asset {
 }
 
 export default function AssetsPage() {
+  // We need to call useSession() even if we don't use the result
+  // to maintain consistent hook order across renders
+  useSession();
   const { checkPermission } = usePermissions();
+
   if (!checkPermission('Asset view (list and detail)')) {
     return (
       <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
@@ -33,11 +37,8 @@ export default function AssetsPage() {
       </div>
     );
   }
-  const { data: session } = useSession();
-  const router = useRouter();
 
   const queryClient = useQueryClient();
-  const { canManageAssets } = usePermissions();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");

@@ -8,6 +8,7 @@ import { AssetLinkingTable } from '@/components/AssetLinkingTable';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetAuditTab } from '@/components/AssetAuditTab';
+import { DocumentsTab } from '@/components/DocumentsTab';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -93,7 +94,11 @@ interface Asset {
 }
 
 export default function AssetDetailsPage({ params }: { params: { id: string } }) {
+  // Call hooks first to maintain consistent order
+  const router = useRouter();
+  useSession();
   const { checkPermission } = usePermissions();
+
   if (!checkPermission('Asset view (list and detail)')) {
     return (
       <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
@@ -102,9 +107,6 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       </div>
     );
   }
-  // No need to use React.use since params is already resolved
-  const router = useRouter();
-  const { data: session } = useSession();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
@@ -643,6 +645,11 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
           assetLocation={asset?.location}
           lastAuditDate={asset?.lastAuditDate}
           nextAuditDate={asset?.nextAuditDate}
+        />;
+      case 'docs':
+        return <DocumentsTab
+          assetId={params.id}
+          assetName={asset?.name || ''}
         />;
       case 'depreciation':
         return (

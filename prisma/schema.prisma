@@ -112,6 +112,10 @@ model Document {
   assetId   String
   type      DocumentType
   url       String
+  fileName  String?      // Original file name
+  fileSize  Int?         // File size in bytes
+  filePath  String?      // Local file path (if stored locally)
+  mimeType  String?      // MIME type of the file
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
