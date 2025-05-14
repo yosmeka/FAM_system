@@ -11,11 +11,10 @@ interface CapitalImprovement {
   description: string;
   improvementDate: string;
   cost: number;
-  usefulLifeMonths: number | null;
-  depreciationMethod: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  // usefulLifeMonths and depreciationMethod are no longer used
 }
 
 interface CapitalImprovementsTabProps {
@@ -38,7 +37,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
       if (!response.ok) throw new Error('Failed to fetch capital improvements');
       const data = await response.json();
       setImprovements(data);
-      
+
       // Calculate total improvement value
       const total = data.reduce((sum: number, item: CapitalImprovement) => sum + item.cost, 0);
       setTotalImprovementValue(total);
@@ -81,7 +80,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
       });
 
       if (!response.ok) throw new Error('Failed to delete capital improvement');
-      
+
       toast.success('Capital improvement deleted successfully');
       fetchImprovements();
     } catch (error) {
@@ -121,7 +120,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
         <div>
           <h2 className="text-xl font-semibold">Capital Improvements</h2>
           <p className="text-sm text-gray-500">
-            Manage improvements that increase the asset's value and affect depreciation
+            Manage improvements that simply increase the asset's value (like painting or minor upgrades)
           </p>
         </div>
         {checkPermission('Asset edit') && (
@@ -150,8 +149,8 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
           <div className="bg-white p-3 rounded-md shadow-sm">
             <p className="text-sm text-gray-500">Latest Improvement</p>
             <p className="text-xl font-semibold">
-              {improvements.length > 0 
-                ? formatDate(improvements[0].improvementDate) 
+              {improvements.length > 0
+                ? formatDate(improvements[0].improvementDate)
                 : 'None'}
             </p>
           </div>
@@ -173,12 +172,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Cost
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Useful Life
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Depreciation Method
-                </th>
+
                 {checkPermission('Asset edit') && (
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -198,17 +192,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatCurrency(improvement.cost)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {improvement.usefulLifeMonths ? `${improvement.usefulLifeMonths} months` : 'Not specified'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {improvement.depreciationMethod 
-                      ? improvement.depreciationMethod.replace(/_/g, ' ').toLowerCase()
-                        .split(' ')
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ')
-                      : 'Not specified'}
-                  </td>
+
                   {checkPermission('Asset edit') && (
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
@@ -237,7 +221,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
           </div>
           <h3 className="text-lg font-medium text-gray-900">No Capital Improvements</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Add improvements like luxury lighting, roofing, or other upgrades that increase the asset's value.
+            Add improvements like painting, minor repairs, or other upgrades that simply increase the asset's value.
           </p>
           {checkPermission('Asset edit') && (
             <button

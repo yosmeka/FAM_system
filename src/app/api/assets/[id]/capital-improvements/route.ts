@@ -73,7 +73,7 @@ export async function POST(
 
     // Parse the request body
     const body = await request.json();
-    
+
     // Validate required fields
     if (!body.description || !body.improvementDate || !body.cost) {
       return NextResponse.json(
@@ -89,8 +89,8 @@ export async function POST(
         description: body.description,
         improvementDate: new Date(body.improvementDate),
         cost: parseFloat(body.cost),
-        usefulLifeMonths: body.usefulLifeMonths ? parseInt(body.usefulLifeMonths) : null,
-        depreciationMethod: body.depreciationMethod || null,
+        usefulLifeMonths: null, // No longer using separate useful life for improvements
+        depreciationMethod: null, // No longer using separate depreciation method for improvements
         notes: body.notes || null,
       },
     });
@@ -105,8 +105,8 @@ export async function POST(
           increment: parseFloat(body.cost),
         },
         // Also update the depreciable cost if it exists
-        depreciableCost: asset.depreciableCost 
-          ? { increment: parseFloat(body.cost) } 
+        depreciableCost: asset.depreciableCost
+          ? { increment: parseFloat(body.cost) }
           : undefined,
       },
     });

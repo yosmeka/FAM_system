@@ -15,10 +15,6 @@ const capitalImprovementSchema = z.object({
   cost: z.string().refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
     message: 'Cost must be a positive number',
   }),
-  usefulLifeMonths: z.string().optional().refine(val => !val || (!isNaN(parseInt(val)) && parseInt(val) > 0), {
-    message: 'Useful life must be a positive number',
-  }),
-  depreciationMethod: z.enum(['STRAIGHT_LINE', 'DECLINING_BALANCE', 'SUM_OF_YEARS_DIGITS', 'UNITS_OF_ACTIVITY']).optional(),
   notes: z.string().optional(),
 });
 
@@ -31,11 +27,11 @@ interface CapitalImprovementFormProps {
   isEditing?: boolean;
 }
 
-export function CapitalImprovementForm({ 
-  assetId, 
-  onSuccess, 
-  initialData, 
-  isEditing = false 
+export function CapitalImprovementForm({
+  assetId,
+  onSuccess,
+  initialData,
+  isEditing = false
 }: CapitalImprovementFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,8 +42,6 @@ export function CapitalImprovementForm({
       description: initialData.description,
       improvementDate: initialData.improvementDate ? new Date(initialData.improvementDate).toISOString().split('T')[0] : '',
       cost: initialData.cost.toString(),
-      usefulLifeMonths: initialData.usefulLifeMonths?.toString() || '',
-      depreciationMethod: initialData.depreciationMethod || undefined,
       notes: initialData.notes || '',
     } : {
       improvementDate: new Date().toISOString().split('T')[0],
@@ -57,12 +51,12 @@ export function CapitalImprovementForm({
   const onSubmit = async (data: CapitalImprovementFormData) => {
     setIsSubmitting(true);
     try {
-      const url = isEditing 
+      const url = isEditing
         ? `/api/assets/${assetId}/capital-improvements/${initialData.id}`
         : `/api/assets/${assetId}/capital-improvements`;
-      
+
       const method = isEditing ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -142,41 +136,7 @@ export function CapitalImprovementForm({
         )}
       </div>
 
-      <div>
-        <label htmlFor="usefulLifeMonths" className="block text-sm font-medium text-gray-700">
-          Useful Life (Months)
-        </label>
-        <input
-          id="usefulLifeMonths"
-          type="number"
-          {...register('usefulLifeMonths')}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          placeholder="e.g., 60"
-        />
-        {errors.usefulLifeMonths && (
-          <p className="mt-1 text-sm text-red-600">{errors.usefulLifeMonths.message}</p>
-        )}
-      </div>
 
-      <div>
-        <label htmlFor="depreciationMethod" className="block text-sm font-medium text-gray-700">
-          Depreciation Method
-        </label>
-        <select
-          id="depreciationMethod"
-          {...register('depreciationMethod')}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        >
-          <option value="">Select a method</option>
-          <option value="STRAIGHT_LINE">Straight Line</option>
-          <option value="DECLINING_BALANCE">Declining Balance</option>
-          <option value="SUM_OF_YEARS_DIGITS">Sum of Years Digits</option>
-          <option value="UNITS_OF_ACTIVITY">Units of Activity</option>
-        </select>
-        {errors.depreciationMethod && (
-          <p className="mt-1 text-sm text-red-600">{errors.depreciationMethod.message}</p>
-        )}
-      </div>
 
       <div>
         <label htmlFor="notes" className="block text-sm font-medium text-gray-700">

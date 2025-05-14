@@ -12,9 +12,9 @@ export interface CapitalImprovement {
   description: string;
   improvementDate: string;
   cost: number;
-  usefulLifeMonths?: number | null;
-  depreciationMethod?: string | null;
   notes?: string | null;
+  // usefulLifeMonths and depreciationMethod are no longer used for capital improvements
+  // as they simply increase the asset value without their own depreciation parameters
 }
 
 export interface DepreciationInput {
@@ -343,14 +343,12 @@ export function calculateTimeBasedDepreciationWithImprovements(
   const baseAssetEndYear = startYear + baseAsset.usefulLife;
 
   // Find the latest year from capital improvements
+  // Since improvements now use the base asset's useful life, we just add that to the improvement year
   const latestImprovementYear = capitalImprovements.length > 0
     ? Math.max(...capitalImprovements.map(imp => {
         const improvementYear = new Date(imp.improvementDate).getFullYear();
-        // Add the useful life of the improvement, or use the base asset's useful life
-        const improvementUsefulLife = imp.usefulLifeMonths
-          ? Math.ceil(imp.usefulLifeMonths / 12)
-          : baseAsset.usefulLife;
-        return improvementYear + improvementUsefulLife;
+        // Always use the base asset's useful life for improvements
+        return improvementYear + baseAsset.usefulLife;
       }))
     : 0;
 
@@ -374,18 +372,15 @@ export function calculateTimeBasedDepreciationWithImprovements(
     depreciationRate: baseAsset.depreciationRate
   });
 
-  // Calculate depreciation for each capital improvement
+  // For simplified capital improvements, we'll just add the improvement cost to the asset value
+  // and use the asset's depreciation parameters for all improvements
   const improvementDepreciations = capitalImprovements.map(improvement => {
-    // Use the improvement's useful life if specified, otherwise use the base asset's
-    const usefulLife = improvement.usefulLifeMonths
-      ? Math.ceil(improvement.usefulLifeMonths / 12)
-      : baseAsset.usefulLife;
+    // Always use the base asset's useful life and depreciation method
+    const usefulLife = baseAsset.usefulLife;
+    const method = baseAsset.method;
 
-    // Use the improvement's depreciation method if specified, otherwise use the base asset's
-    const method = improvement.depreciationMethod as DepreciationMethod || baseAsset.method;
-
-    // Calculate salvage value (10% of cost if not specified)
-    const salvageValue = improvement.cost * 0.1;
+    // No separate salvage value for improvements - they're treated as part of the asset
+    const salvageValue = 0;
 
     return {
       improvement,
