@@ -36,6 +36,9 @@ export async function PUT(req: NextRequest) {
     if (!role || !roles.includes(role)) {
       return NextResponse.json({ error: 'Role is required or invalid' }, { status: 400 });
     }
+    if (role === 'ADMIN') {
+      return NextResponse.json({ error: 'Cannot update permissions for ADMIN role' }, { status: 403 });
+    }
 
     let body;
     try {

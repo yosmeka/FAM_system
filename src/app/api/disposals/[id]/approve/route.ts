@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { sendNotification } from '@/lib/notifications';
 
 // POST /api/disposals/[id]/approve
 export async function POST(
@@ -48,6 +49,15 @@ export async function POST(
       throw error;
     }
 
+    // Send notification to requester (if available)
+    if (disposal?.requestedById && disposal?.asset?.name) {
+      await sendNotification({
+        userId: disposal.requestedById,
+        message: `Your disposal request for asset "${disposal.asset.name}" has been approved.`,
+        type: 'disposal_approved',
+        meta: { assetId: disposal.asset.id, disposalId: disposal.id },
+      });
+    }
     return NextResponse.json(disposal!);
   } catch (error) {
     console.error('Error updating disposal or asset:', error);

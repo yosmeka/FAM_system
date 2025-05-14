@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/disposals
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['ADMIN', 'MANAGER'], async function GET() {
+export const GET = withRole(['MANAGER'], async function GET() {
   try {
     const disposals = await prisma.disposal.findMany({
       include: {
@@ -32,7 +32,7 @@ export const GET = withRole(['ADMIN', 'MANAGER'], async function GET() {
 });
 
 // POST /api/disposals
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER', 'USER'], async function POST(request: Request) {
   try {
     const body = await request.json();
     const { assetId, reason, method, proceeds } = body;

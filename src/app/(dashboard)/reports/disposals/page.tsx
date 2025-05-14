@@ -14,7 +14,20 @@ import type {
   RoleBasedStatsProps
 } from '@/types/reports';
 
+import { useSession } from 'next-auth/react';
+
 export default function DisposalReportsPage() {
+  const { data: session, status } = useSession();
+  if (status === 'loading') return null;
+  if (!session || !session.user) return null;
+  if (session.user.role === 'ADMIN') {
+    return (
+      <div className="container mx-auto p-6">
+        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
+        <p className="text-center">You do not have permission to view disposal reports.</p>
+      </div>
+    );
+  }
   const [loading, setLoading] = useState(true);
   const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
   const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);

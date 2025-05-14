@@ -23,6 +23,11 @@ export function RoleBasedNav() {
       permission: "manage_assets",
     },
     {
+      href: "/transfers",
+      label: "Transfers",
+      permission: "manage_transfers",
+    },
+    {
       href: "/maintenance",
       label: "Maintenance",
       permission: "manage_maintenance",

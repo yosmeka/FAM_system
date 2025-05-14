@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedForm } from '@/components/ui/RoleBasedForm';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
@@ -12,23 +12,54 @@ export default function NewTransferPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  const [loading, setLoading] = useState(false);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(true);
+  const [assetsError, setAssetsError] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
+
+  useEffect(() => {
+    const fetchAssets = async () => {
+      setAssetsLoading(true);
+      setAssetsError(null);
+      try {
+        const response = await fetch('/api/assets');
+        if (!response.ok) throw new Error('Failed to fetch assets');
+        const data = await response.json();
+        setAssets(data);
+      } catch (err: any) {
+        setAssetsError(err.message || 'Failed to fetch assets');
+      } finally {
+        setAssetsLoading(false);
+      }
+    };
+    fetchAssets();
+  }, []);
+
   if (status === 'loading') return null;
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+  if (!session || session.user.role !== 'USER') {
     if (typeof window !== 'undefined') {
       router.replace('/dashboard');
-      toast.error('Access denied: Only Admins and Managers can create transfer requests.');
+      toast.error('Access denied: Only users can create transfer requests.');
     }
     return null;
   }
 
-  const [loading, setLoading] = useState(false);
-
   const handleSubmit = async (formData: FormData) => {
+    if (!formData.get('assetId')) {
+      toast.error('Please select an asset.');
+      return;
+    }
+    if (!selectedAsset) {
+      toast.error('Please select an asset.');
+      return;
+    }
+
     try {
       setLoading(true);
       const data = {
         assetId: formData.get('assetId'),
-        fromLocation: formData.get('fromLocation'),
+        fromLocation: selectedAsset?.location || '', // Use selected asset's location
         toLocation: formData.get('toLocation'),
         reason: formData.get('reason'),
       };
@@ -72,10 +103,33 @@ export default function NewTransferPage() {
                 name="assetId"
                 className="mt-1 block w-full rounded-md border border-gray-300 p-2"
                 required
+                disabled={assetsLoading || !!assetsError}
+                onChange={e => {
+                  const asset = assets.find(a => a.id === e.target.value);
+                  setSelectedAsset(asset || null);
+                }}
+                aria-describedby="assetHelp"
               >
-                <option value="">Select Asset</option>
-                {/* We'll fetch and populate assets here */}
+                <option value="">{assetsLoading ? 'Loading assets...' : assetsError ? 'Failed to load assets' : 'Select Asset'}</option>
+                {assets.map(asset => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.name} ({asset.serialNumber})
+                  </option>
+                ))}
               </select>
+              <div id="assetHelp" className="text-xs text-gray-500 mt-1">
+                {assetsLoading && 'Fetching available assets...'}
+                {assetsError && <span className="text-red-500">{assetsError}</span>}
+                {!assetsLoading && !assetsError && 'Choose the asset you want to transfer.'}
+              </div>
+              {selectedAsset && (
+                <div className="bg-gray-50 rounded p-2 mt-2 border text-xs">
+                  <div><b>Serial:</b> {selectedAsset.serialNumber}</div>
+                  <div><b>Location:</b> {selectedAsset.location}</div>
+                  <div><b>Status:</b> {selectedAsset.status}</div>
+                  <div><b>Value:</b> ${selectedAsset.currentValue?.toLocaleString?.() ?? selectedAsset.currentValue}</div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -86,8 +140,11 @@ export default function NewTransferPage() {
                 type="text"
                 id="fromLocation"
                 name="fromLocation"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-gray-100 cursor-not-allowed"
                 required
+                value={selectedAsset?.location || ''}
+                readOnly
+                disabled
               />
             </div>
 
@@ -130,8 +187,9 @@ export default function NewTransferPage() {
                 variant="primary"
                 loading={loading}
                 className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={loading || assetsLoading || !!assetsError}
               >
-                Create Transfer
+                {loading ? 'Submitting...' : 'Create Transfer'}
               </RoleBasedButton>
             </div>
           </div>

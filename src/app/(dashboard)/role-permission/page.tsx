@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 
 interface Permission {
@@ -20,7 +20,7 @@ export default function RolePermissionPage() {
   }
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [selectedRole, setSelectedRole] = useState('ADMIN');
+  const [selectedRole, setSelectedRole] = useState('MANAGER');
   const [rolePermissions, setRolePermissions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,13 +36,14 @@ export default function RolePermissionPage() {
       })
       .then(data => {
         console.log('Loaded roles from API:', data.roles);
-        setRoles(data.roles || []);
+        // Only allow MANAGER and USER roles for assignment
+        setRoles((data.roles || []).filter((role: string) => role !== 'ADMIN'));
       })
       .catch(error => {
         console.error('Error fetching roles:', error);
         toast.error('Failed to load roles. Using default roles.');
-        // Fallback to default roles
-        setRoles(['ADMIN', 'MANAGER', 'USER']);
+        // Fallback to default roles, but only allow MANAGER and USER
+        setRoles(['MANAGER', 'USER']);
       });
 
     // Fetch permissions
@@ -187,9 +188,11 @@ export default function RolePermissionPage() {
             onChange={e => setSelectedRole(e.target.value)}
             className="rp-rolebar__select"
           >
-            {roles.map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
+            {roles
+              .filter(role => role === 'MANAGER' || role === 'USER')
+              .map(role => (
+                <option key={role} value={role}>{role}</option>
+              ))}
           </select>
         )}
         <Button onClick={handleSave} className="rp-rolebar__save" disabled={saving}>

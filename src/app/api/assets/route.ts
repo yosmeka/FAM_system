@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
+export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   try {
     const assets = await prisma.asset.findMany({
       orderBy: {
@@ -32,7 +32,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
   }
 });
 
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 

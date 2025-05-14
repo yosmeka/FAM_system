@@ -7,7 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model RoleChangeLog {
+  id         String   @id @default(uuid())
+  userId     String
+  oldRole    String
+  newRole    String
+  changedBy  String
+  changedAt  DateTime @default(now())
+
+  user       User     @relation("RoleChangedUser", fields: [userId], references: [id])
+  changedByUser User  @relation("RoleChangedBy", fields: [changedBy], references: [id])
+}
+
 model User {
+  // ... existing fields ...
+  roleChangeLogs      RoleChangeLog[] @relation("RoleChangedUser")
+  roleChangesMade     RoleChangeLog[] @relation("RoleChangedBy")
   // ...existing fields...
   userPermissions   UserPermission[]
   id                  String        @id @default(cuid())
@@ -22,6 +37,18 @@ model User {
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
+  notifications      Notification[]
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  type      String   @default("info")
+  meta      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Asset {
@@ -69,6 +96,7 @@ model Transfer {
   requesterId    String
   toDepartment   String
   status         TransferStatus @default(PENDING)
+  managerReason  String?        // Reason provided by manager for rejection
   asset          Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester      User           @relation("TransferRequestedBy", fields: [requesterId], references: [id])
 }

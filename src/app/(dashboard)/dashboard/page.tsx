@@ -44,9 +44,178 @@ interface DashboardData {
   }>;
 }
 
+import { useState, useEffect } from 'react';
+import { AdminRecentActivity } from '@/components/ui/AdminRecentActivity';
+import { AdminCharts } from '@/components/ui/AdminCharts';
+import { Toaster, toast } from 'react-hot-toast';
+import { NotificationBell } from '@/components/ui/NotificationBell';
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   
+  const [adminStats, setAdminStats] = useState<{ users: number; roles: number; permissions: number } | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+
+  const isAdmin = session?.user?.role === 'ADMIN';
+
+  useEffect(() => {
+    if (isAdmin) {
+      setAdminLoading(true);
+      Promise.all([
+        fetch('/api/users/count').then(async res => {
+          if (!res.ok) return { count: 0 };
+          try { return await res.json(); } catch { return { count: 0 }; }
+        }),
+        fetch('/api/roles/count').then(async res => {
+          if (!res.ok) return { count: 0 };
+          try { return await res.json(); } catch { return { count: 0 }; }
+        }),
+        fetch('/api/permissions/count').then(async res => {
+          if (!res.ok) return { count: 0 };
+          try { return await res.json(); } catch { return { count: 0 }; }
+        })
+      ]).then(([users, roles, permissions]) => {
+        setAdminStats({
+          users: users.count || 0,
+          roles: roles.count || 0,
+          permissions: permissions.count || 0,
+        });
+      }).finally(() => setAdminLoading(false));
+    }
+  }, [isAdmin]);
+
+  // Animated count-up component
+  const CountUp = ({ end }: { end: number }) => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+      let start = 0;
+      if (end === undefined || end === null) return;
+      const duration = 800;
+      const step = Math.max(1, Math.ceil(end / 40));
+      const interval = setInterval(() => {
+        start += step;
+        if (start >= end) {
+          setCount(end);
+          clearInterval(interval);
+        } else {
+          setCount(start);
+        }
+      }, duration / (end / step));
+      return () => clearInterval(interval);
+    }, [end]);
+    return <span>{count}</span>;
+  };
+
+  // Fetch recent activity, charts, and notifications for admin
+  const [recentActivity, setRecentActivity] = useState<any>(null);
+  const [userGrowth, setUserGrowth] = useState<any[]>([]);
+  const [permissionAssignments, setPermissionAssignments] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/admin/recent-activity')
+        .then(async res => {
+          if (!res.ok) return setRecentActivity(null);
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            setRecentActivity(null);
+            return;
+          }
+          const data = await res.json();
+          setRecentActivity(data);
+        });
+      fetch('/api/admin/user-growth')
+        .then(async res => {
+          if (!res.ok) return setUserGrowth([]);
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            setUserGrowth([]);
+            return;
+          }
+          const data = await res.json();
+          setUserGrowth(data.userGrowth || []);
+        });
+      fetch('/api/admin/permission-assignments')
+        .then(async res => {
+          if (!res.ok) return setPermissionAssignments([]);
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            setPermissionAssignments([]);
+            return;
+          }
+          const data = await res.json();
+          setPermissionAssignments(data.permissionAssignments || []);
+        });
+      fetch('/api/admin/notifications')
+        .then(async res => {
+          if (!res.ok) return setNotifications([]);
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            setNotifications([]);
+            return;
+          }
+          const data = await res.json();
+          setNotifications(data.notifications || []);
+        });
+    }
+  }, [isAdmin]);
+
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-200 via-red-100 to-yellow-100 py-8 px-2 dark:bg-gray-950">
+        <Toaster position="top-right" />
+
+        {/* Welcome Banner */}
+        <div className="flex flex-col items-center mb-8">
+          {session?.user?.image && (
+            <img src={session.user.image} alt="avatar" className="w-20 h-20 rounded-full shadow-lg mb-2 border-4 border-indigo-400" />
+          )}
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-red-500 to-yellow-500 mb-1 drop-shadow-lg">Welcome, {session?.user?.name}</h1>
+          <span className="text-lg text-gray-600 dark:text-gray-300 font-medium">System Administration Dashboard</span>
+        </div>
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl mb-10">
+          <div className="bg-gradient-to-br from-indigo-500 via-indigo-300 to-white dark:from-indigo-900 dark:via-indigo-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-indigo-100 hover:scale-105 transition-transform duration-200">
+            <span className="text-5xl mb-2 animate-bounce">👥</span>
+            <span className="text-5xl font-extrabold text-indigo-900 dark:text-indigo-100">
+              {adminLoading ? '...' : <CountUp end={adminStats?.users ?? 0} />}
+            </span>
+            <span className="text-lg text-indigo-700 dark:text-indigo-300 mt-2 font-semibold tracking-wide">Total Users</span>
+          </div>
+          <div className="bg-gradient-to-br from-pink-400 via-red-300 to-white dark:from-pink-900 dark:via-red-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-red-100 hover:scale-105 transition-transform duration-200">
+            <span className="text-5xl mb-2 animate-bounce">🛡️</span>
+            <span className="text-5xl font-extrabold text-red-900 dark:text-red-100">
+              {adminLoading ? '...' : <CountUp end={adminStats?.roles ?? 0} />}
+            </span>
+            <span className="text-lg text-red-700 dark:text-red-300 mt-2 font-semibold tracking-wide">Roles</span>
+          </div>
+          <div className="bg-gradient-to-br from-yellow-300 via-yellow-100 to-white dark:from-yellow-900 dark:via-yellow-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-yellow-100 hover:scale-105 transition-transform duration-200">
+            <span className="text-5xl mb-2 animate-bounce">🔑</span>
+            <span className="text-5xl font-extrabold text-yellow-700 dark:text-yellow-200">
+              {adminLoading ? '...' : <CountUp end={adminStats?.permissions ?? 0} />}
+            </span>
+            <span className="text-lg text-yellow-700 dark:text-yellow-200 mt-2 font-semibold tracking-wide">Permissions</span>
+          </div>
+        </div>
+        {/* Quick Actions */}
+        <div className="text-center mb-10">
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-3 drop-shadow">Quick Actions</h2>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/users" className="bg-indigo-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition font-semibold text-lg">Manage Users</a>
+            <a href="/role-permission" className="bg-red-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-red-700 transition font-semibold text-lg">Manage Roles & Permissions</a>
+          </div>
+        </div>
+        {/* Charts */}
+        <AdminCharts userGrowth={userGrowth} permissionAssignments={permissionAssignments} />
+        {/* Recent Activity / System Logs */}
+        <div className="w-full flex flex-col items-center">
+          <AdminRecentActivity activity={recentActivity || {}} />
+        </div>
+      </div>
+    );
+  }
+
   const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboardData'],
     queryFn: async () => {

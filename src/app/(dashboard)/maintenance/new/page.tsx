@@ -13,10 +13,10 @@ export default function NewMaintenanceRequestPage() {
   const router = useRouter();
 
   if (status === 'loading') return null;
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+  if (!session || (session.user.role !== 'USER' && session.user.role !== 'MANAGER')) {
     if (typeof window !== 'undefined') {
       router.replace('/dashboard');
-      toast.error('Access denied: Only Admins and Managers can create maintenance requests.');
+      toast.error('Access denied: Only Users and Managers can create maintenance requests.');
     }
     return null;
   }
