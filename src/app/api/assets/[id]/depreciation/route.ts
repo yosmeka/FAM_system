@@ -12,7 +12,7 @@ export async function GET(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Fetch the asset with its depreciation settings
+    // Fetch the asset with its depreciation settings and capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
@@ -28,6 +28,17 @@ export async function GET(
         usefulLifeMonths: true,
         depreciationMethod: true,
         depreciationStartDate: true,
+        capitalImprovements: {
+          select: {
+            id: true,
+            description: true,
+            improvementDate: true,
+            cost: true,
+          },
+          orderBy: {
+            improvementDate: 'asc',
+          },
+        },
       },
     });
 
@@ -50,7 +61,7 @@ export async function GET(
 
     const salvageValue = querySalvageValue
       ? parseFloat(querySalvageValue)
-      : (asset.salvageValue || asset.purchasePrice * 0.1); // Default to 10% of purchase price
+      : (asset.salvageValue || 0); // Use 0 as default if not set
 
     const usefulLifeYears = queryUsefulLife
       ? parseInt(queryUsefulLife)
@@ -102,7 +113,8 @@ export async function GET(
         calculationMethod = 'STRAIGHT_LINE'; // Default
     }
 
-    // Calculate depreciation
+    // Calculate depreciation using the depreciableCost field
+    // This already includes any capital improvements that have been added
     const depreciationResults = calculateDepreciation({
       purchasePrice: depreciableCost,
       purchaseDate: startDate.toISOString(),
@@ -138,6 +150,7 @@ export async function GET(
         totalUnits,
         unitsPerYear,
       },
+
       depreciationResults,
       chartData,
     });
@@ -165,10 +178,23 @@ export async function PUT(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Check if the asset exists
+    // Check if the asset exists and get its capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
+      },
+      include: {
+        capitalImprovements: {
+          select: {
+            id: true,
+            description: true,
+            improvementDate: true,
+            cost: true,
+          },
+          orderBy: {
+            improvementDate: 'asc',
+          },
+        },
       },
     });
 
@@ -244,12 +270,16 @@ export async function PUT(
         calculationMethod = 'STRAIGHT_LINE'; // Default
     }
 
-    // Calculate depreciation with the updated settings
+    // Calculate depreciation using the depreciableCost field
+    // This already includes any capital improvements that have been added
+    const usefulLifeValue = usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12);
+    const startDateValue = (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate);
+
     const depreciationResults = calculateDepreciation({
       purchasePrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
-      purchaseDate: (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate).toISOString(),
-      usefulLife: usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
-      salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
+      purchaseDate: startDateValue.toISOString(),
+      usefulLife: usefulLifeValue,
+      salvageValue: updatedAsset.salvageValue || 0,
       method: calculationMethod,
       depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
       totalUnits: totalUnits,
@@ -320,7 +350,7 @@ export async function PUT(
       },
       depreciationSettings: {
         depreciableCost: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
-        salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
+        salvageValue: updatedAsset.salvageValue || 0,
         usefulLifeYears: Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
         usefulLifeMonths: updatedAsset.usefulLifeMonths || 60,
         // Use the original method from the request, not the one stored in the database
@@ -330,6 +360,7 @@ export async function PUT(
         totalUnits,
         unitsPerYear,
       },
+
       depreciationResults,
       chartData,
     });

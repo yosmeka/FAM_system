@@ -84,6 +84,10 @@ model Asset {
   transferRequests    Transfer[]
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
+  lastAuditDate       DateTime?
+  nextAuditDate       DateTime?
+  capitalImprovements CapitalImprovement[]
+  audits              AssetAudit[]
 }
 
 model Transfer {
@@ -139,6 +143,10 @@ model Document {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  fileName  String?      // Original file name
+  fileSize  Int?         // File size in bytes
+  filePath  String?      // Local file path (if stored locally)
+  mimeType  String?      // MIME type of the file
 }
 
 model Depreciation {
@@ -295,4 +303,59 @@ model RolePermission {
   permissionId String
   permission   Permission @relation(fields: [permissionId], references: [id])
   @@unique([role, permissionId])
+}
+model CapitalImprovement {
+  id                String   @id @default(cuid())
+  assetId           String
+  description       String
+  improvementDate   DateTime
+  cost              Float
+  usefulLifeMonths  Int?
+  depreciationMethod DepreciationMethod?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+}
+enum AuditStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum AuditCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  CRITICAL
+  MISSING
+}
+
+model AssetAudit {
+  id                String        @id @default(cuid())
+  assetId           String
+  auditDate         DateTime
+  auditedBy         String
+  status            AuditStatus   @default(COMPLETED)
+  condition         AuditCondition
+  locationVerified  Boolean       @default(true)
+  notes             String?
+  discrepancies     String?
+  discrepancyResolved Boolean     @default(false)
+  resolvedDate      DateTime?
+  resolvedBy        String?
+  resolutionNotes   String?
+  photoUrls         String?       // Comma-separated URLs
+  nextAuditDate     DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  asset             Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([auditDate])
+  @@index([status])
 }

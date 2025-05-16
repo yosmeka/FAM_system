@@ -31,7 +31,7 @@ const assetFormSchema = z.object({
   // Financial Information
   purchaseDate: z.date({ required_error: "Purchase date is required." }),
   purchasePrice: z.coerce.number().min(0, { message: "Purchase price must be a positive number." }),
-  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }),
+  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }).optional(),
   depreciableCost: z.coerce.number().min(0, { message: "Depreciable cost must be a positive number." }).optional(),
   salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional(),
 
@@ -148,7 +148,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
       // Define which fields to validate for each tab
       const fieldsToValidate = {
         basic: ["name", "serialNumber"],
-        financial: ["purchaseDate", "purchasePrice", "currentValue"],
+        financial: ["purchaseDate", "purchasePrice"],
         classification: ["status"],
         maintenance: [] // No required fields in the last tab
       }
@@ -196,23 +196,36 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   // Function to check if serial number already exists
   const checkSerialNumber = async (serialNumber: string): Promise<boolean> => {
     try {
-      // Skip check if we're editing and the serial number hasn't changed
-      if (isEditing && initialData?.serialNumber === serialNumber) {
+      // Skip check if serial number is empty or we're editing and the serial number hasn't changed
+      if (!serialNumber || serialNumber.trim() === '' ||
+          (isEditing && initialData?.serialNumber === serialNumber)) {
         return false
       }
 
+      // For debugging - log the serial number being checked
+      console.log("Checking serial number:", serialNumber)
+
       const response = await fetch(`/api/assets/check-serial?serialNumber=${encodeURIComponent(serialNumber)}`)
+      if (!response.ok) {
+        console.error("Serial check API error:", response.status, response.statusText)
+        return false // Don't block submission if the API fails
+      }
+
       const data = await response.json()
-      return data.exists
+      console.log("Serial check response:", data)
+      return data.exists === true // Explicitly check for true
     } catch (error) {
       console.error("Error checking serial number:", error)
-      return false
+      return false // Don't block submission if there's an error
     }
   }
 
   async function onSubmit(data: AssetFormValues) {
     setIsSubmitting(true)
     try {
+      // Log the form data being submitted
+      console.log("Submitting form data:", data)
+
       // Check if serial number exists before submitting
       const serialExists = await checkSerialNumber(data.serialNumber)
       if (serialExists) {
@@ -233,6 +246,8 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
         setIsSubmitting(false)
         return
       }
+
+      // Proceed with submission if serial number is unique or check failed
 
       const endpoint = isEditing ? `/api/assets/${assetId}` : '/api/assets'
       const method = isEditing ? 'PUT' : 'POST'
@@ -294,75 +309,217 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
     }
   }
 
-  // Calculate progress percentage
+  // Calculate progress based on filled fields
+  const calculateProgress = () => {
+    // Define required fields for each tab
+    const tabFields = {
+      basic: ["name", "serialNumber", "description"],
+      financial: ["purchaseDate", "purchasePrice", "salvageValue"],
+      classification: ["status", "location", "department", "category", "type"],
+      maintenance: ["supplier", "warrantyExpiry"]
+    };
+
+    // Count total required fields and filled fields
+    const totalFields = Object.values(tabFields).flat().length;
+    let filledFields = 0;
+
+    // Check each field if it has a value
+    Object.values(tabFields).forEach(fields => {
+      fields.forEach(field => {
+        // Using type assertion for form values
+        const value = form.getValues(field as keyof AssetFormValues);
+        if (value &&
+            (typeof value === 'string' ? value.trim() !== '' : true) &&
+            (typeof value === 'number' ? !isNaN(value) : true)) {
+          filledFields++;
+        }
+      });
+    });
+
+    // Calculate percentage
+    return Math.round((filledFields / totalFields) * 100);
+  };
+
+  const progressPercentage = calculateProgress()
   const currentStepIndex = tabOrder.indexOf(activeTab)
-  const progressPercentage = ((currentStepIndex + 1) / tabOrder.length) * 100
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {/* Progress indicator */}
-        <div className="mb-6">
-          <div className="flex justify-between mb-2">
-            <span className="text-sm font-medium">Step {currentStepIndex + 1} of {tabOrder.length}</span>
-            <span className="text-sm font-medium">{Math.round(progressPercentage)}% Complete</span>
+        {/* Enhanced Progress indicator */}
+        <div className="mb-8 bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex justify-between mb-3">
+            <span className="text-sm font-medium flex items-center">
+              <span className="inline-flex items-center justify-center w-6 h-6 mr-2 bg-blue-600 text-white rounded-full text-xs">
+                {currentStepIndex + 1}
+              </span>
+              Step {currentStepIndex + 1} of {tabOrder.length}
+            </span>
+            <span className="text-sm font-medium flex items-center">
+              <span className={`mr-2 ${progressPercentage > 50 ? 'text-green-600' : 'text-blue-600'}`}>
+                {Math.round(progressPercentage)}% Complete
+              </span>
+              {progressPercentage === 100 && (
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+              className={`h-3 rounded-full transition-all duration-500 ease-in-out ${
+                progressPercentage < 30 ? 'bg-blue-400' :
+                progressPercentage < 70 ? 'bg-blue-600' :
+                progressPercentage === 100 ? 'bg-green-600 animate-pulse' : 'bg-green-600'
+              }`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
+          <p className="text-xs mt-2 flex justify-between">
+            <span className="text-gray-500">Fill in more fields to increase your progress</span>
+            <span className={cn(
+              "font-medium",
+              progressPercentage < 30 ? "text-blue-500" :
+              progressPercentage < 70 ? "text-blue-600" :
+              progressPercentage === 100 ? "text-green-600 font-bold" : "text-green-600"
+            )}>
+              {progressPercentage === 100 ? "✓ Complete!" : `${progressPercentage}% Complete`}
+            </span>
+          </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8">
+          <TabsList className="grid grid-cols-4 mb-8 p-2 bg-gradient-to-r from-blue-50 via-purple-50 to-amber-50 rounded-lg shadow-md">
             <TabsTrigger
               value="basic"
               className={cn(
-                activeTab === "basic" ? "font-bold" : "",
-                completedTabs.includes("basic") ? "text-green-600 border-green-600" : ""
+                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
+                activeTab === "basic"
+                  ? "font-bold bg-gradient-to-r from-blue-100 to-blue-50 shadow-md"
+                  : "hover:bg-blue-50",
+                completedTabs.includes("basic")
+                  ? "text-green-600 border-green-600"
+                  : ""
               )}
             >
-              {completedTabs.includes("basic") ? "✓ " : "1. "}
-              Basic Information
+              <div className={cn(
+                "absolute inset-0 bg-blue-200 opacity-20",
+                activeTab === "basic" ? "animate-pulse" : "opacity-0"
+              )}></div>
+              <div className="relative z-10 flex items-center justify-center">
+                <span className={cn(
+                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
+                  completedTabs.includes("basic")
+                    ? "bg-green-100 text-green-800"
+                    : activeTab === "basic"
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                )}>
+                  {completedTabs.includes("basic") ? "✓" : "1"}
+                </span>
+                <span>Basic Information</span>
+              </div>
             </TabsTrigger>
+
             <TabsTrigger
               value="financial"
               className={cn(
-                activeTab === "financial" ? "font-bold" : "",
-                completedTabs.includes("financial") ? "text-green-600 border-green-600" : ""
+                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
+                activeTab === "financial"
+                  ? "font-bold bg-gradient-to-r from-green-100 to-green-50 shadow-md"
+                  : "hover:bg-green-50",
+                completedTabs.includes("financial")
+                  ? "text-green-600 border-green-600"
+                  : ""
               )}
             >
-              {completedTabs.includes("financial") ? "✓ " : "2. "}
-              Financial Details
+              <div className={cn(
+                "absolute inset-0 bg-green-200 opacity-20",
+                activeTab === "financial" ? "animate-pulse" : "opacity-0"
+              )}></div>
+              <div className="relative z-10 flex items-center justify-center">
+                <span className={cn(
+                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
+                  completedTabs.includes("financial")
+                    ? "bg-green-100 text-green-800"
+                    : activeTab === "financial"
+                      ? "bg-green-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                )}>
+                  {completedTabs.includes("financial") ? "✓" : "2"}
+                </span>
+                <span>Financial Details</span>
+              </div>
             </TabsTrigger>
+
             <TabsTrigger
               value="classification"
               className={cn(
-                activeTab === "classification" ? "font-bold" : "",
-                completedTabs.includes("classification") ? "text-green-600 border-green-600" : ""
+                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
+                activeTab === "classification"
+                  ? "font-bold bg-gradient-to-r from-purple-100 to-purple-50 shadow-md"
+                  : "hover:bg-purple-50",
+                completedTabs.includes("classification")
+                  ? "text-green-600 border-green-600"
+                  : ""
               )}
             >
-              {completedTabs.includes("classification") ? "✓ " : "3. "}
-              Classification
+              <div className={cn(
+                "absolute inset-0 bg-purple-200 opacity-20",
+                activeTab === "classification" ? "animate-pulse" : "opacity-0"
+              )}></div>
+              <div className="relative z-10 flex items-center justify-center">
+                <span className={cn(
+                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
+                  completedTabs.includes("classification")
+                    ? "bg-green-100 text-green-800"
+                    : activeTab === "classification"
+                      ? "bg-purple-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                )}>
+                  {completedTabs.includes("classification") ? "✓" : "3"}
+                </span>
+                <span>Classification</span>
+              </div>
             </TabsTrigger>
+
             <TabsTrigger
               value="maintenance"
               className={cn(
-                activeTab === "maintenance" ? "font-bold" : "",
-                completedTabs.includes("maintenance") ? "text-green-600 border-green-600" : ""
+                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
+                activeTab === "maintenance"
+                  ? "font-bold bg-gradient-to-r from-amber-100 to-amber-50 shadow-md"
+                  : "hover:bg-amber-50",
+                completedTabs.includes("maintenance")
+                  ? "text-green-600 border-green-600"
+                  : ""
               )}
             >
-              {completedTabs.includes("maintenance") ? "✓ " : "4. "}
-              Maintenance & Depreciation
+              <div className={cn(
+                "absolute inset-0 bg-amber-200 opacity-20",
+                activeTab === "maintenance" ? "animate-pulse" : "opacity-0"
+              )}></div>
+              <div className="relative z-10 flex items-center justify-center">
+                <span className={cn(
+                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
+                  completedTabs.includes("maintenance")
+                    ? "bg-green-100 text-green-800"
+                    : activeTab === "maintenance"
+                      ? "bg-amber-600 text-white"
+                      : "bg-gray-200 text-gray-700"
+                )}>
+                  {completedTabs.includes("maintenance") ? "✓" : "4"}
+                </span>
+                <span>Maintenance & Depreciation</span>
+              </div>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
+            <Card className="border border-blue-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-blue-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white">
+                <CardTitle className="text-blue-800">Basic Information</CardTitle>
                 <CardDescription>Enter the essential details about this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -373,7 +530,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     <FormItem>
                       <FormLabel>Asset Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter asset name" {...field} />
+                        <Input
+                          placeholder="Enter asset name"
+                          {...field}
+                          value={field.value || ""}
+                          className="border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -385,10 +547,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="serialNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Serial Number</FormLabel>
+                      <FormLabel>Asset Tag ID</FormLabel>
                       <div className="relative">
                         <FormControl>
-                          <Input placeholder="Enter serial number" {...field} />
+                          <Input
+                            placeholder="Enter serial number"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
+                          />
                         </FormControl>
                         {isCheckingSerial && (
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -418,7 +585,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormControl>
                         <Textarea
                           placeholder="Enter a detailed description of the asset"
-                          className="min-h-[120px]"
+                          className="min-h-[120px] border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
                           {...field}
                           value={field.value || ""}
                         />
@@ -437,22 +604,33 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 variant="outline"
                 onClick={goToPreviousTab}
                 disabled={isFirstTab}
+                className={cn(
+                  "border-blue-200 text-blue-700 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 active:scale-95",
+                  isFirstTab && "opacity-50 cursor-not-allowed"
+                )}
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
                 Previous
               </Button>
               <Button
                 type="button"
                 onClick={goToNextTab}
+                className="bg-blue-600 hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Next
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="financial" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Details</CardTitle>
+            <Card className="border border-green-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-green-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-white">
+                <CardTitle className="text-green-800">Financial Details</CardTitle>
                 <CardDescription>Enter the financial information for this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -469,17 +647,34 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal border-green-200 hover:bg-green-50 hover:text-green-800 transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] shadow-sm hover:shadow",
                                   !field.value && "text-muted-foreground",
+                                  field.value && "text-green-800 border-green-300 bg-green-50"
                                 )}
                               >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                {field.value ? format(field.value, "PPP") : <span>Date</span>}
+                                <CalendarIcon className="ml-auto h-5 w-5 text-green-600" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          <PopoverContent className="w-auto p-4 border-green-200 shadow-lg bg-gradient-to-br from-green-50 to-white rounded-lg" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              className="rounded-md border-green-200"
+                              classNames={{
+                                day_selected: "bg-green-600 hover:bg-green-700 focus:bg-green-700 text-white font-bold",
+                                day_today: "bg-green-100 text-green-900 border border-green-400",
+                                head_cell: "text-green-800 font-semibold",
+                                caption: "text-green-800 font-semibold",
+                                nav_button_previous: "text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded-full",
+                                nav_button_next: "text-green-600 hover:text-green-800 hover:bg-green-100 p-1 rounded-full",
+                                table: "border-collapse border-spacing-0 shadow-sm rounded-md overflow-hidden",
+                                cell: "p-2 relative text-center focus-within:relative focus-within:z-20",
+                                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-green-100 rounded-full"
+                              }}
+                            />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />
@@ -494,7 +689,14 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Purchase Price</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value ?? ""}
+                            className="border-green-200 focus:border-green-400 focus:ring-2 focus:ring-green-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -502,48 +704,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="currentValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Current Value</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="depreciableCost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <div className="flex items-center gap-2">
-                            Depreciable Cost
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>The cost basis for depreciation calculations.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -566,7 +727,14 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           </div>
                         </FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} value={field.value || ""} />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-green-200 focus:border-green-400 focus:ring-2 focus:ring-green-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -582,22 +750,30 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
+                className="border-green-200 text-green-700 hover:bg-green-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
                 Previous
               </Button>
               <Button
                 type="button"
                 onClick={goToNextTab}
+                className="bg-green-600 hover:bg-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Next
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="classification" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Classification</CardTitle>
+            <Card className="border border-purple-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-purple-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-white">
+                <CardTitle className="text-purple-800">Classification</CardTitle>
                 <CardDescription>Categorize this asset for better organization.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -607,18 +783,43 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value || "ACTIVE"}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border-purple-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="ACTIVE">Active</SelectItem>
-                          <SelectItem value="INACTIVE">Inactive</SelectItem>
-                          <SelectItem value="MAINTENANCE">In Maintenance</SelectItem>
-                          <SelectItem value="DISPOSED">Disposed</SelectItem>
-                          <SelectItem value="LOST">Lost</SelectItem>
+                        <SelectContent className="border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-white rounded-lg p-1">
+                          <SelectItem value="ACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                              Active
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="INACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
+                              Inactive
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="UNDER_MAINTENANCE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
+                              In Maintenance
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="DISPOSED" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Disposed
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="LOST" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
+                              Lost
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -634,7 +835,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          <Input placeholder="Asset location" {...field} value={field.value || ""} />
+                          <Input
+                            placeholder="Asset location"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -648,7 +854,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Department</FormLabel>
                         <FormControl>
-                          <Input placeholder="Department" {...field} value={field.value || ""} />
+                          <Input
+                            placeholder="Department"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -664,7 +875,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Category</FormLabel>
                         <FormControl>
-                          <Input placeholder="Asset category" {...field} value={field.value || ""} />
+                          <Input
+                            placeholder="Asset category"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -678,7 +894,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Type</FormLabel>
                         <FormControl>
-                          <Input placeholder="Asset type" {...field} value={field.value || ""} />
+                          <Input
+                            placeholder="Asset type"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -693,7 +914,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     <FormItem>
                       <FormLabel>Supplier</FormLabel>
                       <FormControl>
-                        <Input placeholder="Supplier name" {...field} value={field.value || ""} />
+                        <Input
+                          placeholder="Supplier name"
+                          {...field}
+                          value={field.value || ""}
+                          className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -708,23 +934,31 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
+                className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
                 Previous
               </Button>
               <Button
                 type="button"
                 onClick={goToNextTab}
+                className="bg-purple-600 hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Next
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="maintenance" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Maintenance & Warranty</CardTitle>
-                <CardDescription>Track maintenance schedules and warranty information.</CardDescription>
+            <Card className="border border-amber-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-amber-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-white">
+                <CardTitle className="text-amber-800">Warranty</CardTitle>
+                <CardDescription>Track warranty information.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -739,17 +973,34 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             <Button
                               variant={"outline"}
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal border-amber-200 hover:bg-amber-50 hover:text-amber-800 transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] shadow-sm hover:shadow",
                                 !field.value && "text-muted-foreground",
+                                field.value && "text-amber-800 border-amber-300 bg-amber-50"
                               )}
                             >
-                              {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              {field.value ? format(field.value, "PPP") : <span>Date</span>}
+                              <CalendarIcon className="ml-auto h-5 w-5 text-amber-600" />
                             </Button>
                           </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        <PopoverContent className="w-auto p-4 border-amber-200 shadow-lg bg-gradient-to-br from-amber-50 to-white rounded-lg" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            className="rounded-md border-amber-200"
+                            classNames={{
+                              day_selected: "bg-amber-600 hover:bg-amber-700 focus:bg-amber-700 text-white font-bold",
+                              day_today: "bg-amber-100 text-amber-900 border border-amber-400",
+                              head_cell: "text-amber-800 font-semibold",
+                              caption: "text-amber-800 font-semibold",
+                              nav_button_previous: "text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-1 rounded-full",
+                              nav_button_next: "text-amber-600 hover:text-amber-800 hover:bg-amber-100 p-1 rounded-full",
+                              table: "border-collapse border-spacing-0 shadow-sm rounded-md overflow-hidden",
+                              cell: "p-2 relative text-center focus-within:relative focus-within:z-20",
+                              day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-amber-100 rounded-full"
+                            }}
+                          />
                         </PopoverContent>
                       </Popover>
                       <FormMessage />
@@ -757,73 +1008,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   )}
                 />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="lastMaintenance"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Last Maintenance Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="nextMaintenance"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Next Maintenance Date</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-full pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground",
-                                )}
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {/* Maintenance dates removed as requested */}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Depreciation</CardTitle>
+            <Card className="border border-red-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-red-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white">
+                <CardTitle className="text-red-800">Depreciation</CardTitle>
                 <CardDescription>Set up depreciation parameters for this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -835,16 +1026,41 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormLabel>Depreciation Method</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || ""}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="border-red-200 focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all">
                             <SelectValue placeholder="Select method" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="STRAIGHT_LINE">Straight Line</SelectItem>
-                          <SelectItem value="DECLINING_BALANCE">Declining Balance</SelectItem>
-                          <SelectItem value="DOUBLE_DECLINING">Double Declining</SelectItem>
-                          <SelectItem value="SUM_OF_YEARS_DIGITS">Sum of Years Digits</SelectItem>
-                          <SelectItem value="UNITS_OF_ACTIVITY">Units of Activity</SelectItem>
+                        <SelectContent className="border-red-200 shadow-lg bg-gradient-to-br from-red-50 to-white rounded-lg p-1">
+                          <SelectItem value="STRAIGHT_LINE" className="hover:bg-red-100 focus:bg-red-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Straight Line
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="DECLINING_BALANCE" className="hover:bg-red-100 focus:bg-red-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Declining Balance
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="DOUBLE_DECLINING" className="hover:bg-red-100 focus:bg-red-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Double Declining
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="SUM_OF_YEARS_DIGITS" className="hover:bg-red-100 focus:bg-red-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Sum of Years Digits
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="UNITS_OF_ACTIVITY" className="hover:bg-red-100 focus:bg-red-100 rounded-md my-1 cursor-pointer">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Units of Activity
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -860,7 +1076,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormItem>
                         <FormLabel>Useful Life (Months)</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="Enter months" {...field} value={field.value || ""} />
+                          <Input
+                            type="number"
+                            placeholder="Enter months"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-200 transition-all"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -879,17 +1101,34 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               <Button
                                 variant={"outline"}
                                 className={cn(
-                                  "w-full pl-3 text-left font-normal",
+                                  "w-full pl-3 text-left font-normal border-red-200 hover:bg-red-50 hover:text-red-800 transition-all duration-200 ease-in-out transform hover:scale-[1.01] active:scale-[0.99] shadow-sm hover:shadow",
                                   !field.value && "text-muted-foreground",
+                                  field.value && "text-red-800 border-red-300 bg-red-50"
                                 )}
                               >
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                {field.value ? format(field.value, "PPP") : <span>Date</span>}
+                                <CalendarIcon className="ml-auto h-5 w-5 text-red-600" />
                               </Button>
                             </FormControl>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          <PopoverContent className="w-auto p-4 border-red-200 shadow-lg bg-gradient-to-br from-red-50 to-white rounded-lg" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              className="rounded-md border-red-200"
+                              classNames={{
+                                day_selected: "bg-red-600 hover:bg-red-700 focus:bg-red-700 text-white font-bold",
+                                day_today: "bg-red-100 text-red-900 border border-red-400",
+                                head_cell: "text-red-800 font-semibold",
+                                caption: "text-red-800 font-semibold",
+                                nav_button_previous: "text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded-full",
+                                nav_button_next: "text-red-600 hover:text-red-800 hover:bg-red-100 p-1 rounded-full",
+                                table: "border-collapse border-spacing-0 shadow-sm rounded-md overflow-hidden",
+                                cell: "p-2 relative text-center focus-within:relative focus-within:z-20",
+                                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-red-100 rounded-full"
+                              }}
+                            />
                           </PopoverContent>
                         </Popover>
                         <FormMessage />
@@ -906,15 +1145,37 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
+                className="border-amber-200 text-amber-700 hover:bg-amber-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+                </svg>
                 Previous
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700"
+                className={cn(
+                  "bg-green-600 hover:bg-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg",
+                  isSubmitting && "opacity-70 cursor-not-allowed"
+                )}
               >
-                {isSubmitting ? 'Saving...' : isEditing ? 'Update Asset' : 'Create Asset'}
+                {isSubmitting ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  <span className="flex items-center">
+                    {isEditing ? 'Update Asset' : 'Create Asset'}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                )}
               </Button>
             </div>
           </TabsContent>

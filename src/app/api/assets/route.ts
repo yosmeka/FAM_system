@@ -51,7 +51,8 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
         serialNumber: body.serialNumber,
         purchaseDate: new Date(body.purchaseDate),
         purchasePrice: parseFloat(body.purchasePrice),
-        currentValue: parseFloat(body.currentValue),
+        // Set currentValue to purchasePrice if not provided
+        currentValue: body.currentValue ? parseFloat(body.currentValue) : parseFloat(body.purchasePrice),
         status: body.status,
         location: body.location,
         department: body.department,
@@ -92,10 +93,13 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
     console.log('Initial history records to be created:', changes);
 
     try {
-      const result = await prisma.assetHistory.createMany({
-        data: changes,
-      });
-      console.log('Initial history records created:', result);
+      // Create history records one by one instead of using createMany
+      for (const change of changes) {
+        await prisma.assetHistory.create({
+          data: change
+        });
+      }
+      console.log('Initial history records created successfully');
     } catch (error) {
       console.error('Error creating initial history records:', error);
     }
