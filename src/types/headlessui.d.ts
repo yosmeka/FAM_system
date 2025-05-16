@@ -14,6 +14,14 @@ declare module '@headlessui/react' {
     className?: string;
   }
 
+  interface DialogProps {
+    as?: ElementType;
+    open?: boolean;
+    onClose: (value: boolean) => void;
+    className?: string;
+    children: ReactNode;
+  }
+
   interface DisclosureProps {
     as?: ElementType;
     defaultOpen?: boolean;
@@ -48,6 +56,15 @@ declare module '@headlessui/react' {
   }
 
   export const Transition: React.FC<TransitionProps>;
+  interface DialogTitleProps extends ComponentProps<'h2'> {
+    as?: ElementType;
+  }
+
+  export const Dialog: React.FC<DialogProps> & {
+    Panel: React.FC<ComponentProps<'div'>>;
+    Title: React.FC<DialogTitleProps>;
+    Description: React.FC<ComponentProps<'p'>>;
+  };
   export const Disclosure: React.FC<DisclosureProps> & {
     Button: React.FC<ComponentProps<'button'>>;
     Panel: React.FC<ComponentProps<'div'>>;
@@ -57,4 +74,4 @@ declare module '@headlessui/react' {
     Items: React.FC<MenuItemsProps>;
     Item: React.FC<MenuItemProps>;
   };
-} 
+}

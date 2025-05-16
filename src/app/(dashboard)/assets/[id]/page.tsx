@@ -1,22 +1,19 @@
 'use client';
 
 import React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { LinkAssetModal } from '@/components/LinkAssetModal';
-import { UnlinkAssetButton } from '@/components/UnlinkAssetButton';
 import { AssetLinkingTable } from '@/components/AssetLinkingTable';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
-import Link from 'next/link';
+import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
 import {
-  calculateDepreciation,
-  generateChartData,
   DepreciationMethod,
   DepreciationResult
 } from '@/utils/depreciation';
@@ -45,37 +42,50 @@ interface Asset {
   updatedAt: string;
   linkedTo: LinkedAsset[];
   linkedFrom: LinkedAsset[];
+  capitalImprovements?: CapitalImprovement[];
   depreciations: Array<{
     usefulLife: number;
   }>;
 }
 
+
+interface CapitalImprovement {
+  id: string;
+  description: string;
+  improvementDate: string;
+  cost: number;
+  usefulLifeMonths: number | null;
+  depreciationMethod: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface HistoryRecord {
+  changedAt: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string | null;
+}
+
 export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  // Define all hooks at the top level
   const { checkPermission } = usePermissions();
-  if (!checkPermission('Asset view (list and detail)')) {
-    return (
-      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
-        <h1 className="text-2xl font-semibold">Access Denied</h1>
-        <p className="mt-2">You do not have permission to view asset details.</p>
-      </div>
-    );
-  }
-  const resolvedParams = React.use(params); // Unwrap params Promise for Next.js App Router
   const router = useRouter();
-  const { data: session } = useSession();
+  // Session is used for authorization checks in API calls
+  useSession();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('details');
   const [isLinkingAsset, setIsLinkingAsset] = useState(false);
   const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
-  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(false);
-  const [selectedAssetId, setSelectedAssetId] = useState<string>('');
+  // These state variables are used in the renderLinkingTab function
+  const [availableAssets] = useState<Asset[]>([]);
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-
   const { toPDF, targetRef } = usePDF({
     filename: `depreciation-report-${asset?.name || 'asset'}.pdf`,
   });
@@ -84,7 +94,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [usefulLife, setUsefulLife] = useState<number>(5);
   const [salvageValue, setSalvageValue] = useState<number>(0);
   const [depreciationMethod, setDepreciationMethod] = useState<DepreciationMethod>('STRAIGHT_LINE');
-  const [depreciationRate, setDepreciationRate] = useState<number>(20);
+  // Depreciation rate is used in the handleSaveDepreciationSettings function
+  const [, setDepreciationRate] = useState<number>(20);
   const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
     isDepreciable: true,
     depreciableCost: 0,
@@ -94,21 +105,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     dateAcquired: new Date().toISOString().split('T')[0]
   });
 
-  const fetchAvailableAssets = async () => {
-    setIsLoadingAssets(true);
-    try {
-      const response = await fetch('/api/assets/available');
-      if (!response.ok) throw new Error('Failed to fetch available assets');
-      const data = await response.json();
-      // Filter out the current asset from the available assets
-      const filteredAssets = data.filter((a: Asset) => a.id !== resolvedParams.id);
-      setAvailableAssets(filteredAssets);
-    } catch (error) {
-      console.error('Error fetching available assets:', error);
-    } finally {
-      setIsLoadingAssets(false);
-    }
-  };
+  // Unwrap params Promise for Next.js App Router
+  const resolvedParams = React.use(params);
 
   // Fetch initial asset data
   useEffect(() => {
@@ -119,32 +117,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         const response = await fetch(`/api/assets/${resolvedParams.id}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
-        console.log("INITIAL FETCH - Fetched asset data:", data);
-        console.log("INITIAL FETCH - Linked assets (linkedTo):", data.linkedTo);
-        console.log("INITIAL FETCH - Linked assets length:", data.linkedTo ? data.linkedTo.length : 0);
-        console.log("INITIAL FETCH - Linked from assets (linkedFrom):", data.linkedFrom);
-        console.log("INITIAL FETCH - Linked from length:", data.linkedFrom ? data.linkedFrom.length : 0);
-
-        // Check if the asset has any linked assets
-        if (data.linkedTo && data.linkedTo.length > 0) {
-          console.log("INITIAL FETCH - Asset has linked child assets:", data.linkedTo.length);
-          data.linkedTo.forEach((link: LinkedAsset, index: number) => {
-            console.log(`INITIAL FETCH - Child ${index + 1}:`, link.toAsset);
-          });
-        } else {
-          console.log("INITIAL FETCH - Asset has no linked child assets");
-        }
-
-        // Check if the asset is linked to any other assets
-        if (data.linkedFrom && data.linkedFrom.length > 0) {
-          console.log("INITIAL FETCH - Asset is linked to parent assets:", data.linkedFrom.length);
-          data.linkedFrom.forEach((link: LinkedAsset, index: number) => {
-            console.log(`INITIAL FETCH - Parent ${index + 1}:`, link.fromAsset);
-          });
-        } else {
-          console.log("INITIAL FETCH - Asset is not linked to any parent assets");
-        }
-
         setAsset(data);
       } catch (error) {
         console.error('Error fetching asset:', error);
@@ -156,122 +128,42 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     fetchAsset();
   }, [resolvedParams.id]);
 
-  // Handle tab changes and data fetching
+
+
+  // Add useEffect for history tab
   useEffect(() => {
-    const fetchTabData = async () => {
-      if (!asset) return;
-
-      switch (activeTab) {
-        case 'linking':
-          if (isLinkingAsset) {
-            setIsLoadingAssets(true);
-            try {
-              const response = await fetch('/api/assets');
-              if (!response.ok) throw new Error('Failed to fetch assets');
-              const data = await response.json();
-              // Filter out current asset, already linked assets, and assets that are already parents
-              const filteredAssets = data.filter((a: Asset) => {
-                // Don't include the current asset
-                if (a.id === resolvedParams.id) return false;
-
-                // Don't include assets that are already linked as children
-                if (asset?.linkedTo?.some(link => link.toAsset.id === a.id)) return false;
-
-                // Don't include assets that are already parents (have their own linked assets)
-                if (a.linkedTo && a.linkedTo.length > 0) return false;
-
-                // Don't include assets that are already children of other assets
-                if (a.linkedFrom && a.linkedFrom.length > 0) return false;
-
-                return true;
-              });
-              setAvailableAssets(filteredAssets);
-            } catch (error) {
-              console.error('Error fetching assets:', error);
-              toast.error('Failed to load available assets');
-            } finally {
-              setIsLoadingAssets(false);
-            }
-          }
-          break;
-
-        case 'history':
-          setIsHistoryLoading(true);
-          try {
-            const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
-            if (!response.ok) throw new Error('Failed to fetch history');
-            const data = await response.json();
-            setHistory(data);
-          } catch (error) {
-            console.error('Error fetching history:', error);
-            toast.error('Failed to fetch asset history');
-          } finally {
-            setIsHistoryLoading(false);
-          }
-          break;
-
-        case 'depreciation':
-          try {
-            // Fetch depreciation data from the API
-            const response = await fetch(`/api/assets/${resolvedParams.id}/depreciation`);
-            if (!response.ok) throw new Error('Failed to fetch depreciation data');
-            const data = await response.json();
-
-            // Update state with the fetched data
-            setDepreciationResults(data.depreciationResults);
-            setDepreciationData(data.chartData);
-
-            // Update the form controls with the asset's depreciation settings
-            setSalvageValue(data.depreciationSettings.salvageValue);
-            setUsefulLife(data.depreciationSettings.usefulLifeYears);
-            setDepreciationMethod(data.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
-
-            // Set depreciation rate if it's declining balance
-            if (data.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
-              setDepreciationRate(data.depreciationSettings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20);
-            }
-
-            // Update the depreciation settings for the modal
-            setDepreciationSettings({
-              isDepreciable: true,
-              depreciableCost: data.depreciationSettings.depreciableCost,
-              salvageValue: data.depreciationSettings.salvageValue,
-              usefulLifeMonths: data.depreciationSettings.usefulLifeMonths,
-              depreciationMethod: data.depreciationSettings.depreciationMethod,
-              dateAcquired: new Date(data.depreciationSettings.startDate).toISOString().split('T')[0]
-            });
-          } catch (error) {
-            console.error('Error fetching depreciation data:', error);
-            toast.error('Failed to fetch depreciation data');
-
-            // Fallback to client-side calculation if API fails
-            const results = calculateDepreciation({
-              purchasePrice: asset.purchasePrice,
-              purchaseDate: asset.purchaseDate,
-              salvageValue,
-              usefulLife,
-              method: depreciationMethod,
-              depreciationRate: depreciationRate
-            });
-            setDepreciationResults(results);
-            setDepreciationData(generateChartData(results));
-
-            // Set default depreciation settings
-            setDepreciationSettings({
-              isDepreciable: true,
-              depreciableCost: asset.purchasePrice,
-              salvageValue: asset.purchasePrice * 0.1,
-              usefulLifeMonths: 60,
-              depreciationMethod: 'STRAIGHT_LINE',
-              dateAcquired: new Date(asset.purchaseDate).toISOString().split('T')[0]
-            });
-          }
-          break;
+    // Function to fetch history data
+    const fetchHistory = async () => {
+      if (activeTab === 'history') {
+        setIsHistoryLoading(true);
+        try {
+          const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
+          if (!response.ok) throw new Error('Failed to fetch history');
+          const data = await response.json();
+          setHistory(data);
+        } catch (error) {
+          console.error('Error fetching history:', error);
+          toast.error('Failed to load asset history');
+        } finally {
+          setIsHistoryLoading(false);
+        }
       }
     };
 
-    fetchTabData();
-  }, [activeTab, resolvedParams.id, asset, isLinkingAsset]);
+    fetchHistory();
+  }, [activeTab, resolvedParams.id]);
+
+  // Check permissions first
+  if (!checkPermission('Asset view (list and detail)')) {
+    return (
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
+        <h1 className="text-2xl font-semibold">Access Denied</h1>
+        <p className="mt-2">You do not have permission to view asset details.</p>
+      </div>
+    );
+  }
+
+
 
   const handleLinkSuccess = () => {
     // Refresh the asset data without reloading the page
@@ -297,62 +189,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     fetchAsset();
   };
 
-  // Remove the useEffect that recalculates depreciation when settings change
-  // We'll handle this with a recalculate button instead
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (activeTab === 'history') {
-        setIsHistoryLoading(true);
-        try {
-          const response = await fetch(`/api/assets/${resolvedParams.id}/history`);
-          if (!response.ok) throw new Error('Failed to fetch history');
-          const data = await response.json();
-          setHistory(data);
-        } catch (error) {
-          console.error('Error fetching history:', error);
-          toast.error('Failed to load asset history');
-        } finally {
-          setIsHistoryLoading(false);
-        }
-      }
-    };
-
-    fetchHistory();
-  }, [activeTab, resolvedParams.id]);
-
-  const calculateAssetDepreciation = async () => {
-    if (!asset) return;
-
-    try {
-      // Call the API with the current settings
-      const response = await fetch(`/api/assets/${resolvedParams.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
-
-      if (!response.ok) throw new Error('Failed to fetch depreciation data');
-
-      const data = await response.json();
-      setDepreciationResults(data.depreciationResults);
-      setDepreciationData(data.chartData);
-
-      toast.success('Depreciation recalculated successfully');
-    } catch (error) {
-      console.error('Error calculating depreciation:', error);
-      toast.error('Failed to calculate depreciation');
-
-      // Fallback to client-side calculation
-      const results = calculateDepreciation({
-        purchasePrice: asset.purchasePrice,
-        purchaseDate: asset.purchaseDate,
-        usefulLife,
-        salvageValue: salvageValue || asset.purchasePrice * 0.1,
-        method: depreciationMethod,
-        depreciationRate
-      });
-
-      setDepreciationResults(results);
-      setDepreciationData(generateChartData(results));
-    }
-  };
 
   const handleSaveDepreciationSettings = async (settings: DepreciationSettings) => {
     if (!asset) return;
@@ -532,6 +369,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderHistoryTab();
       case 'linking':
         return renderLinkingTab();
+        case 'capital_improvment':
+        return <CapitalImprovementsTab assetId={resolvedParams.id} />;
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -742,7 +581,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
         {checkPermission('Asset edit') && (
-          <button 
+          <button
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
@@ -750,7 +589,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           </button>
         )}
         {checkPermission('Asset delete') && (
-          <button 
+          <button
             onClick={handleDelete}
             className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
           >
@@ -784,7 +623,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'reserve', 'audit', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${
