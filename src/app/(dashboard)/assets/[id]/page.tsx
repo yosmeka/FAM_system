@@ -9,12 +9,13 @@ import { ManageDepreciationModal, DepreciationSettings } from '@/components/Mana
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
+import { MaintenanceTabWrapper } from '@/components/MaintenanceTabWrapper';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import Link from 'next/link';
-import { ArrowLeft, Download, Settings } from 'lucide-react';
+import { ArrowLeft, Download, Sliders } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
 import {
@@ -94,6 +95,9 @@ interface Asset {
 }
 
 export default function AssetDetailsPage({ params }: { params: { id: string } }) {
+  // Use React.use() to unwrap params
+  const unwrappedParams = React.use(params);
+  const assetId = unwrappedParams.id;
   // Call hooks first to maintain consistent order
   const router = useRouter();
   useSession();
@@ -145,7 +149,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       if (!response.ok) throw new Error('Failed to fetch available assets');
       const data = await response.json();
       // Filter out the current asset from the available assets
-      const filteredAssets = data.filter((a: Asset) => a.id !== params.id);
+      const filteredAssets = data.filter((a: Asset) => a.id !== assetId);
       setAvailableAssets(filteredAssets);
     } catch (error) {
       console.error('Error fetching available assets:', error);
@@ -159,8 +163,8 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     const fetchAsset = async () => {
       setIsLoading(true);
       try {
-        console.log("INITIAL FETCH - Fetching asset data for ID:", params.id);
-        const response = await fetch(`/api/assets/${params.id}`);
+        console.log("INITIAL FETCH - Fetching asset data for ID:", assetId);
+        const response = await fetch(`/api/assets/${assetId}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
         console.log("INITIAL FETCH - Fetched asset data:", data);
@@ -198,7 +202,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       }
     };
     fetchAsset();
-  }, [params.id]);
+  }, [assetId]);
 
   // Handle tab changes and data fetching
   useEffect(() => {
@@ -216,7 +220,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
               // Filter out current asset, already linked assets, and assets that are already parents
               const filteredAssets = data.filter((a: Asset) => {
                 // Don't include the current asset
-                if (a.id === params.id) return false;
+                if (a.id === assetId) return false;
 
                 // Don't include assets that are already linked as children
                 if (asset?.linkedTo?.some(link => link.toAsset.id === a.id)) return false;
@@ -242,7 +246,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         case 'history':
           setIsHistoryLoading(true);
           try {
-            const response = await fetch(`/api/assets/${params.id}/history`);
+            const response = await fetch(`/api/assets/${assetId}/history`);
             if (!response.ok) throw new Error('Failed to fetch history');
             const data = await response.json();
             setHistory(data);
@@ -257,7 +261,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         case 'depreciation':
           try {
             // Fetch depreciation data from the API
-            const response = await fetch(`/api/assets/${params.id}/depreciation`);
+            const response = await fetch(`/api/assets/${assetId}/depreciation`);
             if (!response.ok) throw new Error('Failed to fetch depreciation data');
             const data = await response.json();
 
@@ -317,7 +321,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     };
 
     fetchTabData();
-  }, [activeTab, params.id, asset, isLinkingAsset]);
+  }, [activeTab, assetId, asset, isLinkingAsset]);
 
   const handleLinkSuccess = () => {
     // Refresh the asset data without reloading the page
@@ -327,7 +331,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     const fetchAsset = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/assets/${params.id}`);
+        const response = await fetch(`/api/assets/${assetId}`);
         if (!response.ok) throw new Error('Failed to fetch asset');
         const data = await response.json();
         console.log("Refreshed asset data:", data);
@@ -351,7 +355,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       if (activeTab === 'history') {
         setIsHistoryLoading(true);
         try {
-          const response = await fetch(`/api/assets/${params.id}/history`);
+          const response = await fetch(`/api/assets/${assetId}/history`);
           if (!response.ok) throw new Error('Failed to fetch history');
           const data = await response.json();
           setHistory(data);
@@ -365,7 +369,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     };
 
     fetchHistory();
-  }, [activeTab, params.id]);
+  }, [activeTab, assetId]);
 
   const calculateAssetDepreciation = async () => {
     if (!asset) return;
@@ -391,7 +395,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       }
 
       // Call the API with the current settings
-      const response = await fetch(`/api/assets/${params.id}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}&calculateAsGroup=${depreciationSettings.calculateAsGroup || false}`);
+      const response = await fetch(`/api/assets/${assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}&calculateAsGroup=${depreciationSettings.calculateAsGroup || false}`);
 
       if (!response.ok) throw new Error('Failed to fetch depreciation data');
 
@@ -450,7 +454,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
 
       // Call the API with the new settings using PUT method to update the asset
       const response = await fetch(
-        `/api/assets/${params.id}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}&calculateAsGroup=${settings.calculateAsGroup || false}`,
+        `/api/assets/${assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}&calculateAsGroup=${settings.calculateAsGroup || false}`,
         {
           method: 'PUT',
           headers: {
@@ -511,7 +515,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
     }
 
     try {
-      const response = await fetch(`/api/assets/${params.id}`, {
+      const response = await fetch(`/api/assets/${assetId}`, {
         method: 'DELETE',
       });
 
@@ -616,7 +620,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
           open={isLinkingAsset}
           onClose={() => setIsLinkingAsset(false)}
           onSuccess={handleLinkSuccess}
-          currentAssetId={params.id}
+          currentAssetId={assetId}
           availableAssets={availableAssets}
         />
         {asset && (
@@ -637,10 +641,10 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
       case 'linking':
         return renderLinkingTab();
       case 'capital_improvment':
-        return <CapitalImprovementsTab assetId={params.id} />;
+        return <CapitalImprovementsTab assetId={assetId} />;
       case 'audit':
         return <AssetAuditTab
-          assetId={params.id}
+          assetId={assetId}
           assetName={asset?.name || ''}
           assetLocation={asset?.location}
           lastAuditDate={asset?.lastAuditDate}
@@ -648,8 +652,15 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
         />;
       case 'docs':
         return <DocumentsTab
-          assetId={params.id}
+          assetId={assetId}
           assetName={asset?.name || ''}
+        />;
+      case 'maint':
+        return <MaintenanceTabWrapper
+          assetId={assetId}
+          assetName={asset?.name || ''}
+          lastMaintenance={asset?.lastMaintenance}
+          nextMaintenance={asset?.nextMaintenance}
         />;
       case 'depreciation':
         return (
@@ -760,8 +771,7 @@ export default function AssetDetailsPage({ params }: { params: { id: string } })
                     onClick={() => setIsManagingDepreciation(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
-                    <Settings size={16} />
-                    Manage
+                    Manage Settings
                   </button>
                 </div>
               </div>

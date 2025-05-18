@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { AssetAuditForm } from './AssetAuditForm';
+import { MaintenanceFormSimple } from './MaintenanceFormSimple';
 
-interface AssetAuditModalProps {
+interface MaintenanceModalProps {
   open: boolean;
   onClose: () => void;
   assetId: string;
@@ -13,14 +13,14 @@ interface AssetAuditModalProps {
   isEditing?: boolean;
 }
 
-export function AssetAuditModal({
+export function MaintenanceModal({
   open,
   onClose,
   assetId,
   onSuccess,
   initialData,
   isEditing = false,
-}: AssetAuditModalProps) {
+}: MaintenanceModalProps) {
   const handleSuccess = () => {
     onSuccess();
     onClose();
@@ -35,7 +35,7 @@ export function AssetAuditModal({
         <div className="fixed inset-0 bg-black bg-opacity-30" onClick={onClose}></div>
 
         {/* Modal */}
-        <div className="relative z-10 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+        <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
           {/* Close button */}
           <div className="absolute right-0 top-0 pr-4 pt-4">
             <button
@@ -52,10 +52,10 @@ export function AssetAuditModal({
           <div>
             <div className="mt-3 text-center sm:mt-0 sm:text-left">
               <h3 className="text-lg font-semibold leading-6 text-gray-900">
-                {isEditing ? 'Edit Audit Record' : 'Record New Audit'}
+                {isEditing ? 'Edit Maintenance Record' : 'Schedule Maintenance'}
               </h3>
               <div className="mt-4">
-                <AssetAuditForm
+                <MaintenanceFormSimple
                   assetId={assetId}
                   onSuccess={handleSuccess}
                   initialData={initialData}
