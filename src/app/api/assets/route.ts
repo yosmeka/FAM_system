@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 import { withRole } from '@/middleware/rbac';
+import { withPermission } from '@/middleware/permission';
 
 export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   try {
@@ -32,7 +33,7 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   }
 });
 
-export const POST = withRole(['MANAGER'], async function POST(request: Request) {
+export const POST = withPermission(async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -71,35 +72,6 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
       },
     });
 
-    // Track initial asset creation in history
-    const fields = [
-      'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
-      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
-      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
-      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
-    ];
-
-    console.log('New asset created:', asset);
-
-    const changes = fields.map(field => ({
-      assetId: asset.id,
-      field,
-      oldValue: null,
-      newValue: asset[field]?.toString() || null,
-      changedBy: session.user?.email || 'system',
-    }));
-
-    console.log('Initial history records to be created:', changes);
-
-    try {
-      const result = await prisma.assetHistory.createMany({
-        data: changes,
-      });
-      console.log('Initial history records created:', result);
-    } catch (error) {
-      console.error('Error creating initial history records:', error);
-    }
-
     return NextResponse.json(asset);
   } catch (error: any) {
     console.error('Error creating asset:', error);
@@ -122,4 +94,4 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
       code: error.code
     }, { status: 500 });
   }
-});
+}, 'Asset create');

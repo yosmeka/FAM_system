@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   // Create a test user
   const password = await hash('password123', 12);
-  
+
   const user = await prisma.user.upsert({
     where: { email: 'admin@example.com' },
     update: {},
@@ -80,6 +80,21 @@ async function main() {
       create: {
         role: 'ADMIN',
         permissionId: userViewPermission.id,
+      },
+    });
+  }
+
+  // Assign 'User create/invite' permission to ADMIN role
+  const userCreatePermission = await prisma.permission.findUnique({
+    where: { name: 'User create/invite' },
+  });
+  if (userCreatePermission) {
+    await prisma.rolePermission.upsert({
+      where: { role_permissionId: { role: 'ADMIN', permissionId: userCreatePermission.id } },
+      update: {},
+      create: {
+        role: 'ADMIN',
+        permissionId: userCreatePermission.id,
       },
     });
   }

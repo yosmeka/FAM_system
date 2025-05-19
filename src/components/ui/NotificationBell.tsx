@@ -24,6 +24,18 @@ export function NotificationBell({ notifications, setNotifications }: Notificati
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/admin/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
   return (
     <div className="relative">
       <button
@@ -65,7 +77,7 @@ export function NotificationBell({ notifications, setNotifications }: Notificati
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              const res = await fetch('/api/notifications', {
+                              const res = await fetch('/api/admin/notifications', {
                                 method: 'PATCH',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ id: n.id }),
@@ -74,8 +86,9 @@ export function NotificationBell({ notifications, setNotifications }: Notificati
                                 const err = await res.json();
                                 throw new Error(err.error || 'Failed to mark as read');
                               }
-                              setNotifications((prev) => prev.map((notif) => notif.id === n.id ? { ...notif, read: true } : notif));
+                              await fetchNotifications();
                             } catch (err) {
+                              console.error('Failed to mark as read:', err);
                               alert('Failed to mark as read');
                             }
                           }}
@@ -93,7 +106,7 @@ export function NotificationBell({ notifications, setNotifications }: Notificati
                         onClick={async (e) => {
                           e.stopPropagation();
                           try {
-                            const res = await fetch('/api/notifications', {
+                            const res = await fetch('/api/admin/notifications', {
                               method: 'DELETE',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ id: n.id }),
@@ -102,8 +115,9 @@ export function NotificationBell({ notifications, setNotifications }: Notificati
                               const err = await res.json();
                               throw new Error(err.error || 'Failed to delete notification');
                             }
-                            setNotifications((prev) => prev.filter((notif) => notif.id !== n.id));
+                            await fetchNotifications();
                           } catch (err) {
+                            console.error('Failed to delete notification:', err);
                             alert('Failed to delete notification');
                           }
                         }}
