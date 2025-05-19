@@ -33,7 +33,13 @@ interface MaintenanceRecord {
   completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  notes?: string | null;
+  scheduledDate?: string | null;
   requester?: {
+    name: string;
+    email: string;
+  };
+  manager?: {
     name: string;
     email: string;
   };
@@ -431,6 +437,14 @@ export function AssetMaintenanceTab({
                         <li><span className="font-medium">Priority:</span> {record.priority}</li>
                         {record.cost && <li><span className="font-medium">Cost:</span> ${record.cost.toFixed(2)}</li>}
                         {record.completedAt && <li><span className="font-medium">Completed:</span> {formatDate(record.completedAt)}</li>}
+                        {record.status === 'REJECTED' && record.notes && (
+                          <li className="mt-2">
+                            <span className="font-medium text-red-600">Rejection Reason:</span>
+                            <div className="mt-1 p-2 bg-red-50 border border-red-100 rounded-md text-gray-700">
+                              {record.notes}
+                            </div>
+                          </li>
+                        )}
                       </ul>
                     </div>
                   </div>

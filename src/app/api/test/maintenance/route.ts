@@ -7,14 +7,14 @@ export async function GET(request: Request) {
     // Get the assetId from the query parameters
     const url = new URL(request.url);
     const assetId = url.searchParams.get('assetId');
-    
+
     console.log("TEST MAINTENANCE API - Request received for asset:", assetId);
-    
+
     if (!assetId) {
       console.log("TEST MAINTENANCE API - No assetId provided");
       return NextResponse.json({ error: 'assetId is required' }, { status: 400 });
     }
-    
+
     // Get all maintenance records for the asset
     const maintenanceRecords = await prisma.maintenance.findMany({
       where: {
@@ -30,11 +30,17 @@ export async function GET(request: Request) {
             email: true,
           },
         },
+        manager: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
     });
-    
+
     console.log("TEST MAINTENANCE API - Found records:", maintenanceRecords.length);
-    
+
     return NextResponse.json(maintenanceRecords);
   } catch (error) {
     console.error('Error fetching maintenance records:', error);

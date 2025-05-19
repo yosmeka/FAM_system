@@ -50,6 +50,12 @@ export async function GET(
             email: true,
           },
         },
+        manager: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
