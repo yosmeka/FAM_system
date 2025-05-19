@@ -17,33 +17,32 @@ const navigation = [
     roles: [
       "ADMIN",
       "MANAGER",
-
     ],
   },
   {
     name: "Assets",
     href: "/assets",
-    roles: ["ADMIN", "MANAGER", "USER", ],
+    roles: ["ADMIN", "MANAGER", "USER"],
   },
-  // {
-  //   name: "Transfers",
-  //   href: "/transfers",
-  //   roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
-  // },
-  // {
-  //   name: "Maintenance",
-  //   href: "/maintenance",
-  //   roles: ["ADMIN", "MANAGER", "ASSET_MANAGER", "DEPARTMENT_OFFICER", "BRANCH_OFFICER"],
-  // },
+  {
+    name: "Maintenance Requests",
+    href: "/maintenance",
+    roles: ["ADMIN", "MANAGER"],
+  },
+  {
+    name: "Request Maintenance",
+    href: "/maintenance/request",
+    roles: ["USER"],
+  },
   {
     name: "Disposals",
     href: "/disposals",
-    roles: ["ADMIN", "MANAGER",],
+    roles: ["ADMIN", "MANAGER"],
   },
   {
     name: "Reports",
     href: "/reports",
-    roles: ["ADMIN", "MANAGER",],
+    roles: ["ADMIN", "MANAGER"],
   },
   { name: "Users", href: "/users", roles: ["ADMIN"] },
   { name: "Role & Permission Management", href: "/role-permission", roles: ["ADMIN"] },

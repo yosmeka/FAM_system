@@ -52,7 +52,7 @@ export function MaintenanceModal({
           <div>
             <div className="mt-3 text-center sm:mt-0 sm:text-left">
               <h3 className="text-lg font-semibold leading-6 text-gray-900">
-                {isEditing ? 'Edit Maintenance Record' : 'Schedule Maintenance'}
+                {isEditing ? 'Edit Maintenance Record' : 'Schedule or Request Maintenance'}
               </h3>
               <div className="mt-4">
                 <MaintenanceFormSimple

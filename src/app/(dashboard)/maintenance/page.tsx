@@ -29,6 +29,7 @@ export default function MaintenancePage() {
 
   const [loading, setLoading] = useState(true);
   const [maintenance, setMaintenance] = useState<MaintenanceRequest[]>([]);
+  const [filter, setFilter] = useState('PENDING_APPROVAL');
 
   useEffect(() => {
     fetchMaintenanceRequests();
@@ -47,10 +48,15 @@ export default function MaintenancePage() {
     }
   };
 
-  const getStatusVariant = (status: MaintenanceStatus): 'success' | 'warning' | 'danger' | 'default' => {
-
+  const getStatusVariant = (status: MaintenanceStatus): 'success' | 'warning' | 'danger' | 'default' | 'info' => {
     switch (status) {
-      case 'PENDING':
+      case 'PENDING_APPROVAL':
+        return 'info';
+      case 'APPROVED':
+        return 'success';
+      case 'REJECTED':
+        return 'danger';
+      case 'SCHEDULED':
         return 'warning';
       case 'IN_PROGRESS':
         return 'warning';
@@ -91,27 +97,55 @@ export default function MaintenancePage() {
       ),
     },
     {
+      key: 'requester',
+      header: 'Requested By',
+      render: (value, item) => (
+        <span>{item.requester?.name || 'Unknown'}</span>
+      ),
+    },
+    {
       key: 'createdAt',
       header: 'Date',
       render: (value) => new Date(value as Date).toLocaleDateString(),
     },
   ];
 
+  // Filter maintenance requests based on the selected filter
+  const filteredMaintenance = filter === 'ALL'
+    ? maintenance
+    : maintenance.filter(req => req.status === filter);
+
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Maintenance Requests</h1>
-        <RoleBasedButton
-          onClick={() => router.push('/maintenance/new')}
-          variant="primary"
-          className="bg-red-600 hover:bg-red-700 text-white"
-        >
-          New Maintenance Request
-        </RoleBasedButton>
+        <div className="flex space-x-2">
+          <select
+            className="rounded-md border border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="ALL">All Requests</option>
+            <option value="PENDING_APPROVAL">Pending Approval</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <RoleBasedButton
+            onClick={() => router.push('/maintenance/new')}
+            variant="primary"
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            New Maintenance Request
+          </RoleBasedButton>
+        </div>
       </div>
 
       <RoleBasedTable
-        data={maintenance}
+        data={filteredMaintenance}
         columns={columns}
         loading={loading}
         onRowClick={(row) => router.push(`/maintenance/${row.id}`)}

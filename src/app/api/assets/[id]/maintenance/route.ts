@@ -111,18 +111,32 @@ export async function POST(
     }
 
     // Create the maintenance record
+    // For regular users, always set status to PENDING_APPROVAL
+    // Admins and managers can set other statuses
+    const userRole = session?.user?.role || 'USER';
+    const isAdminOrManager = userRole === 'ADMIN' || userRole === 'MANAGER';
+
     const maintenance = await prisma.maintenance.create({
       data: {
         assetId: params.id,
         description: body.description,
         priority: body.priority,
-        status: body.status,
+        status: isAdminOrManager ? body.status : 'PENDING_APPROVAL',
         cost: body.cost,
         completedAt: body.completedDate ? new Date(body.completedDate) : null,
         requesterId: userId,
+        managerId: body.managerId || null, // Add the manager ID
+        notes: body.notes,
+        scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : null,
       },
       include: {
         requester: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
           select: {
             name: true,
             email: true,

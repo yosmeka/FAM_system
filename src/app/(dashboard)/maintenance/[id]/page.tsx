@@ -5,19 +5,30 @@ import { useRouter } from 'next/navigation';
 import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
 import { toast } from 'react-hot-toast';
+import { useRole } from '@/hooks/useRole';
+import { MaintenanceApprovalModal } from '@/components/MaintenanceApprovalModal';
 
 interface MaintenanceRequest {
   id: string;
   assetId: string;
   description: string;
   status: string;
-  requestedById: string;
+  requesterId: string;
+  managerId?: string;
   createdAt: string;
+  notes?: string;
+  priority?: string;
+  scheduledDate?: string;
+  completedAt?: string;
   asset?: {
     name: string;
     serialNumber: string;
   };
-  requestedBy?: {
+  requester?: {
+    name: string;
+    email: string;
+  };
+  manager?: {
     name: string;
     email: string;
   };
@@ -28,19 +39,21 @@ export default function MaintenanceRequestDetailsPage({
 }: {
   params: { id: string };
 }) {
-  const statusToVariant: Record<string, 'success' | 'warning' | 'danger' | 'default'> = {
-    'pending': 'warning',
-    'completed': 'success',
-    'cancelled': 'danger',
-    'in_progress': 'warning',
-    'approved': 'success',
-    'rejected': 'danger',
-    // Add other status variants as needed
+  const statusToVariant: Record<string, 'success' | 'warning' | 'danger' | 'default' | 'info'> = {
+    'PENDING_APPROVAL': 'info',
+    'APPROVED': 'success',
+    'REJECTED': 'danger',
+    'SCHEDULED': 'warning',
+    'IN_PROGRESS': 'warning',
+    'COMPLETED': 'success',
+    'CANCELLED': 'danger',
   };
 
   const [request, setRequest] = useState<MaintenanceRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const router = useRouter();
+  const { isManager, isAdmin } = useRole();
 
   useEffect(() => {
     fetchRequestDetails();
@@ -51,6 +64,7 @@ export default function MaintenanceRequestDetailsPage({
       const response = await fetch(`/api/maintenance/${params.id}`);
       if (!response.ok) throw new Error('Failed to fetch maintenance request details');
       const data = await response.json();
+      console.log('Maintenance request details:', data);
       setRequest(data);
     } catch (error) {
       console.error('Error:', error);
@@ -96,7 +110,7 @@ export default function MaintenanceRequestDetailsPage({
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-semibold">Maintenance Request Details</h1>
-          <RoleBasedBadge 
+          <RoleBasedBadge
             label={request.status}
             variant={statusToVariant[request.status as keyof typeof statusToVariant] || 'default'}
           />
@@ -118,9 +132,18 @@ export default function MaintenanceRequestDetailsPage({
           <div>
             <h3 className="font-medium">Requested By</h3>
             <p className="text-gray-600">
-              {request.requestedBy?.name} ({request.requestedBy?.email})
+              {request.requester?.name} ({request.requester?.email})
             </p>
           </div>
+
+          {request.manager && (
+            <div>
+              <h3 className="font-medium">Assigned Manager</h3>
+              <p className="text-gray-600">
+                {request.manager?.name} ({request.manager?.email})
+              </p>
+            </div>
+          )}
 
           <div>
             <h3 className="font-medium">Request Date</h3>
@@ -129,6 +152,36 @@ export default function MaintenanceRequestDetailsPage({
             </p>
           </div>
 
+          {/* Display scheduled date if available */}
+          {request.scheduledDate && (
+            <div>
+              <h3 className="font-medium">Scheduled Date</h3>
+              <p className="text-gray-600">
+                {new Date(request.scheduledDate).toLocaleDateString()}
+              </p>
+            </div>
+          )}
+
+          {/* Display rejection notes if status is REJECTED */}
+          {request.status === 'REJECTED' && request.notes && (
+            <div>
+              <h3 className="font-medium text-red-600">Rejection Reason</h3>
+              <p className="text-gray-600 p-3 bg-red-50 border border-red-100 rounded-md mt-1">
+                {request.notes}
+              </p>
+            </div>
+          )}
+
+          {/* Display notes for other statuses if available */}
+          {request.status !== 'REJECTED' && request.notes && (
+            <div>
+              <h3 className="font-medium">Notes</h3>
+              <p className="text-gray-600 p-3 bg-gray-50 border border-gray-100 rounded-md mt-1">
+                {request.notes}
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-4 pt-4">
             <RoleBasedButton
               variant="secondary"
@@ -136,8 +189,31 @@ export default function MaintenanceRequestDetailsPage({
             >
               Back to List
             </RoleBasedButton>
-            
-            {request.status === 'PENDING' && (
+
+            {/* Approval button for managers and admins */}
+            {(isManager() || isAdmin()) && request.status === 'PENDING_APPROVAL' && (
+              <RoleBasedButton
+                variant="primary"
+                onClick={() => setIsApprovalModalOpen(true)}
+                loading={loading}
+              >
+                Review Request
+              </RoleBasedButton>
+            )}
+
+            {/* Start maintenance button for approved requests */}
+            {request.status === 'APPROVED' && (
+              <RoleBasedButton
+                variant="primary"
+                onClick={() => handleUpdateStatus('SCHEDULED')}
+                loading={loading}
+              >
+                Schedule Maintenance
+              </RoleBasedButton>
+            )}
+
+            {/* Start maintenance button for scheduled requests */}
+            {request.status === 'SCHEDULED' && (
               <RoleBasedButton
                 variant="primary"
                 onClick={() => handleUpdateStatus('IN_PROGRESS')}
@@ -146,7 +222,8 @@ export default function MaintenanceRequestDetailsPage({
                 Start Maintenance
               </RoleBasedButton>
             )}
-            
+
+            {/* Complete maintenance button for in-progress requests */}
             {request.status === 'IN_PROGRESS' && (
               <RoleBasedButton
                 variant="success"
@@ -159,6 +236,24 @@ export default function MaintenanceRequestDetailsPage({
           </div>
         </div>
       </div>
+
+      {/* Approval Modal */}
+      {request && (
+        <MaintenanceApprovalModal
+          open={isApprovalModalOpen}
+          onClose={() => setIsApprovalModalOpen(false)}
+          maintenanceId={request.id}
+          assetId={request.assetId}
+          description={request.description}
+          priority={request.priority || 'MEDIUM'}
+          requesterName={request.requester?.name}
+          createdAt={request.createdAt}
+          onSuccess={() => {
+            fetchRequestDetails();
+            setIsApprovalModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

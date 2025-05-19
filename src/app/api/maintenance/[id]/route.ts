@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const maintenanceRequest = await prisma.maintenanceRequest.findUnique({
+    const maintenanceRequest = await prisma.maintenance.findUnique({
       where: { id: params.id },
       include: {
         asset: {
@@ -16,7 +16,13 @@ export async function GET(
             serialNumber: true,
           },
         },
-        requestedBy: {
+        requester: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
           select: {
             name: true,
             email: true,
@@ -51,12 +57,11 @@ export async function PUT(
     const body = await request.json();
     const { status } = body;
 
-    const maintenanceRequest = await prisma.maintenanceRequest.update({
+    const maintenanceRequest = await prisma.maintenance.update({
       where: { id: params.id },
       data: {
         status,
-        ...(status === 'COMPLETED' ? { endDate: new Date() } : {}),
-        ...(status === 'IN_PROGRESS' ? { startDate: new Date() } : {}),
+        ...(status === 'COMPLETED' ? { completedAt: new Date() } : {}),
       },
       include: {
         asset: {
@@ -65,7 +70,13 @@ export async function PUT(
             serialNumber: true,
           },
         },
-        requestedBy: {
+        requester: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
           select: {
             name: true,
             email: true,

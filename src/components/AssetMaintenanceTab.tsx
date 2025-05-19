@@ -12,11 +12,15 @@ import {
   Clock,
   Calendar,
   Wrench,
-  FileText
+  FileText,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { MaintenanceModal } from './MaintenanceModal';
+import { MaintenanceApprovalModal } from './MaintenanceApprovalModal';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useRole } from '@/hooks/useRole';
 import { MaintenancePriority, MaintenanceStatus } from '@/types/maintenance';
 
 interface MaintenanceRecord {
@@ -49,10 +53,12 @@ export function AssetMaintenanceTab({
   nextMaintenance
 }: AssetMaintenanceTabProps) {
   const { checkPermission } = usePermissions();
+  const { isManager, isAdmin } = useRole();
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(null);
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
   const [maintenanceStats, setMaintenanceStats] = useState({
@@ -60,6 +66,8 @@ export function AssetMaintenanceTab({
     pending: 0,
     inProgress: 0,
     completed: 0,
+    pendingApproval: 0,
+    rejected: 0,
     maintenanceDue: false,
     daysSinceLastMaintenance: 0,
     daysUntilNextMaintenance: 0
@@ -88,9 +96,15 @@ export function AssetMaintenanceTab({
       // Calculate stats
       const stats = {
         total: data.length,
-        pending: data.filter((record: MaintenanceRecord) => record.status === 'PENDING').length,
+        pending: data.filter((record: MaintenanceRecord) =>
+          record.status === 'PENDING_APPROVAL' ||
+          record.status === 'APPROVED' ||
+          record.status === 'SCHEDULED'
+        ).length,
         inProgress: data.filter((record: MaintenanceRecord) => record.status === 'IN_PROGRESS').length,
         completed: data.filter((record: MaintenanceRecord) => record.status === 'COMPLETED').length,
+        pendingApproval: data.filter((record: MaintenanceRecord) => record.status === 'PENDING_APPROVAL').length,
+        rejected: data.filter((record: MaintenanceRecord) => record.status === 'REJECTED').length,
         maintenanceDue: false,
         daysSinceLastMaintenance: 0,
         daysUntilNextMaintenance: 0
@@ -138,6 +152,17 @@ export function AssetMaintenanceTab({
     setIsEditModalOpen(true);
   };
 
+  const handleApproval = (record: MaintenanceRecord) => {
+    setSelectedRecord(record);
+    setIsApprovalModalOpen(true);
+  };
+
+  const handleApprovalSuccess = () => {
+    fetchMaintenanceRecords();
+    setIsApprovalModalOpen(false);
+    setSelectedRecord(null);
+  };
+
   const toggleExpandRecord = (id: string) => {
     if (expandedRecordId === id) {
       setExpandedRecordId(null);
@@ -164,11 +189,32 @@ export function AssetMaintenanceTab({
     const statusStr = String(status).toUpperCase();
 
     switch (statusStr) {
-      case 'PENDING':
+      case 'PENDING_APPROVAL':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <Clock className="w-3 h-3 mr-1" />
+            Pending Approval
+          </span>
+        );
+      case 'APPROVED':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            <ThumbsUp className="w-3 h-3 mr-1" />
+            Approved
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <ThumbsDown className="w-3 h-3 mr-1" />
+            Rejected
+          </span>
+        );
+      case 'SCHEDULED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="w-3 h-3 mr-1" />
-            Pending
+            <Calendar className="w-3 h-3 mr-1" />
+            Scheduled
           </span>
         );
       case 'IN_PROGRESS':
@@ -265,7 +311,7 @@ export function AssetMaintenanceTab({
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             <Plus size={16} className="mr-2" />
-            Schedule Maintenance
+            {(isManager() || isAdmin()) ? "Schedule/Request Maintenance" : "Request Maintenance"}
           </button>
         )}
       </div>
@@ -389,8 +435,21 @@ export function AssetMaintenanceTab({
                     </div>
                   </div>
 
-                  {checkPermission('Asset edit') && (
-                    <div className="flex justify-end space-x-2 mt-4">
+                  <div className="flex justify-end space-x-2 mt-4">
+                    {(isManager() || isAdmin()) && record.status === 'PENDING_APPROVAL' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApproval(record);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50"
+                      >
+                        <ThumbsUp size={14} className="mr-1.5" />
+                        Review Request
+                      </button>
+                    )}
+
+                    {checkPermission('Asset edit') && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -401,8 +460,8 @@ export function AssetMaintenanceTab({
                         <Edit size={14} className="mr-1.5" />
                         Edit
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -423,7 +482,7 @@ export function AssetMaintenanceTab({
               className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               <Plus size={16} className="mr-2" />
-              Schedule First Maintenance
+              {(isManager() || isAdmin()) ? "Schedule/Request First Maintenance" : "Request First Maintenance"}
             </button>
           )}
         </div>
@@ -448,6 +507,23 @@ export function AssetMaintenanceTab({
           onSuccess={handleEditSuccess}
           initialData={selectedRecord}
           isEditing
+        />
+      )}
+
+      {selectedRecord && (
+        <MaintenanceApprovalModal
+          open={isApprovalModalOpen}
+          onClose={() => {
+            setIsApprovalModalOpen(false);
+            setSelectedRecord(null);
+          }}
+          maintenanceId={selectedRecord.id}
+          assetId={assetId}
+          description={selectedRecord.description}
+          priority={selectedRecord.priority}
+          requesterName={selectedRecord.requester?.name}
+          createdAt={selectedRecord.createdAt}
+          onSuccess={handleApprovalSuccess}
         />
       )}
     </div>

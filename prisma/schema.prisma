@@ -20,6 +20,7 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
+  managedMaintenance  Maintenance[] @relation("MaintenanceManagedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
 }
@@ -78,18 +79,24 @@ model Transfer {
 }
 
 model Maintenance {
-  id          String              @id @default(cuid())
-  assetId     String
-  description String
-  cost        Float?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  completedAt DateTime?
-  priority    MaintenancePriority
-  requesterId String
-  status      MaintenanceStatus   @default(PENDING)
-  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  id           String              @id @default(cuid())
+  assetId      String
+  description  String
+  cost         Float?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  completedAt  DateTime?
+  scheduledDate DateTime?
+  priority     MaintenancePriority
+  requesterId  String
+  managerId    String?
+  status       MaintenanceStatus   @default(PENDING_APPROVAL)
+  notes        String?
+  asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
+
+  @@index([managerId])
 }
 
 model Disposal {
@@ -188,7 +195,9 @@ enum MaintenanceType {
 }
 
 enum MaintenanceStatus {
-  PENDING
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
   SCHEDULED
   IN_PROGRESS
   COMPLETED

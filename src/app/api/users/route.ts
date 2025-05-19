@@ -13,7 +13,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Get the role from query parameters
+    const url = new URL(request.url);
+    const role = url.searchParams.get('role');
+
+    // Build the query
+    const query: any = {};
+    if (role) {
+      query.role = role;
+    }
+
     const users = await prisma.user.findMany({
+      where: query,
       select: {
         id: true,
         name: true,
@@ -21,7 +32,7 @@ export async function GET(request: NextRequest) {
         role: true,
       },
       orderBy: {
-        createdAt: 'desc',
+        name: 'asc',
       },
     });
 
