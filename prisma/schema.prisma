@@ -147,6 +147,7 @@ model Document {
   fileSize  Int?         // File size in bytes
   filePath  String?      // Local file path (if stored locally)
   mimeType  String?      // MIME type of the file
+  meta      Json?        // Metadata for the document (e.g., transferId, status)
 }
 
 model Depreciation {
@@ -256,6 +257,8 @@ enum DocumentType {
   WARRANTY
   MANUAL
   MAINTENANCE_RECORD
+  TRANSFER_APPROVAL
+  TRANSFER_REJECTION
   OTHER
 }
 

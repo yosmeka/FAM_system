@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { RoleBasedCard } from '@/components/ui/RoleBasedCard';
 
 const reportTypes = [
@@ -9,18 +10,18 @@ const reportTypes = [
     description: '📊 View asset valuation and distribution',
     path: '/reports/assets',
   },
-  // {
-  //   title: 'Maintenance Reports',
-  //   description: 'Track maintenance history and status',
-  //   path: '/reports/maintenance',
-  //   icon: '🔧',
-  // },
-  // {
-  //   title: 'Transfer Reports',
-  //   description: 'Analyze asset movement patterns',
-  //   path: '/reports/transfers',
-  //   icon: '🔄',
-  // },
+  {
+    title: 'Maintenance Reports',
+    description: 'Track maintenance history and status',
+    path: '/reports/maintenance',
+    icon: '🔧',
+  },
+  {
+    title: 'Transfer Reports',
+    description: 'Analyze asset movement patterns',
+    path: '/reports/transfers',
+    icon: '🔄',
+  },
   {
     title: 'Disposal Reports',
     description: '📉 Monitor disposal trends and recovery',
@@ -28,10 +29,10 @@ const reportTypes = [
   },
 ];
 
-import { useSession } from 'next-auth/react';
-
 export default function ReportsPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+
   if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
@@ -42,7 +43,6 @@ export default function ReportsPage() {
       </div>
     );
   }
-  const router = useRouter();
 
   return (
     <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">

@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma';
 // GET /api/transfers/[id]
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { DocumentMeta, PrismaDocumentClient } from '@/types/document';
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -23,6 +24,7 @@ export async function GET(
       include: {
         asset: {
           select: {
+            id: true,
             name: true,
             serialNumber: true,
             status: true,
@@ -39,6 +41,32 @@ export async function GET(
         },
       },
     });
+
+    // If transfer is approved or rejected, check for document
+    let document = null;
+    if (transfer && (transfer.status === 'APPROVED' || transfer.status === 'REJECTED')) {
+      document = await (prisma as unknown as { document: PrismaDocumentClient }).document.findFirst({
+        where: {
+          assetId: transfer.assetId,
+          type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION',
+        },
+        select: {
+          id: true,
+          url: true,
+          fileName: true,
+          type: true,
+          meta: true,
+        }
+      });
+
+      // Filter documents by transferId in meta if there are multiple
+      if (document && document.meta) {
+        const meta = document.meta as DocumentMeta;
+        if (meta.transferId !== id) {
+          document = null;
+        }
+      }
+    }
 
     if (!transfer) {
       return NextResponse.json(
@@ -60,6 +88,7 @@ export async function GET(
       ...transfer,
       fromLocation: transfer.fromDepartment,
       toLocation: transfer.toDepartment,
+      document: document,
     };
     return NextResponse.json(result);
   } catch (error) {
@@ -149,7 +178,7 @@ export async function PUT(
 
 // DELETE /api/transfers/[id]
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;

@@ -6,9 +6,10 @@ import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 
 import { NotificationBell } from "@/components/ui/NotificationBell";
-import AccountInfoModal from "./AccountInfoModal";
+// import AccountInfoModal from "./AccountInfoModal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Notification } from "@/types/notification";
 
 const navigation = [
   {
@@ -17,7 +18,7 @@ const navigation = [
     roles: [
       "ADMIN",
       "MANAGER",
-    
+
     ],
   },
   {
@@ -54,17 +55,41 @@ function classNames(...classes: string[]) {
 }
 
 export default function Navbar() {
-  const [notifications, setNotifications] = React.useState<any[]>([]);
-  React.useEffect(() => {
-    // Fetch notifications for all authenticated users
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
+
+  // Function to fetch notifications
+  const fetchNotifications = React.useCallback(() => {
+    // Fetch notifications for the current user only
     fetch('/api/admin/notifications')
       .then(res => res.ok ? res.json() : { notifications: [] })
-      .then(data => setNotifications(data.notifications || []))
-      .catch(() => setNotifications([]));
+      .then(data => {
+        // Convert date strings to Date objects
+        const notifs = (data.notifications || []).map((n: Partial<Notification>) => ({
+          ...n,
+          createdAt: n.createdAt ? new Date(n.createdAt) : new Date(),
+          updatedAt: n.updatedAt ? new Date(n.updatedAt) : (n.createdAt ? new Date(n.createdAt) : new Date())
+        }));
+        setNotifications(notifs);
+      })
+      .catch((error) => {
+        console.error('Failed to fetch notifications:', error);
+        setNotifications([]);
+      });
   }, []);
+
+  // Fetch notifications on component mount and every 30 seconds
+  React.useEffect(() => {
+    fetchNotifications();
+
+    // Set up interval to refresh notifications
+    const interval = setInterval(fetchNotifications, 30000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
   const { data: session } = useSession();
   const pathname = usePathname();
-  const [showAccountInfo, setShowAccountInfo] = React.useState(false);
+  // const [showAccountInfo, setShowAccountInfo] = React.useState(false);
 
   if (!session) return null;
 
@@ -151,7 +176,7 @@ export default function Navbar() {
                               active ? "bg-gray-100" : "",
                               "block w-full px-4 py-2 text-left text-sm text-gray-700"
                             )}
-                            onClick={() => setShowAccountInfo(true)}
+                            onClick={() => alert("Account information feature is coming soon!")}
                           >
                             Account Information
                           </button>
