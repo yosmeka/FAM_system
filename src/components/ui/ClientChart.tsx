@@ -41,8 +41,14 @@ export function ClientChart({ type, data, options }: ClientChartProps) {
     return null;
   }
 
-  // Create a stable key based on the chart type and data structure
-  const chartKey = `${type}-${JSON.stringify(data.labels)}`;
+  // Create a stable key based on the chart type
+  const chartKey = `${type}-${Math.random()}`;
+
+  // Ensure data has the required structure
+  if (!data || (type !== 'heatmap' && !data.labels)) {
+    console.error('Invalid chart data structure', data);
+    return <div className="text-center text-red-500">Invalid chart data</div>;
+  }
 
   return <ChartComponent key={chartKey} data={data} options={options} />;
-} 
+}

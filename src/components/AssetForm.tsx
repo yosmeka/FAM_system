@@ -1,12 +1,51 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { CalendarIcon, InfoIcon } from "lucide-react"
 import { format } from "date-fns"
 import { useDebounce } from "use-debounce"
+
+// Define custom icon components instead of using lucide-react
+const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+    <line x1="16" x2="16" y1="2" y2="6" />
+    <line x1="8" x2="8" y1="2" y2="6" />
+    <line x1="3" x2="21" y1="10" y2="10" />
+  </svg>
+);
+
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -119,6 +158,33 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
     mode: "onChange" // Enable validation on change
   })
 
+  // Function to check if serial number already exists
+  const checkSerialNumber = useCallback(async (serialNumber: string): Promise<boolean> => {
+    try {
+      // Skip check if serial number is empty or we're editing and the serial number hasn't changed
+      if (!serialNumber || serialNumber.trim() === '' ||
+          (isEditing && initialData?.serialNumber === serialNumber)) {
+        return false
+      }
+
+      // For debugging - log the serial number being checked
+      console.log("Checking serial number:", serialNumber)
+
+      const response = await fetch(`/api/assets/check-serial?serialNumber=${encodeURIComponent(serialNumber)}`)
+      if (!response.ok) {
+        console.error("Serial check API error:", response.status, response.statusText)
+        return false // Don't block submission if the API fails
+      }
+
+      const data = await response.json()
+      console.log("Serial check response:", data)
+      return data.exists === true // Explicitly check for true
+    } catch (error) {
+      console.error("Error checking serial number:", error)
+      return false // Don't block submission if there's an error
+    }
+  }, [isEditing, initialData?.serialNumber])
+
   // Get the current serial number value and debounce it
   const serialNumber = form.watch("serialNumber")
   const [debouncedSerialNumber] = useDebounce(serialNumber, 500) // 500ms delay
@@ -152,7 +218,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
     }
 
     validateSerialNumber()
-  }, [debouncedSerialNumber, isEditing, initialData?.serialNumber])
+  }, [debouncedSerialNumber, isEditing, initialData?.serialNumber, checkSerialNumber, form])
 
   // Navigation functions with validation
   const goToNextTab = async () => {
@@ -174,7 +240,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
       // Trigger validation for the current tab's fields
       if (currentTabFields.length > 0) {
-        const result = await form.trigger(currentTabFields as any)
+        const result = await form.trigger(currentTabFields as Array<keyof AssetFormValues>)
         isValid = result
       }
 
@@ -208,33 +274,6 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   // Check if current tab is the first or last
   const isFirstTab = activeTab === tabOrder[0]
   const isLastTab = activeTab === tabOrder[tabOrder.length - 1]
-
-  // Function to check if serial number already exists
-  const checkSerialNumber = async (serialNumber: string): Promise<boolean> => {
-    try {
-      // Skip check if serial number is empty or we're editing and the serial number hasn't changed
-      if (!serialNumber || serialNumber.trim() === '' ||
-          (isEditing && initialData?.serialNumber === serialNumber)) {
-        return false
-      }
-
-      // For debugging - log the serial number being checked
-      console.log("Checking serial number:", serialNumber)
-
-      const response = await fetch(`/api/assets/check-serial?serialNumber=${encodeURIComponent(serialNumber)}`)
-      if (!response.ok) {
-        console.error("Serial check API error:", response.status, response.statusText)
-        return false // Don't block submission if the API fails
-      }
-
-      const data = await response.json()
-      console.log("Serial check response:", data)
-      return data.exists === true // Explicitly check for true
-    } catch (error) {
-      console.error("Error checking serial number:", error)
-      return false // Don't block submission if there's an error
-    }
-  }
 
   async function onSubmit(data: AssetFormValues) {
     setIsSubmitting(true)

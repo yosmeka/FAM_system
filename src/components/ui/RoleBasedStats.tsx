@@ -8,7 +8,7 @@ interface RoleBasedStatsProps {
   trend?: number;
   trendLabel?: string;
   description?: string;
-  variant?: 'success' | 'warning' | 'danger' | 'default';
+  variant?: 'success' | 'warning' | 'danger' | 'default' | 'info';
   className?: string;
 }
 
@@ -26,6 +26,7 @@ export function RoleBasedStats({
     warning: 'text-yellow-600',
     danger: 'text-red-600',
     default: 'text-gray-600',
+    info: 'text-blue-600',
   };
 
   return (

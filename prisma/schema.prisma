@@ -154,6 +154,7 @@ model Document {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  meta      Json?        // Metadata for the document (e.g., transferId, status)
 }
 
 model Depreciation {
@@ -265,6 +266,8 @@ enum DocumentType {
   WARRANTY
   MANUAL
   MAINTENANCE_RECORD
+  TRANSFER_APPROVAL
+  TRANSFER_REJECTION
   OTHER
 }
 

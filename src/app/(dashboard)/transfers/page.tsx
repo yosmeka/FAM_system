@@ -98,10 +98,19 @@ export default function TransfersPage() {
       key: 'status',
       header: 'Status',
       render: (value, item) => (
-        <RoleBasedBadge
-          label={value as string}
-          variant={getStatusVariant(value as TransferStatus)}
-        />
+        <div className="flex items-center space-x-2">
+          <RoleBasedBadge
+            label={value as string}
+            variant={getStatusVariant(value as TransferStatus)}
+          />
+          {(value === 'APPROVED' || value === 'REJECTED') && (
+            <span title="Document available" className="text-red-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -205,15 +214,29 @@ export default function TransfersPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Asset Transfers</h1>
-        {session.user.role === 'USER' && (
-          <RoleBasedButton
-            onClick={() => router.push('/transfers/new')}
-            variant="primary"
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            New Transfer
-          </RoleBasedButton>
-        )}
+        <div className="flex space-x-4">
+          {session.user.role === 'USER' && (
+            <>
+              <RoleBasedButton
+                variant="secondary"
+                onClick={() => router.push('/transfers/documents')}
+                className="flex items-center space-x-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>My Documents</span>
+              </RoleBasedButton>
+              <RoleBasedButton
+                onClick={() => router.push('/transfers/new')}
+                variant="primary"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                New Transfer
+              </RoleBasedButton>
+            </>
+          )}
+        </div>
       </div>
 
       <RoleBasedTable
