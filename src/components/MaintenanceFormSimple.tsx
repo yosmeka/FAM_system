@@ -187,7 +187,7 @@ export function MaintenanceFormSimple({
         </div>
       )}
 
-      <div>
+      {/* <div>
         <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700">
           Scheduled Date
         </label>
@@ -198,7 +198,7 @@ export function MaintenanceFormSimple({
           value={scheduledDate}
           onChange={(e) => setScheduledDate(e.target.value)}
         />
-      </div>
+      </div> */}
 
       {showCompletedFields && (
         <>
