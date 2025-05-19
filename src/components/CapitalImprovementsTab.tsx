@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit, Trash2 } from 'lucide-react';
-import { CapitalImprovementModal } from './CapitalImprovementModal';
+import { Plus, Edit, Trash2, Download } from 'lucide-react';
+import { CapitalImprovementModal } from '.';
 import { usePermissions } from '@/hooks/usePermissions';
+import { generateCapitalImprovementsPdf } from '@/lib/generateCapitalImprovementsPdf';
+import { usePDF } from 'react-to-pdf';
+import { formatCurrency, formatDate } from '@/utils/formatters';
 
 interface CapitalImprovement {
   id: string;
@@ -29,29 +32,44 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedImprovement, setSelectedImprovement] = useState<CapitalImprovement | null>(null);
   const [totalImprovementValue, setTotalImprovementValue] = useState(0);
+  const [assetName, setAssetName] = useState<string>('');
 
-  const fetchImprovements = async () => {
+  // For component-based PDF generation
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { toPDF, targetRef } = usePDF({
+    filename: `capital-improvements-${assetId}.pdf`,
+  });
+
+  const fetchImprovements = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/assets/${assetId}/capital-improvements`);
-      if (!response.ok) throw new Error('Failed to fetch capital improvements');
-      const data = await response.json();
-      setImprovements(data);
+      // Fetch capital improvements
+      const improvementsResponse = await fetch(`/api/assets/${assetId}/capital-improvements`);
+      if (!improvementsResponse.ok) throw new Error('Failed to fetch capital improvements');
+      const improvementsData = await improvementsResponse.json();
+      setImprovements(improvementsData);
 
       // Calculate total improvement value
-      const total = data.reduce((sum: number, item: CapitalImprovement) => sum + item.cost, 0);
+      const total = improvementsData.reduce((sum: number, item: CapitalImprovement) => sum + item.cost, 0);
       setTotalImprovementValue(total);
+
+      // Fetch asset details to get the name
+      const assetResponse = await fetch(`/api/assets/${assetId}`);
+      if (assetResponse.ok) {
+        const assetData = await assetResponse.json();
+        setAssetName(assetData.name || `Asset ${assetId}`);
+      }
     } catch (error) {
-      console.error('Error fetching capital improvements:', error);
+      console.error('Error fetching data:', error);
       toast.error('Failed to load capital improvements');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [assetId]);
 
   useEffect(() => {
     fetchImprovements();
-  }, [assetId]);
+  }, [assetId, fetchImprovements]);
 
   const handleAddSuccess = () => {
     fetchImprovements();
@@ -62,6 +80,43 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
     fetchImprovements();
     setIsEditModalOpen(false);
     setSelectedImprovement(null);
+  };
+
+  // Function to generate PDF using jsPDF (data-based approach)
+  const handleGeneratePdf = () => {
+    if (improvements.length === 0) {
+      toast.error('No improvements to export');
+      return;
+    }
+
+    try {
+      generateCapitalImprovementsPdf({
+        assetName,
+        assetId,
+        improvements,
+        totalValue: totalImprovementValue
+      });
+      toast.success('PDF generated successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF');
+    }
+  };
+
+  // Function to generate PDF using react-to-pdf (component-based approach)
+  const handleExportComponentAsPdf = () => {
+    if (improvements.length === 0) {
+      toast.error('No improvements to export');
+      return;
+    }
+
+    try {
+      toPDF();
+      toast.success('PDF exported successfully');
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      toast.error('Failed to export PDF');
+    }
   };
 
   const handleEdit = (improvement: CapitalImprovement) => {
@@ -89,16 +144,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  // Using imported formatDate and formatCurrency functions from utils/formatters
 
   if (isLoading) {
     return (
@@ -120,19 +166,37 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
         <div>
           <h2 className="text-xl font-semibold">Capital Improvements</h2>
           <p className="text-sm text-gray-500">
-            Manage improvements that simply increase the asset's value (like painting or minor upgrades)
+            Manage improvements that simply increase the asset&apos;s value (like painting or minor upgrades)
           </p>
         </div>
-        {checkPermission('Asset edit') && (
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            <Plus size={16} className="mr-2" />
-            Add Improvement
-          </button>
-        )}
+        <div className="flex space-x-2">
+          {improvements.length > 0 && (
+            <button
+              onClick={handleGeneratePdf}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              <Download size={16} className="mr-2" />
+              Export PDF
+            </button>
+          )}
+          {checkPermission('Asset edit') && (
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              <Plus size={16} className="mr-2" />
+              Add Improvement
+            </button>
+          )}
+        </div>
       </div>
+
+      <div ref={targetRef}>
+        {/* PDF Title - only visible in PDF */}
+        <div className="print-only mb-4">
+          <h1 className="text-2xl font-bold text-center">{assetName} - Capital Improvements</h1>
+          <p className="text-sm text-center text-gray-500">Generated on {new Date().toLocaleDateString()}</p>
+        </div>
 
       {/* Summary Card */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -221,7 +285,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
           </div>
           <h3 className="text-lg font-medium text-gray-900">No Capital Improvements</h3>
           <p className="mt-2 text-sm text-gray-500">
-            Add improvements like painting, minor repairs, or other upgrades that simply increase the asset's value.
+            Add improvements like painting, minor repairs, or other upgrades that simply increase the asset&apos;s value.
           </p>
           {checkPermission('Asset edit') && (
             <button
@@ -234,6 +298,7 @@ export function CapitalImprovementsTab({ assetId }: CapitalImprovementsTabProps)
           )}
         </div>
       )}
+      </div> {/* Close targetRef div */}
 
       {/* Modals */}
       <CapitalImprovementModal

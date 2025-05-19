@@ -11,24 +11,39 @@ import type { Column } from '@/types/reports';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 
+import React from 'react';
+
 export default function TransfersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   if (status === 'loading') return null;
-  if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+  if (status !== 'authenticated' || !session) {
     return null;
   }
+  if (session.user.role === 'ADMIN') {
+    return (
+      <div className="container mx-auto p-6">
+        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
+        <p className="text-center">You do not have permission to view asset transfers.</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (status !== 'authenticated' || !session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
-      router.replace('/dashboard');
-      toast.error('Access denied: Only Admins and Managers can view transfers.');
-    }
-  }, [session, status, router]);
+
+
 
   const [loading, setLoading] = useState(true);
   const [transfers, setTransfers] = useState<TransferRequest[]>([]);
+  const [rejectModal, setRejectModal] = useState<{ open: boolean; transferId: string | null }>({ open: false, transferId: null });
+  const [rejectReason, setRejectReason] = useState('');
+
+  // DEBUG: Log session user id and transfers
+  if (typeof window !== 'undefined') {
+    console.log('Session user id:', session?.user?.id);
+    console.log('Session user:', session?.user);
+    console.log('Transfers:', transfers);
+  }
 
   useEffect(() => {
     fetchTransfers();
@@ -97,17 +112,92 @@ export default function TransfersPage() {
     {
       key: 'id',
       header: 'Actions',
-      render: (value) => (
-        <div className="flex space-x-2">
-          <RoleBasedButton
-            onClick={() => router.push(`/transfers/${value}`)}
-            variant="secondary"
-            size="sm"
-          >
-            View
-          </RoleBasedButton>
-        </div>
-      ),
+      render: (value, item) => {
+        const canEditOrDelete = item.status === 'PENDING' && session?.user?.id === item.requester?.id;
+        const isManager = session?.user?.role === 'MANAGER';
+        const isPending = item.status === 'PENDING';
+        const isRequester = session?.user?.id === item.requester?.id;
+        return (
+          <div className="flex space-x-2">
+            <RoleBasedButton
+              onClick={() => router.push(`/transfers/${value}`)}
+              variant="secondary"
+              size="sm"
+            >
+              View
+            </RoleBasedButton>
+            {/* Only requester can edit/delete pending transfers */}
+            {isPending && isRequester && (
+              <>
+                <RoleBasedButton
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    router.push(`/transfers/${value}/edit`);
+                  }}
+                  variant="primary"
+                  size="sm"
+                >
+                  Edit
+                </RoleBasedButton>
+                <RoleBasedButton
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    if (window.confirm('Are you sure you want to delete this transfer request?')) {
+                      (async () => {
+                        try {
+                          const response = await fetch(`/api/transfers/${value}`, { method: 'DELETE' });
+                          if (!response.ok) throw new Error('Failed to delete');
+                          toast.success('Transfer request deleted');
+                          router.push('/transfers');
+                          router.refresh();
+                        } catch (err) {
+                          toast.error('Failed to delete transfer');
+                        }
+                      })();
+                    }
+                  }}
+                  variant="danger"
+                  size="sm"
+                >
+                  Delete
+                </RoleBasedButton>
+              </>
+            )}
+            {/* Only managers can approve/reject pending transfers they did not request */}
+            {isManager && isPending && !isRequester && (
+              <>
+                <RoleBasedButton
+                  onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    try {
+                      const response = await fetch(`/api/transfers/${value}/approve`, { method: 'POST' });
+                      if (!response.ok) throw new Error('Failed to approve');
+                      toast.success('Transfer approved');
+                      fetchTransfers();
+                    } catch (err) {
+                      toast.error('Failed to approve transfer');
+                    }
+                  }}
+                  variant="success"
+                  size="sm"
+                >
+                  Approve
+                </RoleBasedButton>
+                <RoleBasedButton
+                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    e.stopPropagation();
+                    setRejectModal({ open: true, transferId: value });
+                  }}
+                  variant="danger"
+                  size="sm"
+                >
+                  Reject
+                </RoleBasedButton>
+              </>
+            )}
+          </div>
+        );
+      },
     },
   ];
 
@@ -115,13 +205,15 @@ export default function TransfersPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Asset Transfers</h1>
-        <RoleBasedButton
-          onClick={() => router.push('/transfers/new')}
-          variant="primary"
-          className="bg-red-600 hover:bg-red-700 text-white"
-        >
-          New Transfer
-        </RoleBasedButton>
+        {session.user.role === 'USER' && (
+          <RoleBasedButton
+            onClick={() => router.push('/transfers/new')}
+            variant="primary"
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            New Transfer
+          </RoleBasedButton>
+        )}
       </div>
 
       <RoleBasedTable
@@ -130,6 +222,59 @@ export default function TransfersPage() {
         loading={loading}
         onRowClick={(row) => router.push(`/transfers/${row.id}`)}
       />
+
+      {/* Rejection Reason Modal */}
+      {rejectModal.open && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Reason for Rejection</h2>
+            <textarea
+              className="w-full border rounded p-2 mb-4"
+              rows={4}
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Please provide a reason for rejecting this transfer."
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded"
+                onClick={() => {
+                  setRejectModal({ open: false, transferId: null });
+                  setRejectReason('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded"
+                onClick={async () => {
+                  if (!rejectReason) {
+                    toast.error('Rejection reason is required.');
+                    return;
+                  }
+                  try {
+                    const response = await fetch(`/api/transfers/${rejectModal.transferId}/reject`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ reason: rejectReason }),
+                    });
+                    if (!response.ok) throw new Error('Failed to reject');
+                    toast.success('Transfer rejected');
+                    fetchTransfers();
+                  } catch (err) {
+                    toast.error('Failed to reject transfer');
+                  } finally {
+                    setRejectModal({ open: false, transferId: null });
+                    setRejectReason('');
+                  }
+                }}
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

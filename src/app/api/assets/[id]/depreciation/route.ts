@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { calculateGroupDepreciation, generateChartData, LinkedAssetForDepreciation } from '@/utils/depreciation';
+import { calculateGroupDepreciation, calculateDepreciation, generateChartData, LinkedAssetForDepreciation } from '@/utils/depreciation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -12,7 +12,7 @@ export async function GET(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Fetch the asset with its depreciation settings, linked assets, and capital improvements
+    // Fetch the asset with its depreciation settings and capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
@@ -28,46 +28,17 @@ export async function GET(
         usefulLifeMonths: true,
         depreciationMethod: true,
         depreciationStartDate: true,
-        // Get capital improvements
         capitalImprovements: {
+          select: {
+            id: true,
+            description: true,
+            improvementDate: true,
+            cost: true,
+          },
           orderBy: {
             improvementDate: 'asc',
           },
         },
-        // Get child assets (assets linked from this asset)
-        linkedFrom: {
-          include: {
-            fromAsset: {
-              select: {
-                id: true,
-                name: true,
-                purchaseDate: true,
-                purchasePrice: true,
-                currentValue: true,
-                depreciableCost: true,
-                salvageValue: true,
-                capitalImprovements: true,
-              }
-            }
-          }
-        },
-        // Also get parent assets (assets this asset is linked to)
-        linkedTo: {
-          include: {
-            toAsset: {
-              select: {
-                id: true,
-                name: true,
-                purchaseDate: true,
-                purchasePrice: true,
-                currentValue: true,
-                depreciableCost: true,
-                salvageValue: true,
-                capitalImprovements: true,
-              }
-            }
-          }
-        }
       },
     });
 
@@ -85,7 +56,7 @@ export async function GET(
     const queryCalculateAsGroup = url.searchParams.get('calculateAsGroup');
 
     // Calculate total capital improvements cost
-    const capitalImprovementsCost = asset.capitalImprovements?.reduce((sum, improvement) => sum + improvement.cost, 0) || 0;
+    const capitalImprovementsCost = asset.capitalImprovements?.reduce((sum: number, improvement: any) => sum + improvement.cost, 0) || 0;
     console.log("Total capital improvements cost:", capitalImprovementsCost);
 
     // Use query parameters if provided, otherwise use asset's settings
@@ -95,7 +66,7 @@ export async function GET(
 
     const salvageValue = querySalvageValue
       ? parseFloat(querySalvageValue)
-      : (asset.salvageValue || asset.purchasePrice * 0.1); // Default to 10% of purchase price
+      : (asset.salvageValue || 0); // Use 0 as default if not set
 
     const usefulLifeYears = queryUsefulLife
       ? parseInt(queryUsefulLife)
@@ -149,34 +120,11 @@ export async function GET(
 
     // Check if we should calculate as a group
     const calculateAsGroup = queryCalculateAsGroup === 'true';
+    console.log("API GET: Calculating depreciation with calculateAsGroup =", calculateAsGroup);
 
-    console.log("API: Depreciation calculation request with calculateAsGroup =", calculateAsGroup);
-    console.log("API: Query parameter value:", queryCalculateAsGroup);
-
-    // Prepare linked assets data for group calculation if needed
-    const linkedAssets: LinkedAssetForDepreciation[] = [];
-    if (calculateAsGroup && asset.linkedFrom && asset.linkedFrom.length > 0) {
-      // This is a parent asset with children, use the children for group calculation
-      asset.linkedFrom.forEach((link: any) => {
-        linkedAssets.push({
-          id: link.fromAsset.id,
-          purchasePrice: link.fromAsset.purchasePrice,
-          purchaseDate: link.fromAsset.purchaseDate.toISOString(),
-          salvageValue: link.fromAsset.salvageValue || link.fromAsset.purchasePrice * 0.1,
-          depreciableCost: link.fromAsset.depreciableCost || link.fromAsset.purchasePrice
-        });
-
-        console.log("Added child asset for group calculation:", {
-          id: link.fromAsset.id,
-          purchasePrice: link.fromAsset.purchasePrice,
-          depreciableCost: link.fromAsset.depreciableCost || link.fromAsset.purchasePrice,
-          salvageValue: link.fromAsset.salvageValue || link.fromAsset.purchasePrice * 0.1
-        });
-      });
-    }
-
-    // Calculate depreciation (as group if requested and has linked assets)
-    const depreciationResults = calculateGroupDepreciation({
+    // Calculate depreciation using the depreciableCost field
+    // This already includes any capital improvements that have been added
+    const depreciationResults = calculateDepreciation({
       purchasePrice: depreciableCost,
       purchaseDate: startDate.toISOString(),
       usefulLife: usefulLifeYears,
@@ -186,7 +134,6 @@ export async function GET(
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear,
       calculateAsGroup: calculateAsGroup,
-      linkedAssets: linkedAssets,
       capitalImprovements: asset.capitalImprovements || []
     });
 
@@ -213,9 +160,9 @@ export async function GET(
         startDate,
         totalUnits,
         unitsPerYear,
-        calculateAsGroup,
-        linkedAssetsCount: linkedAssets.length
+        calculateAsGroup
       },
+
       depreciationResults,
       chartData,
     });
@@ -243,53 +190,24 @@ export async function PUT(
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
-    // Check if the asset exists and fetch linked assets and capital improvements
+    // Check if the asset exists and get its capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
         id: params.id,
       },
       include: {
-        // Get capital improvements
         capitalImprovements: {
+          select: {
+            id: true,
+            description: true,
+            improvementDate: true,
+            cost: true,
+          },
           orderBy: {
             improvementDate: 'asc',
           },
         },
-        // Get child assets (assets linked from this asset)
-        linkedFrom: {
-          include: {
-            fromAsset: {
-              select: {
-                id: true,
-                name: true,
-                purchaseDate: true,
-                purchasePrice: true,
-                currentValue: true,
-                depreciableCost: true,
-                salvageValue: true,
-                capitalImprovements: true,
-              }
-            }
-          }
-        },
-        // Also get parent assets (assets this asset is linked to)
-        linkedTo: {
-          include: {
-            toAsset: {
-              select: {
-                id: true,
-                name: true,
-                purchaseDate: true,
-                purchasePrice: true,
-                currentValue: true,
-                depreciableCost: true,
-                salvageValue: true,
-                capitalImprovements: true,
-              }
-            }
-          }
-        }
-      }
+      },
     });
 
     if (!asset) {
@@ -372,40 +290,22 @@ export async function PUT(
         calculationMethod = 'STRAIGHT_LINE'; // Default
     }
 
-    // Prepare linked assets data for group calculation if needed
-    const linkedAssets: LinkedAssetForDepreciation[] = [];
-    if (calculateAsGroup && asset.linkedFrom && asset.linkedFrom.length > 0) {
-      // This is a parent asset with children, use the children for group calculation
-      asset.linkedFrom.forEach((link: any) => {
-        linkedAssets.push({
-          id: link.fromAsset.id,
-          purchasePrice: link.fromAsset.purchasePrice,
-          purchaseDate: link.fromAsset.purchaseDate.toISOString(),
-          salvageValue: link.fromAsset.salvageValue || link.fromAsset.purchasePrice * 0.1,
-          depreciableCost: link.fromAsset.depreciableCost || link.fromAsset.purchasePrice
-        });
+    // Calculate depreciation using the depreciableCost field
+    // This already includes any capital improvements that have been added
+    const usefulLifeValue = usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12);
+    const startDateValue = (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate);
 
-        console.log("Added child asset for group calculation (PUT):", {
-          id: link.fromAsset.id,
-          purchasePrice: link.fromAsset.purchasePrice,
-          depreciableCost: link.fromAsset.depreciableCost || link.fromAsset.purchasePrice,
-          salvageValue: link.fromAsset.salvageValue || link.fromAsset.purchasePrice * 0.1
-        });
-      });
-    }
-
-    // Calculate depreciation with the updated settings
-    const depreciationResults = calculateGroupDepreciation({
-      purchasePrice: (updatedAsset.depreciableCost || updatedAsset.purchasePrice) + capitalImprovementsCost,
-      purchaseDate: (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate).toISOString(),
-      usefulLife: usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
-      salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
+    const depreciationResults = calculateDepreciation({
+      purchasePrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
+      purchaseDate: startDateValue.toISOString(),
+      usefulLife: usefulLifeValue,
+      salvageValue: updatedAsset.salvageValue || 0,
       method: calculationMethod,
       depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear,
       calculateAsGroup: calculateAsGroup,
-      linkedAssets: linkedAssets,
+      // linkedAssets: linkedAssets,
       capitalImprovements: asset.capitalImprovements || []
     });
 
@@ -475,7 +375,7 @@ export async function PUT(
       },
       depreciationSettings: {
         depreciableCost: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
-        salvageValue: updatedAsset.salvageValue || updatedAsset.purchasePrice * 0.1,
+        salvageValue: updatedAsset.salvageValue || 0,
         usefulLifeYears: Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12),
         usefulLifeMonths: updatedAsset.usefulLifeMonths || 60,
         // Use the original method from the request, not the one stored in the database
@@ -485,8 +385,9 @@ export async function PUT(
         totalUnits,
         unitsPerYear,
         calculateAsGroup,
-        linkedAssetsCount: linkedAssets.length
+        // linkedAssetsCount: linkedAssets.length
       },
+
       depreciationResults,
       chartData,
     });

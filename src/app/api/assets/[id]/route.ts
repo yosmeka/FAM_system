@@ -4,10 +4,11 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
+export const GET = withRole(['MANAGER', 'USER'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const { id } = await context.params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -16,12 +17,12 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     }
 
     // First, clean up any self-referencing links
-    await cleanupSelfReferencingLinks(params.id);
+    await cleanupSelfReferencingLinks(id);
 
     // Fetch the asset with its linked assets
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
       include: {
         linkedTo: {
@@ -38,7 +39,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     });
 
     console.log("API DEBUGGING - GET ASSET");
-    console.log("Asset ID:", params.id);
+    console.log("Asset ID:", id);
     console.log("Asset found:", !!asset);
     if (asset) {
       console.log("LinkedTo count:", asset.linkedTo?.length || 0);
@@ -62,7 +63,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     // Check if there are any linked assets in the database
     const linkedAssetsCount = await prisma.linkedAsset.count({
       where: {
-        fromAssetId: params.id
+        fromAssetId: id
       }
     });
 
@@ -107,15 +108,20 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 
     return NextResponse.json(asset);
   } catch (error) {
-    console.error('Error fetching asset:', error);
+    if (error instanceof Error) {
+      console.error('Error fetching asset:', error.message);
+    } else {
+      console.error('Unknown error fetching asset:', error);
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
 
-export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
+export const PUT = withRole(['MANAGER'], async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -123,11 +129,19 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check if user has 'Asset edit' permission (user-specific or role-based)
+    const { id: userId, role } = session.user;
+    const { hasPermission } = await import('@/app/api/users/[id]/route');
+    const permitted = await hasPermission({ id: userId, role }, 'Asset edit');
+    if (!permitted) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // First get the current asset to compare changes
     const currentAsset = await prisma.asset.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     });
 
     if (!currentAsset) {
@@ -137,7 +151,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
     // Update the asset
     const updatedAsset = await prisma.asset.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         name: body.name,
@@ -184,7 +198,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
 
       if (oldValue?.toString() !== newValue?.toString()) {
         changes.push({
-          assetId: params.id,
+          assetId: id,
           field,
           oldValue: oldValue?.toString() || null,
           newValue: newValue?.toString() || null,
@@ -208,15 +222,20 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
 
     return NextResponse.json(updatedAsset);
   } catch (error) {
-    console.error('Error updating asset:', error);
+    if (error instanceof Error) {
+      console.error('Error updating asset:', error.message);
+    } else {
+      console.error('Unknown error updating asset:', error);
+    }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
 
-export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
+export const DELETE = withRole(['MANAGER'], async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const { id } = params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -226,7 +245,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
 
     // First check if the asset exists
     const asset = await prisma.asset.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     });
 
     if (!asset) {
@@ -234,66 +253,70 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
     }
 
     // First delete all related records manually to avoid foreign key constraint issues
-    console.log(`Deleting all related records for asset ${params.id}`);
+    console.log(`Deleting all related records for asset ${id}`);
 
     // Delete asset depreciations
     await prisma.assetDepreciation.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete depreciation records
     await prisma.depreciation.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete linked assets (both directions)
     await prisma.linkedAsset.deleteMany({
       where: {
         OR: [
-          { fromAssetId: params.id },
-          { toAssetId: params.id }
+          { fromAssetId: id },
+          { toAssetId: id }
         ]
       }
     });
 
     // Delete history records
     await prisma.assetHistory.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete maintenance records
     await prisma.maintenance.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete transfer records
     await prisma.transfer.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete disposal records
     await prisma.disposal.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Delete document records
     await prisma.document.deleteMany({
-      where: { assetId: params.id }
+      where: { assetId: id }
     });
 
     // Finally delete the asset itself
     await prisma.asset.delete({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting asset:', error);
+    if (error instanceof Error) {
+      console.error('Error deleting asset:', error.message);
+    } else {
+      console.error('Unknown error deleting asset:', error);
+    }
 
     // Check for specific Prisma errors
-    if (error.code === 'P2003') {
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2003') {
       return NextResponse.json(
         {
           error: 'Failed to delete asset',
@@ -309,7 +332,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
       {
         error: 'Failed to delete asset',
         details: error instanceof Error ? error.message : 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       },
       { status: 500 }
     );

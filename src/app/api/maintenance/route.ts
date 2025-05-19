@@ -73,7 +73,7 @@ export const GET = withRole(['ADMIN', 'MANAGER'], async function GET(request: Re
 });
 
 // POST /api/maintenance
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER', 'USER'], async function POST(request: Request) {
   try {
     const body = await request.json();
     const { assetId, description, requestedById } = body;

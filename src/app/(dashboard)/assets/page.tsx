@@ -24,20 +24,10 @@ interface Asset {
 }
 
 export default function AssetsPage() {
-  // We need to call useSession() even if we don't use the result
-  // to maintain consistent hook order across renders
-  useSession();
-  const { checkPermission } = usePermissions();
-
-  if (!checkPermission('Asset view (list and detail)')) {
-    return (
-      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
-        <h1 className="text-2xl font-semibold">Access Denied</h1>
-        <p className="mt-2">You do not have permission to view assets.</p>
-      </div>
-    );
-  }
-
+  // All hooks MUST be called at the top, before any return!
+  const { checkPermission, loading } = usePermissions();
+  const { data: session } = useSession();
+  // const router = useRouter(); // Initialize the router hook
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -60,6 +50,26 @@ export default function AssetsPage() {
       return response.json();
     },
   });
+
+  // Only after ALL hooks, check loading/permissions and return early if needed
+  if (loading) {
+    return (
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex items-center justify-center">
+        <span className="text-lg">Loading permissions...</span>
+      </div>
+    );
+  }
+
+  if (!checkPermission('Asset view (list and detail)')) {
+    return (
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+        <h1 className="text-2xl font-semibold">Access Denied</h1>
+        <p className="mt-2">You do not have permission to view assets.</p>
+      </div>
+    );
+  }
+  // ...rest of your component
+
 
   // Get unique categories and departments
   const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));

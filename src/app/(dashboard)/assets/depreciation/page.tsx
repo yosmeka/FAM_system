@@ -1,10 +1,10 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Settings } from 'lucide-react';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
-
-'use client';
 
 interface Asset {
   id: string;
@@ -33,7 +33,9 @@ interface DepreciationResult {
   method: 'STRAIGHT_LINE' | 'DECLINING_BALANCE';
 }
 
-export default function AssetDepreciationPage({ searchParams }: { searchParams: { assetId: string } }) {
+export default function AssetDepreciationPage(props: { searchParams?: { assetId?: string } }) {
+  const searchParams = props.searchParams || {};
+  const assetId = searchParams.assetId || ""; // fallback to empty string if not provided
   const router = useRouter();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +58,8 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
     const fetchAssetAndDepreciation = async () => {
       try {
         // First fetch the asset
-        const assetResponse = await fetch(`/api/assets/${searchParams.assetId}`);
+        if (!assetId) return;
+        const assetResponse = await fetch(`/api/assets/${assetId}`);
         if (!assetResponse.ok) {
           throw new Error('Failed to fetch asset');
         }
@@ -64,7 +67,7 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
         setAsset(assetData);
 
         // Then fetch the depreciation data
-        const depreciationResponse = await fetch(`/api/assets/${searchParams.assetId}/depreciation`);
+        const depreciationResponse = await fetch(`/api/assets/${assetId}/depreciation`);
         if (!depreciationResponse.ok) {
           throw new Error('Failed to fetch depreciation data');
         }
@@ -116,7 +119,8 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
 
     try {
       // Call the API with the current settings
-      const response = await fetch(`/api/assets/${searchParams.assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
+      if (!assetId) return;
+      const response = await fetch(`/api/assets/${assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
 
       if (!response.ok) throw new Error('Failed to fetch depreciation data');
 
@@ -179,8 +183,9 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
       const usefulLifeYears = Math.ceil(settings.usefulLifeMonths / 12);
 
       // Call the API with the new settings using PUT method to update the asset
+      if (!assetId) return;
       const response = await fetch(
-        `/api/assets/${searchParams.assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        `/api/assets/${assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
         {
           method: 'PUT',
           headers: {
@@ -252,7 +257,7 @@ export default function AssetDepreciationPage({ searchParams }: { searchParams: 
             onClose={() => setIsManagingDepreciation(false)}
             onSave={handleSaveDepreciationSettings}
             initialSettings={depreciationSettings}
-            assetId={searchParams.assetId}
+            assetId={assetId}
           />
 
           <div className="bg-white p-6 rounded-lg shadow overflow-x-auto">

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
+export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   try {
     const assets = await prisma.asset.findMany({
       orderBy: {
@@ -32,7 +32,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
   }
 });
 
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -51,7 +51,8 @@ export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: 
         serialNumber: body.serialNumber,
         purchaseDate: new Date(body.purchaseDate),
         purchasePrice: parseFloat(body.purchasePrice),
-        currentValue: parseFloat(body.currentValue),
+        // Set currentValue to purchasePrice if not provided
+        currentValue: body.currentValue ? parseFloat(body.currentValue) : parseFloat(body.purchasePrice),
         status: body.status,
         location: body.location,
         department: body.department,
@@ -92,10 +93,13 @@ export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: 
     console.log('Initial history records to be created:', changes);
 
     try {
-      const result = await prisma.assetHistory.createMany({
-        data: changes,
-      });
-      console.log('Initial history records created:', result);
+      // Create history records one by one instead of using createMany
+      for (const change of changes) {
+        await prisma.assetHistory.create({
+          data: change
+        });
+      }
+      console.log('Initial history records created successfully');
     } catch (error) {
       console.error('Error creating initial history records:', error);
     }

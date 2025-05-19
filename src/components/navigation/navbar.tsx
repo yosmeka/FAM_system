@@ -5,7 +5,7 @@ import { Disclosure, Menu } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 
-import NotificationBell from "./NotificationBell";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import AccountInfoModal from "./AccountInfoModal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,27 +22,27 @@ const navigation = [
   {
     name: "Assets",
     href: "/assets",
-    roles: ["ADMIN", "MANAGER", "USER"],
+    roles: [ "MANAGER", "USER", ],
   },
   {
-    name: "Maintenance Requests",
+    name: "Transfers",
+    href: "/transfers",
+    roles: ["MANAGER", "USER"],
+  },
+  {
+    name: "Maintenance",
     href: "/maintenance",
-    roles: ["ADMIN", "MANAGER"],
-  },
-  {
-    name: "Request Maintenance",
-    href: "/maintenance/request",
-    roles: ["USER"],
+    roles: ["MANAGER", "USER"],
   },
   {
     name: "Disposals",
     href: "/disposals",
-    roles: ["ADMIN", "MANAGER"],
+    roles: ["MANAGER", "USER"],
   },
   {
     name: "Reports",
     href: "/reports",
-    roles: ["ADMIN", "MANAGER"],
+    roles: ["MANAGER", "USER"],
   },
   { name: "Users", href: "/users", roles: ["ADMIN"] },
   { name: "Role & Permission Management", href: "/role-permission", roles: ["ADMIN"] },
@@ -53,6 +53,14 @@ function classNames(...classes: string[]) {
 }
 
 export default function Navbar() {
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    // Fetch notifications for all authenticated users
+    fetch('/api/admin/notifications')
+      .then(res => res.ok ? res.json() : { notifications: [] })
+      .then(data => setNotifications(data.notifications || []))
+      .catch(() => setNotifications([]));
+  }, []);
   const { data: session } = useSession();
   const pathname = usePathname();
   const [showAccountInfo, setShowAccountInfo] = React.useState(false);
@@ -103,12 +111,13 @@ export default function Navbar() {
                     ))}
                   </div>
                 </div>
+
               </div>
               <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
                 {/* Theme Switcher */}
 
-                {/* Notification Bell */}
-                <NotificationBell />
+                {/* Notification Bell (right of navigation, left of profile) */}
+                <NotificationBell notifications={notifications} setNotifications={setNotifications} />
                 {/* Profile Dropdown */}
                 <Menu as="div" className="relative ml-3">
                   <div>

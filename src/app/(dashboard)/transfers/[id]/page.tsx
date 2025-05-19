@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
@@ -17,25 +19,37 @@ interface TransferDetails {
   asset?: {
     name: string;
     serialNumber: string;
+    status?: string;
+    location?: string;
+    currentValue?: number;
+  };
+  requester?: {
+    name?: string;
+    email?: string;
+    id?: string;
   };
 }
 
-export default function TransferDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+import { useSession } from 'next-auth/react';
+
+export default function TransferDetailsPage({ params }: { params: any }) {
+  const { data: session } = useSession();
+  const { id } = React.use(params) as { id: string };
   const [transfer, setTransfer] = useState<TransferDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleted, setDeleted] = useState(false);
+
   const router = useRouter();
 
   useEffect(() => {
-    fetchTransferDetails();
-  }, [params.id]);
+    if (!deleted) {
+      fetchTransferDetails();
+    }
+  }, [id, deleted]);
 
   const fetchTransferDetails = async () => {
     try {
-      const response = await fetch(`/api/transfers/${params.id}`);
+      const response = await fetch(`/api/transfers/${id}`);
       if (!response.ok) throw new Error('Failed to fetch transfer details');
       const data = await response.json();
       setTransfer(data);
@@ -47,24 +61,19 @@ export default function TransferDetailsPage({
     }
   };
 
-  const handleApprove = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/transfers/${params.id}/approve`, {
-        method: 'POST',
-      });
 
-      if (!response.ok) throw new Error('Failed to approve transfer');
 
-      toast.success('Transfer approved successfully');
-      fetchTransferDetails();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to approve transfer');
-    } finally {
-      setLoading(false);
+
+  useEffect(() => {
+    if (deleted) {
+      router.push('/transfers');
+      router.refresh();
     }
-  };
+  }, [deleted, router]);
+
+  if (deleted) {
+    return <div>Redirecting...</div>;
+  }
 
   if (loading) {
     return <div>Loading...</div>;
@@ -72,6 +81,22 @@ export default function TransferDetailsPage({
 
   if (!transfer) {
     return <div>Transfer not found</div>;
+  }
+
+  // Delete handler
+  async function handleDelete() {
+    if (!window.confirm('Are you sure you want to delete this transfer request?')) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/transfers/${id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('Failed to delete transfer');
+      toast.success('Transfer request deleted');
+      setDeleted(true);
+    } catch (error) {
+      toast.error('Failed to delete transfer');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -85,9 +110,21 @@ export default function TransferDetailsPage({
         <div className="bg-white shadow rounded-lg p-6 space-y-4">
           <div>
             <h2 className="text-lg font-medium">Asset Information</h2>
-            <p className="text-gray-600">
-              {transfer.asset?.name} ({transfer.asset?.serialNumber})
-            </p>
+            <div className="text-gray-600 space-y-1">
+              <div><b>Name:</b> {transfer.asset?.name}</div>
+              <div><b>Serial Number:</b> {transfer.asset?.serialNumber}</div>
+              {transfer.asset?.status && <div><b>Status:</b> {transfer.asset.status}</div>}
+              {transfer.asset?.location && <div><b>Location:</b> {transfer.asset.location}</div>}
+              {transfer.asset?.currentValue !== undefined && <div><b>Value:</b> ${transfer.asset.currentValue?.toLocaleString?.() ?? transfer.asset.currentValue}</div>}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-medium">Requester Information</h2>
+            <div className="text-gray-600 space-y-1">
+              <div><b>Name:</b> {transfer.requester?.name || 'Unknown'}</div>
+              <div><b>Email:</b> {transfer.requester?.email || 'Unknown'}</div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -120,13 +157,25 @@ export default function TransferDetailsPage({
             >
               Back to List
             </RoleBasedButton>
+            {/* Show Edit button only if transfer is pending and user is the requester */}
+            {transfer.status === 'PENDING' &&
+              session?.user?.id === transfer.requester?.id && (
+                <RoleBasedButton
+                  variant="primary"
+                  onClick={() => router.push(`/transfers/${transfer.id}/edit`)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Edit
+                </RoleBasedButton>
+              )
+            }
             {transfer.status === 'PENDING' && (
               <RoleBasedButton
-                variant="primary"
-                onClick={handleApprove}
+                variant="danger"
+                onClick={handleDelete}
                 loading={loading}
               >
-                Approve Transfer
+                Delete Transfer
               </RoleBasedButton>
             )}
           </div>

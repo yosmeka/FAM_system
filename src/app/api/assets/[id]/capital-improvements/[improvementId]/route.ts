@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 // GET a specific capital improvement
 export async function GET(
   request: Request,
-  { params }: { params: { id: string; improvementId: string } }
+  context: { params: { id: string; improvementId: string } }
 ) {
   try {
     // Get session for authentication
@@ -16,11 +16,15 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the IDs from the context
+    const assetId = context.params.id;
+    const improvementId = context.params.improvementId;
+
     // Check if the capital improvement exists
     const capitalImprovement = await prisma.capitalImprovement.findUnique({
       where: {
-        id: params.improvementId,
-        assetId: params.id,
+        id: improvementId,
+        assetId: assetId,
       },
     });
 
@@ -41,7 +45,7 @@ export async function GET(
 // PUT (update) a specific capital improvement
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string; improvementId: string } }
+  context: { params: { id: string; improvementId: string } }
 ) {
   try {
     // Get session for authentication
@@ -51,11 +55,15 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the IDs from the context
+    const assetId = context.params.id;
+    const improvementId = context.params.improvementId;
+
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({
       where: {
-        id: params.improvementId,
-        assetId: params.id,
+        id: improvementId,
+        assetId: assetId,
       },
     });
 
@@ -80,7 +88,7 @@ export async function PUT(
     // Update the capital improvement
     const updatedImprovement = await prisma.capitalImprovement.update({
       where: {
-        id: params.improvementId,
+        id: improvementId,
       },
       data: {
         description: body.description,
@@ -92,39 +100,72 @@ export async function PUT(
       },
     });
 
-    // Only update the asset value if the cost has changed
+    // Only update the depreciable cost if the cost has changed
     if (costDifference !== 0) {
       // Get the current asset
       const asset = await prisma.asset.findUnique({
         where: {
-          id: params.id,
+          id: assetId,
         },
       });
 
       if (asset) {
-        // Update the asset's current value to reflect the change in improvement cost
-        await prisma.asset.update({
-          where: {
-            id: params.id,
-          },
-          data: {
-            currentValue: {
-              increment: costDifference,
-            },
-            // Also update the depreciable cost if it exists
-            depreciableCost: asset.depreciableCost
-              ? { increment: costDifference }
-              : undefined,
-          },
-        });
+        let newDepreciableCost: number;
 
-        // Create an asset history record for the value change
+        // If a current asset value was provided in the request, use it as the base
+        if (body.currentAssetValue) {
+          // Extract the numeric value from the currency string (remove $ and commas)
+          const currentValueString = body.currentAssetValue.replace(/[$,]/g, '');
+          const currentDepreciatedCost = parseFloat(currentValueString);
+
+          // If we have a valid number, use it as the base and add the cost difference
+          if (!isNaN(currentDepreciatedCost)) {
+            // Calculate the new depreciable cost by adding the cost difference
+            newDepreciableCost = currentDepreciatedCost + costDifference;
+
+            // Update only the depreciable cost field
+            await prisma.asset.update({
+              where: {
+                id: assetId,
+              },
+              data: {
+                depreciableCost: newDepreciableCost,
+              },
+            });
+          } else {
+            // If the current value string couldn't be parsed, fall back to adjusting existing depreciable cost
+            newDepreciableCost = (asset.depreciableCost || asset.purchasePrice) + costDifference;
+
+            await prisma.asset.update({
+              where: {
+                id: assetId,
+              },
+              data: {
+                depreciableCost: newDepreciableCost,
+              },
+            });
+          }
+        } else {
+          // If no current value was provided, just adjust the existing depreciable cost
+          newDepreciableCost = (asset.depreciableCost || asset.purchasePrice) + costDifference;
+
+          await prisma.asset.update({
+            where: {
+              id: assetId,
+            },
+            data: {
+              depreciableCost: newDepreciableCost,
+            },
+          });
+        }
+
+        // Create an asset history record for the depreciable cost change
         await prisma.assetHistory.create({
           data: {
-            assetId: params.id,
-            field: 'Capital Improvement Update',
-            oldValue: asset.currentValue.toString(),
-            newValue: (asset.currentValue + costDifference).toString(),
+            assetId: assetId,
+            field: 'Capital Improvement Update - Depreciable Cost',
+            oldValue: body.currentAssetValue || (asset.depreciableCost || asset.purchasePrice).toString(),
+            newValue: newDepreciableCost.toString(),
             changedBy: session.user?.name || 'system',
           },
         });
@@ -144,7 +185,7 @@ export async function PUT(
 // DELETE a specific capital improvement
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; improvementId: string } }
+  context: { params: { id: string; improvementId: string } }
 ) {
   try {
     // Get session for authentication
@@ -154,11 +195,15 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the IDs from the context
+    const assetId = context.params.id;
+    const improvementId = context.params.improvementId;
+
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({
       where: {
-        id: params.improvementId,
-        assetId: params.id,
+        id: improvementId,
+        assetId: assetId,
       },
     });
 
@@ -169,7 +214,7 @@ export async function DELETE(
     // Get the current asset
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id: assetId,
       },
     });
 
@@ -180,33 +225,29 @@ export async function DELETE(
     // Delete the capital improvement
     await prisma.capitalImprovement.delete({
       where: {
-        id: params.improvementId,
+        id: improvementId,
       },
     });
 
-    // Update the asset's current value to remove the improvement cost
+    // Update only the depreciable cost to remove the improvement cost
+    const newDepreciableCost = (asset.depreciableCost || asset.purchasePrice) - existingImprovement.cost;
+
     await prisma.asset.update({
       where: {
-        id: params.id,
+        id: assetId,
       },
       data: {
-        currentValue: {
-          decrement: existingImprovement.cost,
-        },
-        // Also update the depreciable cost if it exists
-        depreciableCost: asset.depreciableCost
-          ? { decrement: existingImprovement.cost }
-          : undefined,
+        depreciableCost: newDepreciableCost,
       },
     });
 
     // Create an asset history record
     await prisma.assetHistory.create({
       data: {
-        assetId: params.id,
-        field: 'Capital Improvement Removed',
-        oldValue: asset.currentValue.toString(),
-        newValue: (asset.currentValue - existingImprovement.cost).toString(),
+        assetId: assetId,
+        field: 'Capital Improvement Removed - Depreciable Cost',
+        oldValue: (asset.depreciableCost || asset.purchasePrice).toString(),
+        newValue: newDepreciableCost.toString(),
         changedBy: session.user?.name || 'system',
       },
     });

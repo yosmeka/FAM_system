@@ -21,10 +21,10 @@ export default function NewDisposalPage() {
   const router = useRouter();
 
   if (status === 'loading') return null;
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+  if (!session || (session.user.role !== 'USER' && session.user.role !== 'MANAGER')) {
     if (typeof window !== 'undefined') {
       router.replace('/dashboard');
-      toast.error('Access denied: Only Admins and Managers can create disposal requests.');
+      toast.error('Access denied: Only User and Managers can create disposal requests.');
     }
     return null;
   }

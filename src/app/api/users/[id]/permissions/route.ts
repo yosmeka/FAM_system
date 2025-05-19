@@ -11,7 +11,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = params.id;
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { userPermissions: true } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { userPermissions: { include: { permission: true } } }
+  });
   console.log('Requested userId:', userId, 'User:', user);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
   if (!user.role) {

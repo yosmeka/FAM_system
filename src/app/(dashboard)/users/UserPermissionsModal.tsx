@@ -40,7 +40,9 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
         setEffectivePermissions(data.effectivePermissions);
         const overrides: Record<string, boolean> = {};
         for (const up of data.userPermissions) {
-          overrides[up.permission.name] = up.granted;
+          if (up.permission && up.permission.name) {
+            overrides[up.permission.name] = up.granted;
+          }
         }
         setUserOverrides(overrides);
       } catch (err: any) {
@@ -60,7 +62,14 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ permissionName: perm, granted }),
       });
-      if (!res.ok) throw new Error("Failed to update permission");
+      if (!res.ok) {
+        let errorMsg = "Failed to update permission";
+        try {
+          const data = await res.json();
+          if (data.error) errorMsg = data.error;
+        } catch {}
+        throw new Error(errorMsg);
+      }
       toast.success(`Permission ${granted ? "granted" : "revoked"} for ${perm}`);
       // Refresh
       const data = await fetch(`/api/users/${userId}/permissions`).then(r => r.json());
@@ -70,11 +79,12 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
         overrides[up.permission.name] = up.granted;
       }
       setUserOverrides(overrides);
-    } catch (err) {
-      toast.error("Error updating permission");
+    } catch (err: any) {
+      toast.error(err.message || "Error updating permission");
     }
     setLoading(false);
   };
+
 
   if (!open) return null;
 

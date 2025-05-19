@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { sendNotification } from '@/lib/notifications';
 
 // POST /api/transfers/[id]/approve
 export async function POST(
@@ -9,26 +10,66 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Update the transfer status to APPROVED
+    const { id } = await params;
+    let reason = '';
+    if (request.headers.get('content-type')?.includes('application/json')) {
+      try {
+        const body = await request.json();
+        reason = body.reason || '';
+      } catch (e) {
+        // Ignore JSON parse error for approval
+      }
+    }
     const transfer = await prisma.transfer.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: 'APPROVED',
-        approvedAt: new Date(),
       },
       include: {
         asset: true,
       },
     });
 
-    // Update the asset's location
-    await prisma.asset.update({
+    // Ensure toDepartment (used as location) is set
+    if (!transfer.toDepartment) {
+      return NextResponse.json({ error: 'Transfer request missing destination location.' }, { status: 400 });
+    }
+
+    // Update asset location and status using toDepartment as the new location
+    const updatedAsset = await prisma.asset.update({
       where: { id: transfer.assetId },
       data: {
-        location: transfer.toLocation,
+        status: 'TRANSFERRED',
+        location: transfer.toDepartment,
       },
     });
 
-    return NextResponse.json(transfer);
+    // Track the change in asset history, but don't fail the main operation if this fails
+    try {
+      await prisma.assetHistory.create({
+        assetId: transfer.assetId,
+        field: 'location',
+        oldValue: transfer.asset.location || '',
+        newValue: transfer.toDepartment,
+        changedBy: (await getServerSession(authOptions))?.user?.email || 'system',
+      });
+    } catch (historyError) {
+      console.error('Asset history logging failed:', historyError);
+      // Continue without throwing
+    }
+
+    // Send notification to requester
+    if (transfer.requesterId && transfer.asset?.name) {
+      const session = await getServerSession(authOptions);
+      await sendNotification({
+        userId: transfer.requesterId,
+        message: `Your transfer request for asset "${transfer.asset.name}" has been approved by ${session?.user?.name || 'a manager'}.`,
+        type: 'transfer_approved',
+        meta: { assetId: transfer.asset.id, transferId: transfer.id },
+      });
+    }
+    return NextResponse.json({ transfer, updatedAsset });
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json(
@@ -89,13 +130,23 @@ export async function PUT(
         {
           assetId: transfer.assetId,
           field: 'location',
-          oldValue: transfer.fromDepartment,
-          newValue: transfer.toDepartment,
+          oldValue: transfer.fromLocation,
+          newValue: transfer.toLocation,
           changedBy: session.user?.email || 'system',
         }
       ]
     });
 
+    // Send notification to requester
+    if (transfer.requesterId && transfer.asset?.name) {
+      const session = await getServerSession(authOptions);
+      await sendNotification({
+        userId: transfer.requesterId,
+        message: `Your transfer request for asset "${transfer.asset.name}" has been approved by ${session?.user?.name || 'a manager'}.`,
+        type: 'transfer_approved',
+        meta: { assetId: transfer.asset.id, transferId: transfer.id },
+      });
+    }
     return NextResponse.json(updatedTransfer);
   } catch (error) {
     console.error('Error approving transfer:', error);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendNotification } from '@/lib/notifications';
 
 // POST /api/disposals/[id]/reject
 export async function POST(
@@ -26,6 +27,15 @@ export async function POST(
       },
     });
 
+    // Send notification to requester (if available)
+    if (disposal?.requestedById && disposal?.asset?.name) {
+      await sendNotification({
+        userId: disposal.requestedById,
+        message: `Your disposal request for asset "${disposal.asset.name}" has been rejected.`,
+        type: 'disposal_rejected',
+        meta: { assetId: disposal.asset.id, disposalId: disposal.id },
+      });
+    }
     return NextResponse.json(disposal);
   } catch (error) {
     console.error('Error:', error);
