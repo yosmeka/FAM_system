@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { Toaster } from "react-hot-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "react-hot-toast";
@@ -27,7 +27,7 @@ export default function AssetsPage() {
   // All hooks MUST be called at the top, before any return!
   const { checkPermission, loading } = usePermissions();
   const { data: session } = useSession();
-  const router = useRouter();
+  // const router = useRouter(); // Initialize the router hook
   const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState("");

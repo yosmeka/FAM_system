@@ -35,6 +35,7 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
+  managedMaintenance  Maintenance[] @relation("MaintenanceManagedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
@@ -73,6 +74,8 @@ model Asset {
   usefulLifeMonths    Int?
   depreciationMethod  DepreciationMethod?
   depreciationStartDate DateTime?
+  lastAuditDate       DateTime?
+  nextAuditDate       DateTime?
   assetDepreciations  AssetDepreciation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -84,8 +87,6 @@ model Asset {
   transferRequests    Transfer[]
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
-  lastAuditDate       DateTime?
-  nextAuditDate       DateTime?
   capitalImprovements CapitalImprovement[]
   audits              AssetAudit[]
 }
@@ -106,18 +107,24 @@ model Transfer {
 }
 
 model Maintenance {
-  id          String              @id @default(cuid())
-  assetId     String
-  description String
-  cost        Float?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  completedAt DateTime?
-  priority    MaintenancePriority
-  requesterId String
-  status      MaintenanceStatus   @default(PENDING)
-  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  id           String              @id @default(cuid())
+  assetId      String
+  description  String
+  cost         Float?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  completedAt  DateTime?
+  scheduledDate DateTime?
+  priority     MaintenancePriority
+  requesterId  String
+  managerId    String?
+  status       MaintenanceStatus   @default(PENDING_APPROVAL)
+  notes        String?
+  asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
+
+  @@index([managerId])
 }
 
 model Disposal {
@@ -140,13 +147,13 @@ model Document {
   assetId   String
   type      DocumentType
   url       String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
   fileName  String?      // Original file name
   fileSize  Int?         // File size in bytes
   filePath  String?      // Local file path (if stored locally)
   mimeType  String?      // MIME type of the file
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
   meta      Json?        // Metadata for the document (e.g., transferId, status)
 }
 
@@ -217,7 +224,9 @@ enum MaintenanceType {
 }
 
 enum MaintenanceStatus {
-  PENDING
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
   SCHEDULED
   IN_PROGRESS
   COMPLETED
@@ -259,6 +268,8 @@ enum DocumentType {
   MAINTENANCE_RECORD
   TRANSFER_APPROVAL
   TRANSFER_REJECTION
+  MAINTENANCE_APPROVAL
+  MAINTENANCE_REJECTION
   OTHER
 }
 
@@ -307,6 +318,7 @@ model RolePermission {
   permission   Permission @relation(fields: [permissionId], references: [id])
   @@unique([role, permissionId])
 }
+
 model CapitalImprovement {
   id                String   @id @default(cuid())
   assetId           String
@@ -322,6 +334,7 @@ model CapitalImprovement {
 
   @@index([assetId])
 }
+
 enum AuditStatus {
   PENDING
   COMPLETED

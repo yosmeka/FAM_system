@@ -1,7 +1,7 @@
 "use client";
 
-import React, { Fragment } from "react";
-import { Disclosure, Menu, Transition } from "@headlessui/react";
+import React from "react";
+import { Disclosure, Menu } from "@headlessui/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 
@@ -18,7 +18,6 @@ const navigation = [
     roles: [
       "ADMIN",
       "MANAGER",
-
     ],
   },
   {
@@ -101,7 +100,7 @@ export default function Navbar() {
   return (
     <Disclosure as="nav" className="bg-red-600">
       {({ open }: { open: boolean }) => (
-        <>
+        <div>
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
             <div className="relative flex h-16 items-center justify-between">
               <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
@@ -155,16 +154,7 @@ export default function Navbar() {
                       </div>
                     </Menu.Button>
                   </div>
-                  <Transition
-                    as={Fragment}
-                    enter="transition ease-out duration-100"
-                    enterFrom="transform opacity-0 scale-95"
-                    enterTo="transform opacity-100 scale-100"
-                    leave="transition ease-in duration-75"
-                    leaveFrom="transform opacity-100 scale-100"
-                    leaveTo="transform opacity-0 scale-95"
-                  >
-                    <Menu.Items className="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-xl bg-white py-2 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <Menu.Items className="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-xl bg-white py-2 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none">
                       <div className="px-4 py-3 border-b border-gray-100">
                         <div className="font-semibold text-gray-900 text-base">{session.user?.name}</div>
                         <div className="text-xs text-gray-500">{session.user?.email}</div>
@@ -210,7 +200,6 @@ export default function Navbar() {
                         )}
                       </Menu.Item>
                     </Menu.Items>
-                  </Transition>
                 </Menu>
               </div>
             </div>
@@ -234,7 +223,7 @@ export default function Navbar() {
               ))}
             </div>
           </Disclosure.Panel>
-        </>
+        </div>
       )}
     </Disclosure>
   );

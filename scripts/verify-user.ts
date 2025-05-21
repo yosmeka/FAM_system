@@ -9,14 +9,14 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 async function main() {
   try {
     console.log('🔍 Checking database users...');
-    
+
     const users = await prisma.user.findMany();
     console.log('Users in database:', users);
-    
+
     const admin = await prisma.user.findUnique({
       where: { email: 'admin@example.com' }
     });
-    
+
     if (admin) {
       console.log('✅ Admin user found:', {
         id: admin.id,
@@ -27,7 +27,7 @@ async function main() {
     } else {
       console.log('❌ Admin user not found');
     }
-    
+
   } catch (error) {
     console.error('Error:', error);
   } finally {
@@ -35,4 +35,4 @@ async function main() {
   }
 }
 
-main(); 
+main();

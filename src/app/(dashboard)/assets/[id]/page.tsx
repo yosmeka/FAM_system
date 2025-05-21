@@ -10,6 +10,8 @@ import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
+import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
+import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
@@ -449,8 +451,25 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderHistoryTab();
       case 'linking':
         return renderLinkingTab();
-        case 'capital_improvment':
+      case 'capital_improvment':
         return <CapitalImprovementsTab assetId={resolvedParams.id} />;
+      case 'maint':
+        return (
+          <AssetMaintenanceTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
+            lastMaintenance={asset?.lastMaintenance}
+            nextMaintenance={asset?.nextMaintenance}
+          />
+        );
+      case 'audit':
+        return (
+          <AssetAuditTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
+            assetLocation={asset?.location}
+          />
+        );
       case 'depreciation':
         return (
           <div ref={targetRef}>

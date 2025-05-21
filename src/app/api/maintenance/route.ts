@@ -1,12 +1,42 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // GET /api/maintenance
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['MANAGER'], async function GET() {
+export const GET = withRole(['ADMIN', 'MANAGER'], async function GET(request: Request) {
   try {
+    // Get the current user's ID from the session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const userRole = session.user.role;
+
+    // Parse query parameters
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+
+    // Build the query
+    const query: any = {};
+
+    // If user is a manager, only show requests assigned to them
+    // Admins can see all requests
+    if (userRole === 'MANAGER') {
+      query.managerId = userId;
+    }
+
+    // Filter by status if provided
+    if (status) {
+      query.status = status;
+    }
+
     const maintenanceRequests = await prisma.maintenance.findMany({
+      where: query,
       include: {
         asset: {
           select: {
@@ -14,7 +44,13 @@ export const GET = withRole(['MANAGER'], async function GET() {
             serialNumber: true,
           },
         },
-        requestedBy: {
+        requester: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
           select: {
             name: true,
             email: true,
