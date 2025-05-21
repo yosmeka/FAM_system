@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
 import { AssetAuditTab } from '@/components/AssetAuditTab';
+import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
@@ -460,6 +461,13 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             assetName={asset?.name || 'Asset'}
             lastMaintenance={asset?.lastMaintenance}
             nextMaintenance={asset?.nextMaintenance}
+          />
+        );
+      case 'docs':
+        return (
+          <DocumentsTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
           />
         );
       case 'audit':

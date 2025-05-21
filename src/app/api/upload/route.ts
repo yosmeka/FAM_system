@@ -16,7 +16,7 @@ async function ensureUploadDir(dir: string) {
 }
 
 // POST /api/upload - Upload a file
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(
+export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
   request: Request
 ) {
   try {

@@ -57,7 +57,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 });
 
 // POST /api/assets/[id]/documents - Create a new document for an asset
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(
+export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
