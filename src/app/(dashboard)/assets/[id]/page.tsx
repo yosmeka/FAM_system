@@ -89,7 +89,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [isLinkingAsset, setIsLinkingAsset] = useState(false);
   const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
   // These state variables are used in the renderLinkingTab function
-  const [availableAssets] = useState<Asset[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -427,6 +427,55 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     );
   };
 
+  // Function to fetch available assets for linking
+  const fetchAvailableAssets = async () => {
+    try {
+      console.log("Fetching available assets for linking");
+      const response = await fetch('/api/assets');
+      if (!response.ok) {
+        throw new Error('Failed to fetch available assets');
+      }
+
+      const allAssets = await response.json();
+      console.log("All assets fetched:", allAssets.length);
+
+      // Filter out the current asset and any assets that are already linked
+      // or are children of other assets or have children
+      const filteredAssets = allAssets.filter((fetchedAsset: Asset) => {
+        // Exclude the current asset
+        if (fetchedAsset.id === resolvedParams.id) {
+          return false;
+        }
+
+        // Exclude assets that are already children of other assets
+        if (fetchedAsset.linkedFrom && fetchedAsset.linkedFrom.length > 0) {
+          return false;
+        }
+
+        // Exclude assets that already have children
+        if (fetchedAsset.linkedTo && fetchedAsset.linkedTo.length > 0) {
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log("Filtered available assets:", filteredAssets.length);
+      setAvailableAssets(filteredAssets);
+    } catch (error) {
+      console.error("Error fetching available assets:", error);
+      toast.error("Failed to load available assets for linking");
+    }
+  };
+
+  // Handle opening the linking modal
+  const handleOpenLinkingModal = () => {
+    // Fetch available assets when the modal is opened
+    fetchAvailableAssets();
+    // Then open the modal
+    setIsLinkingAsset(true);
+  };
+
   const renderLinkingTab = () => {
     return (
       <div>
@@ -439,7 +488,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         />
         <AssetLinkingTable
           asset={asset!} // Ensure asset is not null, or add a null check if needed
-          onLinkClick={() => setIsLinkingAsset(true)}
+          onLinkClick={handleOpenLinkingModal}
           onUnlinkSuccess={handleLinkSuccess}
         />
       </div>
