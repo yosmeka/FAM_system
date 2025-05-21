@@ -50,14 +50,46 @@ export default function MaintenancePage() {
 
   const fetchMaintenanceRequests = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/maintenance');
       if (!response.ok) throw new Error('Failed to fetch maintenance requests');
       const data = await response.json();
       setMaintenance(data);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching maintenance requests:', error);
+      toast.error('Failed to load maintenance requests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to handle deleting a maintenance request
+  const handleDeleteRequest = async (maintenanceId: string | number | Date | any) => {
+    // Ensure we have a valid ID
+    if (!maintenanceId || typeof maintenanceId !== 'string') {
+      toast.error('Invalid maintenance request ID');
+      return;
+    }
+
+    // Show confirmation dialog
+    if (!window.confirm('Are you sure you want to delete this maintenance request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/maintenance/${maintenanceId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete maintenance request');
+      }
+
+      toast.success('Maintenance request deleted successfully');
+      fetchMaintenanceRequests(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting maintenance request:', error);
+      toast.error('Failed to delete maintenance request');
     }
   };
 
@@ -179,6 +211,20 @@ export default function MaintenancePage() {
                   Reject
                 </RoleBasedButton>
               </>
+            )}
+
+            {/* Delete button - only shown for the user who created the request */}
+            {isRequester && (
+              <RoleBasedButton
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  handleDeleteRequest(value);
+                }}
+                variant="danger"
+                size="sm"
+              >
+                Delete
+              </RoleBasedButton>
             )}
           </div>
         );

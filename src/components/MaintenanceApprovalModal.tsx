@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Check, X as XIcon, Download } from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { MaintenanceStatus } from '@/types/maintenance';
 
@@ -12,8 +12,8 @@ interface MaintenanceApprovalModalProps {
   assetId: string;
   description: string;
   priority: string;
-  requesterName?: string;
-  createdAt: string;
+  requesterName?: string | null;
+  createdAt: string | Date;
   onSuccess: () => void;
 }
 
@@ -29,12 +29,14 @@ export function MaintenanceApprovalModal({
   onSuccess,
 }: MaintenanceApprovalModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [notes, setNotes] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [assetName, setAssetName] = useState('');
   const [assetSerialNumber, setAssetSerialNumber] = useState('');
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<MaintenanceStatus | null>(null);
+  const [isRequester, setIsRequester] = useState(false);
 
   // Fetch maintenance request details when the modal opens
   useEffect(() => {
@@ -70,14 +72,21 @@ export function MaintenanceApprovalModal({
         const date = new Date(data.scheduledDate);
         setScheduledDate(date.toISOString().split('T')[0]);
       }
+
+      // Check if the current user is the requester
+      const session = await fetch('/api/auth/session').then(res => res.json());
+      if (session?.user?.id && data.requesterId === session.user.id) {
+        setIsRequester(true);
+      }
     } catch (error) {
       console.error('Error fetching maintenance details:', error);
       toast.error('Failed to load maintenance details');
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateInput: string | Date) => {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -135,6 +144,34 @@ export function MaintenanceApprovalModal({
     }
   };
 
+  const handleDelete = async () => {
+    // Show confirmation dialog
+    if (!window.confirm('Are you sure you want to delete this maintenance request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+
+      const response = await fetch(`/api/maintenance/${maintenanceId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete maintenance request');
+      }
+
+      toast.success('Maintenance request deleted successfully');
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error('Error deleting maintenance request:', error);
+      toast.error('Failed to delete maintenance request');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -161,6 +198,15 @@ export function MaintenanceApprovalModal({
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Maintenance Request Details</h2>
             <div className="flex items-center gap-3">
+              {isRequester && (
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="px-3 py-1 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+                >
+                  Delete
+                </button>
+              )}
               {status === 'APPROVED' && documentUrl && (
                 <a
                   href={documentUrl}
@@ -299,7 +345,6 @@ export function MaintenanceApprovalModal({
                   disabled={isSubmitting}
                   className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
                 >
-                  <XIcon size={16} className="mr-2" />
                   Reject
                 </button>
                 <button
@@ -308,7 +353,6 @@ export function MaintenanceApprovalModal({
                   disabled={isSubmitting}
                   className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
                 >
-                  <Check size={16} className="mr-2" />
                   Approve
                 </button>
               </div>

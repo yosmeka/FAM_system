@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 interface RoleBasedBadgeProps {
   label: string;
-  variant?: 'success' | 'warning' | 'danger' | 'default';
+  variant?: 'success' | 'warning' | 'danger' | 'default' | 'info';
   className?: string;
 }
 
@@ -13,6 +13,7 @@ export function RoleBasedBadge({ label, variant = 'default', className }: RoleBa
     warning: "bg-yellow-100 text-yellow-800",
     danger: "bg-red-100 text-red-800",
     default: "bg-gray-100 text-gray-800",
+    info: "bg-blue-100 text-blue-800",
   };
 
   return (
