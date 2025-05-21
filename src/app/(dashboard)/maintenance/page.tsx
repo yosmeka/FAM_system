@@ -210,13 +210,13 @@ export default function MaintenancePage() {
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
-          <RoleBasedButton
+          {/* <RoleBasedButton
             onClick={() => router.push('/maintenance/new')}
             variant="primary"
             className="bg-red-600 hover:bg-red-700 text-white"
           >
             New Maintenance Request
-          </RoleBasedButton>
+          </RoleBasedButton> */}
         </div>
       </div>
 

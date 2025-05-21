@@ -25,6 +25,11 @@ export function MaintenanceFormSimple({
   // Default status based on role - managers and admins can directly schedule
   const defaultStatus = (isManager() || isAdmin()) ? 'SCHEDULED' : 'PENDING_APPROVAL';
   const [status, setStatus] = useState(initialData?.status || defaultStatus);
+
+  // Determine if the user can edit the status field
+  const isPendingApproval = initialData?.status === 'PENDING_APPROVAL';
+  const isApproved = initialData?.status === 'APPROVED';
+  const canEditStatus = isManager() || isAdmin() || (isUser() && isApproved);
   const [cost, setCost] = useState(initialData?.cost?.toString() || '');
   const [scheduledDate, setScheduledDate] = useState(
     initialData?.scheduledDate
@@ -52,10 +57,33 @@ export function MaintenanceFormSimple({
         return;
       }
 
+      // Determine the status to submit based on user role and current status
+      let statusToSubmit = submissionStatus;
+
+      // Store the original status for comparison if editing
+      const originalStatus = isEditing ? initialData.status : null;
+
+      // For regular users with pending requests, always keep status as PENDING_APPROVAL
+      if (isUser() && isPendingApproval && isEditing) {
+        statusToSubmit = 'PENDING_APPROVAL';
+      }
+      // For regular users with non-approved requests that aren't pending, keep the original status
+      else if (isUser() && !isApproved && !isPendingApproval && isEditing && !canEditStatus) {
+        statusToSubmit = initialData.status;
+      }
+
+      // Add a flag to indicate if a notification should be sent to the manager
+      // This happens when a user changes the status of an approved request
+      const shouldNotifyManager = isEditing &&
+                                 isUser() &&
+                                 isApproved &&
+                                 originalStatus !== statusToSubmit &&
+                                 statusToSubmit !== 'APPROVED';
+
       const payload = {
         description,
         priority,
-        status: submissionStatus, // Use the provided status
+        status: statusToSubmit,
         cost: cost ? parseFloat(cost) : undefined,
         scheduledDate,
         completedDate,
@@ -63,6 +91,12 @@ export function MaintenanceFormSimple({
         assetId,
         managerId: managerId || null, // Include the manager ID
       };
+
+      // Add notification flags if needed
+      if (shouldNotifyManager) {
+        payload.notifyManager = true;
+        payload.previousStatus = originalStatus;
+      }
 
       const url = isEditing
         ? `/api/assets/${assetId}/maintenance/${initialData.id}`
@@ -83,6 +117,11 @@ export function MaintenanceFormSimple({
       // Success message based on the action
       if (isEditing) {
         toast.success('Maintenance record updated successfully');
+
+        // Show additional toast if notification was sent to manager
+        if (shouldNotifyManager) {
+          toast.success('Manager has been notified of the status change');
+        }
       } else if (submissionStatus === 'PENDING_APPROVAL') {
         toast.success('Maintenance request submitted for approval');
       } else {
@@ -154,26 +193,51 @@ export function MaintenanceFormSimple({
           <label htmlFor="status" className="block text-sm font-medium text-gray-700">
             Status *
           </label>
-          <select
-            id="status"
-            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            required
-            disabled={!isEditing}
-          >
-            <option value="PENDING_APPROVAL">Pending Approval</option>
-            {isEditing && (
-              <>
+          {isEditing && isUser() && isPendingApproval ? (
+            <>
+              <select
+                id="status"
+                className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 bg-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                value={status}
+                disabled={true}
+                required
+              >
+                <option value="PENDING_APPROVAL">Pending Approval</option>
+              </select>
+              <p className="text-sm text-yellow-700 mt-1">
+                You will be able to update the status after it has been approved by a manager.
+              </p>
+            </>
+          ) : (
+            <>
+              <select
+                id="status"
+                className={`mt-1 block w-full rounded-md border ${isEditing && canEditStatus ? 'border-green-300' : 'border-gray-300'} shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500 ${isEditing && !canEditStatus ? 'bg-gray-100' : ''}`}
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                required
+                disabled={!isEditing || (isUser() && !canEditStatus)}
+              >
+                <option value="PENDING_APPROVAL">Pending Approval</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
                 <option value="SCHEDULED">Scheduled</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="CANCELLED">Cancelled</option>
-              </>
-            )}
-          </select>
+              </select>
+              {isEditing && isUser() && isApproved && (
+                <p className="text-sm text-green-700 mt-1">
+                  This request has been approved. You can now update its status.
+                </p>
+              )}
+              {isEditing && isUser() && !isApproved && !isPendingApproval && (
+                <p className="text-sm text-gray-700 mt-1">
+                  Status can only be edited by managers or for approved requests.
+                </p>
+              )}
+            </>
+          )}
         </div>
       </div>
 

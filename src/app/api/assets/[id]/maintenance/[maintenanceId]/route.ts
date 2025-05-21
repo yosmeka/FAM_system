@@ -65,11 +65,33 @@ export async function PUT(
       console.log("MAINTENANCE RECORD PUT API - Authorized user:", session.user?.email);
     }
 
-    // Check if the maintenance record exists
+    // Check if the maintenance record exists with all related data
     const existingMaintenance = await prisma.maintenance.findUnique({
       where: {
         id: params.maintenanceId,
         assetId: params.id,
+      },
+      include: {
+        asset: {
+          select: {
+            name: true,
+            serialNumber: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
@@ -90,6 +112,9 @@ export async function PUT(
 
     // Parse the request body
     const body = await request.json();
+
+    // Extract notification flags
+    const { notifyManager, previousStatus } = body;
 
     // Prepare update data
     const updateData: any = {
@@ -114,8 +139,22 @@ export async function PUT(
       },
       data: updateData,
       include: {
+        asset: {
+          select: {
+            name: true,
+            serialNumber: true,
+          },
+        },
         requester: {
           select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
+          select: {
+            id: true,
             name: true,
             email: true,
           },
@@ -160,6 +199,54 @@ export async function PUT(
           },
         ],
       });
+    }
+
+    // Send notification to manager if requested
+    if (notifyManager && updatedMaintenance.manager && previousStatus) {
+      try {
+        // Import the sendNotification function
+        const { sendNotification } = await import('@/lib/notifications');
+
+        // Create a user-friendly status name
+        const getStatusName = (status: string) => {
+          const statusMap: Record<string, string> = {
+            'PENDING_APPROVAL': 'Pending Approval',
+            'APPROVED': 'Approved',
+            'REJECTED': 'Rejected',
+            'SCHEDULED': 'Scheduled',
+            'IN_PROGRESS': 'In Progress',
+            'COMPLETED': 'Completed',
+            'CANCELLED': 'Cancelled'
+          };
+          return statusMap[status] || status;
+        };
+
+        // Get user-friendly status names
+        const oldStatusName = getStatusName(previousStatus);
+        const newStatusName = getStatusName(body.status);
+
+        // Create the notification message
+        const message = `Maintenance request for asset "${updatedMaintenance.asset.name}" has been updated from "${oldStatusName}" to "${newStatusName}" by ${updatedMaintenance.requester.name}.`;
+
+        // Send the notification to the manager
+        await sendNotification({
+          userId: updatedMaintenance.manager.id,
+          message,
+          type: 'maintenance_status_changed',
+          meta: {
+            assetId: updatedMaintenance.assetId,
+            maintenanceId: updatedMaintenance.id,
+            previousStatus,
+            newStatus: body.status,
+            updatedBy: updatedMaintenance.requester.id
+          },
+        });
+
+        console.log(`Sent status change notification to manager ${updatedMaintenance.manager.id}`);
+      } catch (notificationError) {
+        console.error('Error sending notification to manager:', notificationError);
+        // Continue even if notification fails
+      }
     }
 
     return NextResponse.json(updatedMaintenance);
