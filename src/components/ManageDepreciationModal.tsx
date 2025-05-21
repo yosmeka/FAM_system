@@ -19,7 +19,6 @@ export interface DepreciationSettings {
   dateAcquired: string;
   totalUnits?: number;
   unitsPerYear?: number[];
-  calculateAsGroup?: boolean;
 }
 
 export function ManageDepreciationModal({
@@ -292,34 +291,6 @@ export function ManageDepreciationModal({
                     <Calendar size={20} className="text-gray-400" />
                   </div>
                 </div>
-              </div>
-
-              <div className="mb-6">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    name="calculateAsGroup"
-                    checked={settings.calculateAsGroup || false}
-                    onChange={(e) => {
-                      // Create updated settings with the new calculateAsGroup value
-                      const updatedSettings = {
-                        ...settings,
-                        calculateAsGroup: e.target.checked
-                      };
-
-                      // Update local state
-                      setSettings(updatedSettings);
-
-                      // Apply changes immediately
-                      onSave(updatedSettings);
-                    }}
-                    className="form-checkbox h-5 w-5 text-yellow-500 rounded"
-                  />
-                  <span>Calculate as Group</span>
-                </label>
-                <p className="text-sm text-gray-400 mt-1 ml-7">
-                  When enabled, depreciation will be calculated for this asset and all its linked child assets as a group.
-                </p>
               </div>
             </>
           )}

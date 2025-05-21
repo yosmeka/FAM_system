@@ -128,23 +128,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
   const defaultValues: Partial<AssetFormValues> = {
     status: "ACTIVE",
-    purchaseDate: undefined,
-    purchasePrice: 0,
-    currentValue: 0,
-    depreciableCost: 0,
-    salvageValue: 0,
-    description: "",
-    location: "",
-    department: "",
-    category: "",
-    type: "",
-    supplier: "",
-    warrantyExpiry: undefined,
-    lastMaintenance: undefined,
-    nextMaintenance: undefined,
-    depreciationMethod: "",
-    usefulLifeMonths: 0,
-    depreciationStartDate: undefined,
+    purchaseDate: new Date(),
     ...formattedInitialData,
   }
 

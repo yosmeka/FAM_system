@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { sendNotification } from '@/lib/notifications';
 
 // PUT /api/maintenance/[id]/approve
 export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
@@ -103,11 +104,100 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
       });
     }
 
-    // Create a notification for the requester
-    // This is a placeholder - you would implement your notification system here
-    console.log(`Maintenance request ${status.toLowerCase()} notification would be sent to ${updatedMaintenance.requester?.email}`);
+    // Generate approval/rejection document
+    let documentUrl = '';
+    try {
+      console.log(`Generating document for maintenance request ${params.id} with status ${status}`);
 
-    return NextResponse.json(updatedMaintenance);
+      // Generate the document - use absolute URL with host
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+      const documentResponse = await fetch(`${baseUrl}/api/maintenance/${params.id}/document`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ managerNotes: notes }),
+      });
+
+      if (documentResponse.ok) {
+        const documentData = await documentResponse.json();
+        documentUrl = documentData.document.url;
+        console.log(`Generated document URL: ${documentUrl}`);
+
+        // Verify the document was created in the database
+        const document = await prisma.document.findFirst({
+          where: {
+            url: documentUrl,
+          },
+        });
+
+        if (document) {
+          console.log(`Verified document in database:`, {
+            id: document.id,
+            type: document.type,
+            url: document.url,
+            meta: document.meta
+          });
+        } else {
+          console.error(`Document not found in database after generation`);
+        }
+      } else {
+        const errorText = await documentResponse.text();
+        console.error('Error generating document:', errorText);
+      }
+    } catch (error) {
+      console.error('Error generating document:', error);
+      // Continue even if document generation fails
+    }
+
+    // Create a notification for the requester
+    if (updatedMaintenance.requesterId) {
+      try {
+        const assetName = updatedMaintenance.asset?.name || 'Unknown asset';
+        const managerName = session?.user?.name || 'A manager';
+
+        // Create notification message based on status
+        let message = '';
+        if (status === 'APPROVED') {
+          message = `Your maintenance request for "${assetName}" has been approved by ${managerName}.`;
+          if (scheduledDate) {
+            message += ` It has been scheduled for ${new Date(scheduledDate).toLocaleDateString()}.`;
+          }
+        } else {
+          message = `Your maintenance request for "${assetName}" has been rejected by ${managerName}.`;
+          if (notes) {
+            message += ` Reason: ${notes.substring(0, 100)}${notes.length > 100 ? '...' : ''}`;
+          }
+        }
+
+        // Add document info if available
+        if (documentUrl) {
+          message += ' A document is available for download.';
+        }
+
+        await sendNotification({
+          userId: updatedMaintenance.requesterId,
+          message,
+          type: status === 'APPROVED' ? 'maintenance_approved' : 'maintenance_rejected',
+          meta: {
+            assetId: updatedMaintenance.assetId,
+            maintenanceId: updatedMaintenance.id,
+            documentUrl: documentUrl || null,
+            notes: notes || null
+          },
+        });
+
+        console.log(`Sent ${status.toLowerCase()} notification to user ${updatedMaintenance.requesterId}`);
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        // Continue even if notification fails
+      }
+    }
+
+    return NextResponse.json({
+      ...updatedMaintenance,
+      documentUrl
+    });
   } catch (error) {
     console.error('Error approving/rejecting maintenance request:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

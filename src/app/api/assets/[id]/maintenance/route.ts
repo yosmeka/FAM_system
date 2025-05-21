@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendNotification } from '@/lib/notifications';
 
 // GET all maintenance records for an asset
 export async function GET(
@@ -188,6 +189,44 @@ export async function POST(
           },
         ],
       });
+    }
+
+    // Send notification to managers if the request is pending approval
+    if (maintenance.status === 'PENDING_APPROVAL') {
+      try {
+        // Find all managers to notify
+        const managers = await prisma.user.findMany({
+          where: {
+            role: 'MANAGER',
+          },
+          select: {
+            id: true,
+            name: true,
+          },
+        });
+
+        // Get requester and asset information for the notification
+        const requesterName = maintenance.requester?.name || 'A user';
+        const assetName = asset.name;
+
+        // Send notification to each manager
+        for (const manager of managers) {
+          await sendNotification({
+            userId: manager.id,
+            message: `${requesterName} has requested maintenance for asset "${assetName}". Please review and approve or reject this request.`,
+            type: 'maintenance_request',
+            meta: {
+              assetId: params.id,
+              maintenanceId: maintenance.id,
+              priority: maintenance.priority,
+            },
+          });
+          console.log(`Sent maintenance request notification to manager ${manager.name} (${manager.id})`);
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications to managers:', notificationError);
+        // Continue even if notifications fail
+      }
     }
 
     return NextResponse.json(maintenance);

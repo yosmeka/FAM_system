@@ -5,17 +5,18 @@ import { toast } from 'react-hot-toast';
 import {
   Plus,
   Edit,
-  Trash2,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   Clock,
   Calendar,
   Wrench,
   FileText,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Download,
+  FileIcon
 } from 'lucide-react';
+import Link from 'next/link';
 import { format, differenceInDays } from 'date-fns';
 import { MaintenanceModal } from './MaintenanceModal';
 import { MaintenanceApprovalModal } from './MaintenanceApprovalModal';
@@ -35,6 +36,7 @@ interface MaintenanceRecord {
   updatedAt: string;
   notes?: string | null;
   scheduledDate?: string | null;
+  documentUrl?: string | null;
   requester?: {
     name: string;
     email: string;
@@ -97,7 +99,39 @@ export function AssetMaintenanceTab({
 
       const data = await response.json();
       console.log("MAINTENANCE TAB - Received data:", data);
-      setMaintenanceRecords(data);
+
+      // Fetch documents for approved/rejected maintenance records
+      const recordsWithDocuments = await Promise.all(
+        data.map(async (record: MaintenanceRecord) => {
+          if (record.status === 'APPROVED' || record.status === 'REJECTED') {
+            try {
+              // Fetch documents for this asset
+              const documentsResponse = await fetch(`/api/assets/${assetId}/documents`);
+              if (documentsResponse.ok) {
+                const documents = await documentsResponse.json();
+
+                // Find document related to this maintenance request
+                const maintenanceDocument = documents.find(
+                  (doc: any) =>
+                    doc.meta &&
+                    doc.meta.maintenanceId === record.id &&
+                    (doc.type === 'MAINTENANCE_APPROVAL' || doc.type === 'MAINTENANCE_REJECTION')
+                );
+
+                if (maintenanceDocument) {
+                  console.log(`Found document for maintenance ${record.id}:`, maintenanceDocument);
+                  return { ...record, documentUrl: maintenanceDocument.url };
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching documents for maintenance ${record.id}:`, error);
+            }
+          }
+          return record;
+        })
+      );
+
+      setMaintenanceRecords(recordsWithDocuments);
 
       // Calculate stats
       const stats = {
@@ -449,6 +483,41 @@ export function AssetMaintenanceTab({
                     </div>
                   </div>
 
+                  {/* Document section for approved or rejected maintenance */}
+                  {(record.status === 'APPROVED' || record.status === 'REJECTED') && (
+                    <div className="mt-4 border-t border-gray-200 pt-4">
+                      <h4 className="text-sm font-medium text-gray-500 mb-2">Document</h4>
+
+                      {record.documentUrl ? (
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0 bg-red-100 rounded-full p-2">
+                            <FileIcon className="h-5 w-5 text-red-600" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">
+                              Maintenance {record.status === 'APPROVED' ? 'Approval' : 'Rejection'} Document
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              This document serves as official proof of the maintenance request {record.status.toLowerCase()}.
+                            </p>
+                          </div>
+                          <a
+                            href={record.documentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Download size={14} className="mr-1.5" />
+                            Download
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No document available for this maintenance request.</p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex justify-end space-x-2 mt-4">
                     {(isManager() || isAdmin()) && record.status === 'PENDING_APPROVAL' && (
                       <button
@@ -462,6 +531,15 @@ export function AssetMaintenanceTab({
                         Review Request
                       </button>
                     )}
+
+                    <Link
+                      href="/documents"
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FileText size={14} className="mr-1.5" />
+                      My Documents
+                    </Link>
 
                     {checkPermission('Asset edit') && (
                       <button
