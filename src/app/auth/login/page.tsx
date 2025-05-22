@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-//import toast from "react-hot-toast";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Image from "next/image";
+import "./login.css";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -55,61 +56,116 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
-        <h2 className="text-center text-2xl font-bold text-red-600">
+    <div className="min-h-screen flex flex-col md:flex-row items-center justify-between login-page-bg">
+      {/* No background pattern - removed */}
+
+      {/* Left side content - hidden on mobile */}
+      
+      {/* <div className="hidden md:flex md:flex-1 p-8 flex-col items-start justify-center h-full md:ml-8 lg:ml-16 relative z-10">
+        <h1 className="text-3xl lg:text-4xl font-bold zemen-red mb-3 lg:mb-4">
+          Zemen Bank
+        </h1>
+        <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">
           Fixed Asset Management System
         </h2>
-        <p className="text-center text-sm text-gray-600 mt-2">
-          Sign in to your account
+        <p className="text-gray-600 max-w-md mb-6 lg:mb-8 text-sm lg:text-base">
+          Efficiently manage, track, and optimize your organization's assets with our comprehensive asset management solution.
         </p>
+      </div> */}
 
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
-          <div>
-            <input
-              {...register("email")}
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="Email address"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+      {/* Login form */}
+      <div className="login-container w-full max-w-sm bg-white p-6 rounded-xl login-card-shadow border border-gray-200 mx-4 md:mx-0 md:mr-8 lg:mr-16 md:self-center md:flex-none">
+        {/* Logo and Header */}
+        <div className="flex flex-col items-center justify-center mb-4">
+          <div className="relative w-36 h-12 mb-2">
+            <Image
+              src="/auth/login/zemen.png"
+              alt="Zemen Bank Logo"
+              fill
+              style={{ objectFit: 'contain' }}
+              priority
             />
+          </div>
+          <p className="text-center text-sm font-medium text-gray-700 mt-1">
+            Sign in to your account
+          </p>
+        </div>
+
+        {/* Login Form */}
+        <form className="mt-4 space-y-3" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-1">
+            <label htmlFor="email" className="text-xs font-medium text-gray-700">
+              Email Address
+            </label>
+            <div className="relative">
+              <input
+                {...register("email")}
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="name@zemenbank.com"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
+              />
+            </div>
             {errors.email && (
-              <p className="text-sm text-red-600 mt-1">
+              <p className="text-xs text-red-600 mt-1">
                 {errors.email.message}
               </p>
             )}
           </div>
 
-          <div>
-            <input
-              {...register("password")}
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Password"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-            />
+          <div className="space-y-1">
+            <label htmlFor="password" className="text-xs font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                {...register("password")}
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
+              />
+            </div>
             {errors.password && (
-              <p className="text-sm text-red-600 mt-1">
+              <p className="text-xs text-red-600 mt-1">
                 {errors.password.message}
               </p>
             )}
           </div>
 
-          <div>
+          <div className="pt-1">
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full flex justify-center py-2 px-4 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500`}
+              className="w-full flex justify-center py-2 px-4 text-sm font-medium rounded-md text-white zemen-bg-red hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 zemen-ring-red transition-colors duration-200 shadow-md"
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? (
+                <div className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </div>
+              ) : (
+                "Sign in"
+              )}
             </button>
           </div>
         </form>
+
+        {/* Footer */}
+        <div className="mt-5 pt-4 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            &copy; {new Date().getFullYear()} Zemen Bank S.C.
+          </p>
+        </div>
       </div>
+
       {/* Toast Notification Container */}
-      <ToastContainer />
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
