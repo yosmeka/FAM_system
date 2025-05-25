@@ -63,15 +63,17 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
 
   const fetchManagers = async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/users/managers');
       if (response.ok) {
         const data = await response.json();
-        // Filter to only show MANAGER role
-        const managerUsers = data.filter((user: Manager) => user.role === 'MANAGER');
-        setManagers(managerUsers);
+        setManagers(data);
+      } else {
+        console.error('Failed to fetch managers:', response.status);
+        toast.error('Failed to load managers');
       }
     } catch (error) {
       console.error('Error fetching managers:', error);
+      toast.error('Failed to load managers');
     }
   };
 

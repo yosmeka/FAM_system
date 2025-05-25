@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-assignments - Get audit assignments
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(request: Request) {
@@ -185,8 +186,18 @@ export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: 
       },
     });
 
-    // TODO: Send notification to assigned user
-    // await sendAuditAssignmentNotification(assignment);
+    // Send notification to assigned user
+    await AuditNotificationService.notifyAssignmentCreated({
+      id: assignment.id,
+      title: assignment.title,
+      assignedToId: assignment.assignedToId,
+      assignedById: assignment.assignedById,
+      asset: {
+        name: assignment.asset.name,
+        serialNumber: assignment.asset.serialNumber,
+      },
+      dueDate: assignment.dueDate,
+    });
 
     return NextResponse.json(assignment, { status: 201 });
   } catch (error) {

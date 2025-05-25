@@ -395,8 +395,11 @@ model AssetAudit {
   workflowStatus    AuditWorkflowStatus @default(DRAFT)
   condition         AuditCondition?
   locationVerified  Boolean             @default(true)
+  actualLocation    String?             // Actual location if different from expected
   notes             String?
   discrepancies     String?
+  recommendations   String?             // Audit recommendations
+  checklistItems    String?             // JSON array of checklist items with results
   discrepancyResolved Boolean           @default(false)
   resolvedDate      DateTime?
   resolvedBy        String?

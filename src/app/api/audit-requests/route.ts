@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-requests - Get audit requests
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(request: Request) {
@@ -185,10 +186,18 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
       },
     });
 
-    // TODO: Send notification to manager
-    // if (managerId) {
-    //   await sendAuditRequestNotification(auditRequest);
-    // }
+    // Send notification to manager(s)
+    await AuditNotificationService.notifyRequestCreated({
+      id: auditRequest.id,
+      title: auditRequest.title,
+      requesterId: auditRequest.requesterId,
+      managerId: auditRequest.managerId,
+      asset: {
+        name: auditRequest.asset.name,
+        serialNumber: auditRequest.asset.serialNumber,
+      },
+      urgency: auditRequest.urgency,
+    });
 
     return NextResponse.json(auditRequest, { status: 201 });
   } catch (error) {

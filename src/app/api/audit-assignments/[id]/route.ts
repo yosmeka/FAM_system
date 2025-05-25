@@ -7,7 +7,7 @@ import { withRole } from '@/middleware/rbac';
 // GET /api/audit-assignments/[id] - Get specific audit assignment
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,8 +15,9 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const assignment = await prisma.auditAssignment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -91,7 +92,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 // PUT /api/audit-assignments/[id] - Update audit assignment
 export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -102,9 +103,10 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
     const body = await request.json();
     const { action, ...updateData } = body;
 
+    const { id } = await params;
     // Get current assignment
     const currentAssignment = await prisma.auditAssignment.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         assignedToId: true,
@@ -153,7 +155,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
       if (userRole === 'MANAGER' && currentAssignment.assignedById !== userId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
-      
+
       const allowedFields = [
         'title',
         'description',
@@ -164,7 +166,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
         'checklistItems',
         'estimatedHours',
       ];
-      
+
       allowedFields.forEach(field => {
         if (updateData[field] !== undefined) {
           if (field === 'dueDate' || field === 'scheduledDate') {
@@ -181,7 +183,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
     }
 
     const updatedAssignment = await prisma.auditAssignment.update({
-      where: { id: params.id },
+      where: { id },
       data: updateFields,
       include: {
         asset: {
@@ -224,7 +226,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
 // DELETE /api/audit-assignments/[id] - Delete audit assignment (Manager/Admin only)
 export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -232,9 +234,10 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     // Check if assignment exists and user has permission
     const assignment = await prisma.auditAssignment.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         assignedById: true,
@@ -260,7 +263,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
     }
 
     await prisma.auditAssignment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Assignment deleted successfully' });

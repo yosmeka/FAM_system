@@ -3,11 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-requests/[id] - Get specific audit request
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,8 +16,9 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const auditRequest = await prisma.auditRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -89,7 +91,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 // PUT /api/audit-requests/[id] - Update audit request
 export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -100,9 +102,10 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
     const body = await request.json();
     const { action, ...updateData } = body;
 
+    const { id } = await params;
     // Get current request
     const currentRequest = await prisma.auditRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         requesterId: true,
@@ -211,7 +214,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
     }
 
     const updatedRequest = await prisma.auditRequest.update({
-      where: { id: params.id },
+      where: { id },
       data: updateFields,
       include: {
         asset: {
@@ -241,10 +244,33 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
       },
     });
 
-    // TODO: Send notifications based on action
-    // if (action === 'approve' || action === 'reject') {
-    //   await sendAuditRequestStatusNotification(updatedRequest);
-    // }
+    // Send notifications based on action
+    if (action === 'approve') {
+      await AuditNotificationService.notifyRequestApproved({
+        id: updatedRequest.id,
+        title: updatedRequest.title,
+        requesterId: updatedRequest.requesterId,
+        managerId: updatedRequest.managerId!,
+        asset: {
+          name: updatedRequest.asset.name,
+          serialNumber: updatedRequest.asset.serialNumber,
+        },
+        reviewNotes: updatedRequest.reviewNotes,
+      });
+    } else if (action === 'reject') {
+      await AuditNotificationService.notifyRequestRejected({
+        id: updatedRequest.id,
+        title: updatedRequest.title,
+        requesterId: updatedRequest.requesterId,
+        managerId: updatedRequest.managerId!,
+        asset: {
+          name: updatedRequest.asset.name,
+          serialNumber: updatedRequest.asset.serialNumber,
+        },
+        rejectionReason: updatedRequest.rejectionReason!,
+        reviewNotes: updatedRequest.reviewNotes,
+      });
+    }
 
     return NextResponse.json(updatedRequest);
   } catch (error) {
@@ -259,7 +285,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
 // DELETE /api/audit-requests/[id] - Delete audit request
 export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -267,9 +293,10 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     // Check if request exists and user has permission
     const auditRequest = await prisma.auditRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         requesterId: true,
@@ -295,7 +322,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
     }
 
     await prisma.auditRequest.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: 'Audit request deleted successfully' });

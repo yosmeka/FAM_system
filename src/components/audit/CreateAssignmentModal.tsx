@@ -64,15 +64,17 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await fetch('/api/users/auditors');
       if (response.ok) {
         const data = await response.json();
-        // Filter to only show USER role
-        const regularUsers = data.filter((user: User) => user.role === 'USER');
-        setUsers(regularUsers);
+        setUsers(data);
+      } else {
+        console.error('Failed to fetch auditors:', response.status);
+        toast.error('Failed to load auditors');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching auditors:', error);
+      toast.error('Failed to load auditors');
     }
   };
 

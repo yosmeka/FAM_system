@@ -355,7 +355,7 @@ export default function AuditWorkflowPage() {
               key={request.id}
               className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
               style={{ backgroundColor: '#2A2D3E' }}
-              onClick={() => {/* TODO: Navigate to request detail */}}
+              onClick={() => router.push(`/audits/requests/${request.id}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // POST /api/audits/workflow - Create audit from assignment or request
 export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(request: Request) {
@@ -105,12 +106,15 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
         auditorId: session.user.id,
         assignmentId,
         requestId,
-        status: 'PENDING',
-        workflowStatus: 'DRAFT',
+        status: body.status || 'PENDING',
+        workflowStatus: body.workflowStatus || 'DRAFT',
         condition,
         locationVerified,
+        actualLocation: body.actualLocation,
         notes,
         discrepancies,
+        recommendations: body.recommendations,
+        checklistItems: body.checklistItems ? JSON.stringify(body.checklistItems) : null,
         photoUrls: photoUrls ? photoUrls.join(',') : null,
         nextAuditDate: nextAuditDate ? new Date(nextAuditDate) : null,
       },
@@ -169,6 +173,25 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
           startedAt: new Date(),
         },
       });
+    }
+
+    // Send notification to manager if audit is submitted for review
+    if (audit.workflowStatus === 'PENDING_REVIEW') {
+      const managerId = assignment?.assignedBy?.id || request?.manager?.id;
+      if (managerId) {
+        await AuditNotificationService.notifyAuditCompleted({
+          id: audit.id,
+          assignmentId: audit.assignmentId,
+          requestId: audit.requestId,
+          auditorId: audit.auditorId,
+          asset: {
+            name: audit.asset.name,
+            serialNumber: audit.asset.serialNumber,
+          },
+          condition: audit.condition,
+          managerId: managerId,
+        });
+      }
     }
 
     return NextResponse.json(audit, { status: 201 });
@@ -272,6 +295,17 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(req
         },
       });
 
+      // Update assignment status to COMPLETED when approved
+      if (currentAudit.assignmentId) {
+        await prisma.auditAssignment.update({
+          where: { id: currentAudit.assignmentId },
+          data: {
+            status: 'COMPLETED',
+            completedAt: new Date(),
+          },
+        });
+      }
+
       // Update request status if applicable
       if (currentAudit.requestId) {
         await prisma.auditRequest.update({
@@ -297,6 +331,17 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(req
         reviewedAt: new Date(),
         reviewNotes: updateData.reviewNotes,
       };
+
+      // Update assignment status to IN_PROGRESS when rejected (needs revision)
+      if (currentAudit.assignmentId) {
+        await prisma.auditAssignment.update({
+          where: { id: currentAudit.assignmentId },
+          data: {
+            status: 'IN_PROGRESS',
+            // Don't update completedAt since it's not completed yet
+          },
+        });
+      }
     } else {
       return NextResponse.json(
         { error: 'Invalid action or insufficient permissions' },
@@ -353,12 +398,50 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(req
       },
     });
 
-    // TODO: Send notifications based on action
-    // if (action === 'submit_for_review') {
-    //   await sendAuditReviewNotification(updatedAudit);
-    // } else if (action === 'approve' || action === 'reject') {
-    //   await sendAuditStatusNotification(updatedAudit);
-    // }
+    // Send notifications based on action
+    if (action === 'submit_for_review') {
+      // Notify manager that audit is ready for review
+      const managerId = updatedAudit.assignment?.assignedBy?.id || updatedAudit.request?.manager?.id;
+      if (managerId) {
+        await AuditNotificationService.notifyAuditCompleted({
+          id: updatedAudit.id,
+          assignmentId: updatedAudit.assignmentId,
+          requestId: updatedAudit.requestId,
+          auditorId: updatedAudit.auditorId,
+          asset: {
+            name: updatedAudit.asset.name,
+            serialNumber: updatedAudit.asset.serialNumber,
+          },
+          condition: updatedAudit.condition,
+          managerId: managerId,
+        });
+      }
+    } else if (action === 'approve') {
+      // Notify auditor that audit was approved
+      await AuditNotificationService.notifyAuditApproved({
+        id: updatedAudit.id,
+        auditorId: updatedAudit.auditorId,
+        managerId: userId,
+        asset: {
+          name: updatedAudit.asset.name,
+          serialNumber: updatedAudit.asset.serialNumber,
+        },
+        reviewNotes: updatedAudit.reviewNotes,
+      });
+    } else if (action === 'reject') {
+      // Notify auditor that audit was rejected
+      await AuditNotificationService.notifyAuditRejected({
+        id: updatedAudit.id,
+        auditorId: updatedAudit.auditorId,
+        managerId: userId,
+        asset: {
+          name: updatedAudit.asset.name,
+          serialNumber: updatedAudit.asset.serialNumber,
+        },
+        rejectionReason: updateData.rejectionReason || 'Audit requires revision',
+        reviewNotes: updatedAudit.reviewNotes,
+      });
+    }
 
     return NextResponse.json(updatedAudit);
   } catch (error) {
