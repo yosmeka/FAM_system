@@ -36,6 +36,11 @@ const navigation = [
     roles: ["MANAGER", "USER"],
   },
   {
+    name: "Audits",
+    href: "/audits/workflow",
+    roles: ["MANAGER", "USER"],
+  },
+  {
     name: "Disposals",
     href: "/disposals",
     roles: ["MANAGER", "USER"],
