@@ -26,7 +26,8 @@ export default function NewTransferPage() {
         const response = await fetch('/api/assets');
         if (!response.ok) throw new Error('Failed to fetch assets');
         const data = await response.json();
-        setAssets(data);
+        const activeAssets = data.filter((asset: any) => asset.status !== 'DISPOSED');
+        setAssets(activeAssets);
       } catch (err: any) {
         setAssetsError(err.message || 'Failed to fetch assets');
       } finally {
@@ -87,6 +88,16 @@ export default function NewTransferPage() {
     }
   };
 
+  const handleAssetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const asset = assets.find(a => a.id === e.target.value);
+    if (asset?.status === 'DISPOSED') {
+      toast.error('Cannot transfer a disposed asset');
+      setSelectedAsset(null);
+      return;
+    }
+    setSelectedAsset(asset || null);
+  };
+
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-2xl mx-auto">
@@ -104,16 +115,13 @@ export default function NewTransferPage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 p-2"
                 required
                 disabled={assetsLoading || !!assetsError}
-                onChange={e => {
-                  const asset = assets.find(a => a.id === e.target.value);
-                  setSelectedAsset(asset || null);
-                }}
+                onChange={handleAssetChange}
                 aria-describedby="assetHelp"
               >
                 <option value="">{assetsLoading ? 'Loading assets...' : assetsError ? 'Failed to load assets' : 'Select Asset'}</option>
                 {assets.map(asset => (
                   <option key={asset.id} value={asset.id}>
-                    {asset.name} ({asset.serialNumber})
+                    {asset.name} ({asset.serialNumber}) - {asset.status}
                   </option>
                 ))}
               </select>

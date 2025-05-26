@@ -576,7 +576,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       {/* Header Bar */}
       <div className={`${isAssetDisposed(asset) ? 'bg-gray-500' : 'bg-red-500'} text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4`}>
         <div className="flex items-center gap-4 mb-2 md:mb-0">
-          <ArrowLeft className="cursor-pointer" onClick={() => router.back()} />
+          <ArrowLeft className="cursor-pointer" onClick={() => router.push('/assets')} />
           <div>
             <h1 className="text-lg font-semibold">{asset.name}</h1>
             <p className="text-sm">Asset Tag ID: {asset.serialNumber} • Site: {asset.location}</p>
@@ -625,22 +625,27 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => (
-          <button
-            key={tab}
-            className={`py-2 ${
-              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
-            } ${isAssetDisposed(asset) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            onClick={() => !isAssetDisposed(asset) && setActiveTab(tab)}
-            disabled={isAssetDisposed(asset)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => {
+          const isAllowedForDisposed = ['photos', 'docs', 'history'].includes(tab);
+          const isDisabled = isAssetDisposed(asset) && !isAllowedForDisposed;
+          
+          return (
+            <button
+              key={tab}
+              className={`py-1.5 px-2 mx-0.5 text-sm ${
+                activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+              } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isDisabled && setActiveTab(tab)}
+              disabled={isDisabled}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content */}
-      {isAssetDisposed(asset) ? (
+      {isAssetDisposed(asset) && !['photos', 'docs', 'history'].includes(activeTab.toLowerCase()) ? (
         <div className="p-8 text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-600 mb-4">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
