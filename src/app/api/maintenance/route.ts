@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 // GET /api/maintenance
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['ADMIN', 'MANAGER'], async function GET(request: Request) {
+export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Request) {
   try {
     // Get the current user's ID from the session
     const session = await getServerSession(authOptions);
@@ -73,7 +73,7 @@ export const GET = withRole(['ADMIN', 'MANAGER'], async function GET(request: Re
 });
 
 // POST /api/maintenance
-export const POST = withRole(['MANAGER', 'USER'], async function POST(request: Request) {
+export const POST = withRole([ 'USER'], async function POST(request: Request) {
   try {
     const body = await request.json();
     const { assetId, description, requestedById } = body;

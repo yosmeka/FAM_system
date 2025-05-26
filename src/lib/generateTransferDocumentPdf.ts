@@ -132,16 +132,7 @@ export async function generateTransferDocumentPdf(options: TransferDocumentOptio
     body: assetInfo,
     theme: 'grid',
     headStyles: { fillColor: [220, 53, 69], textColor: [255, 255, 255] },
-    styles: {
-      fontSize: 10,
-      cellPadding: 4,
-      lineWidth: 0.1,
-      lineColor: [200, 200, 200],
-    },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 'auto', overflow: 'linebreak' },
-    },
+    styles: { fontSize: 10 },
   });
 
   // Get the final Y position
@@ -164,16 +155,7 @@ export async function generateTransferDocumentPdf(options: TransferDocumentOptio
     body: personnelInfo,
     theme: 'grid',
     headStyles: { fillColor: [220, 53, 69], textColor: [255, 255, 255] },
-    styles: {
-      fontSize: 10,
-      cellPadding: 4,
-      lineWidth: 0.1,
-      lineColor: [200, 200, 200],
-    },
-    columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 'auto', overflow: 'linebreak' },
-    },
+    styles: { fontSize: 10 },
   });
 
   // Get the final Y position
@@ -196,45 +178,28 @@ export async function generateTransferDocumentPdf(options: TransferDocumentOptio
 
   // Process long text for better display
   const processedReasonInfo = reasonInfo.map(row => {
-    // Always process text to ensure consistent formatting
-    if (row[1]) {
-      // First, handle any existing newlines in the text
-      const paragraphs = row[1].split('\n');
-      const formattedParagraphs: string[] = [];
+    // If the reason text is too long, truncate it or split it
+    if (row[1] && row[1].length > 100) {
+      // Split long text into multiple lines with proper word breaks
+      const words = row[1].split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
 
-      // Process each paragraph
-      for (const paragraph of paragraphs) {
-        // Skip empty paragraphs
-        if (!paragraph.trim()) {
-          formattedParagraphs.push('');
-          continue;
-        }
-
-        // Split long text into multiple lines with proper word breaks
-        const words = paragraph.split(' ');
-        const lines: string[] = [];
-        let currentLine = '';
-
-        for (const word of words) {
-          // Use a smaller line length for better readability
-          if ((currentLine + ' ' + word).length <= 60) {
-            currentLine += (currentLine ? ' ' : '') + word;
-          } else {
-            lines.push(currentLine);
-            currentLine = word;
-          }
-        }
-
-        if (currentLine) {
+      for (const word of words) {
+        if ((currentLine + ' ' + word).length <= 80) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
           lines.push(currentLine);
+          currentLine = word;
         }
-
-        // Add the formatted paragraph
-        formattedParagraphs.push(lines.join('\n'));
       }
 
-      // Join the paragraphs with double newlines for better separation
-      return [row[0], formattedParagraphs.join('\n\n')];
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+
+      // Join the lines with newlines
+      return [row[0], lines.join('\n')];
     }
     return row;
   });
@@ -245,39 +210,18 @@ export async function generateTransferDocumentPdf(options: TransferDocumentOptio
     body: processedReasonInfo,
     theme: 'grid',
     headStyles: { fillColor: [220, 53, 69], textColor: [255, 255, 255] },
-    styles: {
-      fontSize: 10,
-      cellPadding: 4, // Add more padding for better readability
-      lineWidth: 0.1, // Thinner lines for better appearance
-      lineColor: [200, 200, 200], // Lighter lines
-    },
+    styles: { fontSize: 10 },
     columnStyles: {
       0: { cellWidth: 60 }, // Fixed width for the first column
-      1: {
-        cellWidth: 'auto',
-        overflow: 'linebreak',
-        fontStyle: 'normal',
-        minCellHeight: 10, // Ensure minimum height for cells
-      },
+      1: { cellWidth: 'auto', overflow: 'linebreak' },
     },
     // Add page break if content doesn't fit
     willDrawCell: (data: CellData) => {
       // Check if we're about to draw a cell that would go off the page
       const pageHeight = doc.internal.pageSize.getHeight();
-
-      // Use a larger margin to ensure content doesn't get too close to the bottom
-      if (data.cursor.y + data.row.height > pageHeight - 50) {
-        // Add header to the new page
-        doc.addPage();
-        data.cursor.y = 30; // Start a bit lower to leave room for header
-
-        // Add a mini-header on the new page
-        doc.setFillColor(220, 53, 69);
-        doc.rect(0, 0, pageWidth, 20, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(12);
-        doc.text('Asset Transfer ' + (options.status === 'APPROVED' ? 'Approval' : 'Rejection') + ' (continued)', pageWidth / 2, 12, { align: 'center' });
-        doc.setTextColor(0, 0, 0); // Reset text color
+      if (data.cursor.y + data.row.height > pageHeight - 40) {
+        data.cursor.y = 20; // Reset Y position to top of new page
+        doc.addPage(); // Add a new page
       }
     },
   });
@@ -287,18 +231,10 @@ export async function generateTransferDocumentPdf(options: TransferDocumentOptio
 
   // Check if we need to add a new page for signatures
   const pageHeight = doc.internal.pageSize.getHeight();
-  if (finalY3 + 60 > pageHeight - 30) {
+  if (finalY3 + 50 > pageHeight - 20) {
     doc.addPage();
     // Reset Y position on new page
-    const newFinalY3 = 30;
-
-    // Add a mini-header on the new page
-    doc.setFillColor(220, 53, 69);
-    doc.rect(0, 0, pageWidth, 20, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.text('Asset Transfer ' + (options.status === 'APPROVED' ? 'Approval' : 'Rejection') + ' (continued)', pageWidth / 2, 12, { align: 'center' });
-    doc.setTextColor(0, 0, 0); // Reset text color
+    const newFinalY3 = 20;
 
     // Add signature section on new page
     doc.setFontSize(14);

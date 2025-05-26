@@ -114,7 +114,7 @@ export async function POST(
     if (transfer.requesterId && transfer.asset?.name) {
       await sendNotification({
         userId: transfer.requesterId, // Specific user ID who requested the transfer
-        message: `Your transfer request for asset "${transfer.asset.name}" has been rejected by ${session?.user?.name || 'a manager'}.${documentUrl ? ' A rejection document is available for download.' : ''}`,
+        message: `Your transfer request for asset "${transfer.asset.name}" has been rejected by ${session?.user?.name || 'a manager'}.${reason ? ` Reason: ${reason.substring(0, 100)}${reason.length > 100 ? '...' : ''}` : ''}${documentUrl ? ' A rejection document is available for download.' : ''}`,
         type: 'transfer_rejected',
         meta: {
           assetId: transfer.asset.id,

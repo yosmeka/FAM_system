@@ -55,7 +55,7 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
         currentValue: body.currentValue ? parseFloat(body.currentValue) : parseFloat(body.purchasePrice),
         status: body.status,
         location: body.location,
-        department: body.department,
+        department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
         category: body.category,
         type: body.type,
         supplier: body.supplier,

@@ -11,6 +11,12 @@ const reportTypes = [
     path: '/reports/assets',
   },
   {
+    title: 'Audit Reports',
+    description: '🔍 Track audit compliance and findings',
+    path: '/reports/audits',
+    icon: '🔍',
+  },
+  {
     title: 'Maintenance Reports',
     description: 'Track maintenance history and status',
     path: '/reports/maintenance',

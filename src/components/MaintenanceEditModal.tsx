@@ -43,7 +43,8 @@ export function MaintenanceEditModal({
 
   const { isManager, isAdmin, isUser } = useRole();
   const isPendingApproval = initialData.status === 'PENDING_APPROVAL';
-  const isApproved = !isPendingApproval;
+  const isApproved = initialData.status === 'APPROVED';
+  const canEditStatus = isManager() || isAdmin() || (isUser() && isApproved);
 
   // Fetch managers when component mounts
   useEffect(() => {
@@ -89,11 +90,16 @@ export function MaintenanceEditModal({
         managerId: managerId || undefined,
       };
 
+      // Store the original status for comparison
+      const originalStatus = initialData.status;
+
       // Handle status based on user role and request state
       if (isUser() && isPendingApproval) {
         // For regular users with pending requests, always keep status as PENDING_APPROVAL
-        // We don't even include the status field in the form for these users
         payload.status = 'PENDING_APPROVAL';
+      } else if (isUser() && !isApproved && !canEditStatus) {
+        // For regular users with non-approved requests that aren't pending, keep the original status
+        payload.status = initialData.status;
       } else {
         // For managers/admins or users with approved requests, use the selected status
         payload.status = status;
@@ -102,6 +108,18 @@ export function MaintenanceEditModal({
       // Include scheduled date if provided
       if (scheduledDate) {
         payload.scheduledDate = scheduledDate;
+      }
+
+      // Add a flag to indicate if a notification should be sent to the manager
+      // This happens when a user changes the status of an approved request
+      const shouldNotifyManager = isUser() &&
+                                 isApproved &&
+                                 originalStatus !== payload.status &&
+                                 payload.status !== 'APPROVED';
+
+      if (shouldNotifyManager) {
+        payload.notifyManager = true;
+        payload.previousStatus = originalStatus;
       }
 
       const response = await fetch(`/api/maintenance/${maintenanceId}`, {
@@ -117,6 +135,12 @@ export function MaintenanceEditModal({
       }
 
       toast.success('Maintenance request updated successfully');
+
+      // Show additional toast if notification was sent to manager
+      if (shouldNotifyManager) {
+        toast.success('Manager has been notified of the status change');
+      }
+
       onSuccess();
       onClose();
     } catch (error) {
@@ -210,38 +234,57 @@ export function MaintenanceEditModal({
                   </div>
                 </div>
 
-                {/* Status field - only shown for managers or approved requests */}
-                {isUser() && isPendingApproval ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-                    <p className="text-sm text-yellow-800 font-medium">
-                      This request is currently <span className="font-bold">Pending Approval</span> from a manager.
-                    </p>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      You will be able to update the status after it has been approved.
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                      Status *
-                    </label>
-                    <select
-                      id="status"
-                      className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as MaintenanceStatus)}
-                      required
-                    >
-                      <option value="PENDING_APPROVAL">Pending Approval</option>
-                      <option value="APPROVED">Approved</option>
-                      <option value="REJECTED">Rejected</option>
-                      <option value="SCHEDULED">Scheduled</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="CANCELLED">Cancelled</option>
-                    </select>
-                  </div>
-                )}
+                {/* Status field - always shown but conditionally editable */}
+                <div>
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                    Status *
+                  </label>
+                  {isUser() && isPendingApproval ? (
+                    <>
+                      <select
+                        id="status"
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 bg-gray-100 focus:border-blue-500 focus:ring-blue-500"
+                        value={status}
+                        disabled={true}
+                        required
+                      >
+                        <option value="PENDING_APPROVAL">Pending Approval</option>
+                      </select>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        You will be able to update the status after it has been approved by a manager.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        id="status"
+                        className={`mt-1 block w-full rounded-md border ${canEditStatus ? 'border-green-300' : 'border-gray-300'} shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500 ${!canEditStatus ? 'bg-gray-100' : ''}`}
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as MaintenanceStatus)}
+                        required
+                        disabled={!canEditStatus}
+                      >
+                        <option value="PENDING_APPROVAL">Pending Approval</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                      {isUser() && isApproved && (
+                        <p className="text-sm text-green-700 mt-1">
+                          This request has been approved. You can now update its status.
+                        </p>
+                      )}
+                      {isUser() && !isApproved && !isPendingApproval && (
+                        <p className="text-sm text-gray-700 mt-1">
+                          Status can only be edited by managers or for approved requests.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
 
                 <div>
                   <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700">

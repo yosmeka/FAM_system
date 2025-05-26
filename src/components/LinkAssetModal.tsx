@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Asset } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,14 @@ interface LinkAssetModalProps {
 export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, availableAssets }: LinkAssetModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Add loading state for assets
+  const [isAssetsLoading, setIsAssetsLoading] = useState(availableAssets.length === 0);
+
+  // Update loading state when availableAssets changes
+  useEffect(() => {
+    setIsAssetsLoading(availableAssets.length === 0);
+  }, [availableAssets]);
 
   const filteredAssets = availableAssets.filter(
     (asset) =>
@@ -88,7 +96,12 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
           <div className="border rounded-md shadow-sm">
             <ScrollArea className="h-[400px] p-4">
               <div className="space-y-4">
-                {filteredAssets.length === 0 ? (
+                {isAssetsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                    <p className="text-gray-500">Loading available assets...</p>
+                  </div>
+                ) : filteredAssets.length === 0 ? (
                   <p className="text-center text-gray-500 py-8">No assets found</p>
                 ) : (
                   filteredAssets.map((asset) => (

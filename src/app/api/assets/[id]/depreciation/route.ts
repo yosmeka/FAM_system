@@ -409,16 +409,17 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Get URL to parse query parameters
     const url = new URL(request.url);
 
     // Fetch the asset with its depreciation settings and capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       select: {
         id: true,
@@ -568,9 +569,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
@@ -584,7 +586,7 @@ export async function PUT(
     // Check if the asset exists and get its capital improvements
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         capitalImprovements: {
@@ -631,7 +633,7 @@ export async function PUT(
     // Update the asset with the new depreciation settings
     const updatedAsset = await prisma.asset.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         depreciableCost: depreciableCost ? parseFloat(depreciableCost) : null,
@@ -696,35 +698,35 @@ export async function PUT(
     try {
       const changes = [
         {
-          assetId: params.id,
+          assetId: id,
           field: 'depreciableCost',
           oldValue: asset.depreciableCost?.toString() || null,
           newValue: updatedAsset.depreciableCost?.toString() || null,
           changedBy: session.user?.name || 'system',
         },
         {
-          assetId: params.id,
+          assetId: id,
           field: 'salvageValue',
           oldValue: asset.salvageValue?.toString() || null,
           newValue: updatedAsset.salvageValue?.toString() || null,
           changedBy: session.user?.name || 'system',
         },
         {
-          assetId: params.id,
+          assetId: id,
           field: 'usefulLifeMonths',
           oldValue: asset.usefulLifeMonths?.toString() || null,
           newValue: updatedAsset.usefulLifeMonths?.toString() || null,
           changedBy: session.user?.name || 'system',
         },
         {
-          assetId: params.id,
+          assetId: id,
           field: 'depreciationMethod',
           oldValue: asset.depreciationMethod || null,
           newValue: updatedAsset.depreciationMethod || null,
           changedBy: session.user?.name || 'system',
         },
         {
-          assetId: params.id,
+          assetId: id,
           field: 'depreciationStartDate',
           oldValue: asset.depreciationStartDate?.toISOString() || null,
           newValue: updatedAsset.depreciationStartDate?.toISOString() || null,

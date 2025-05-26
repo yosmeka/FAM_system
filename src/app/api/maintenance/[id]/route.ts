@@ -125,15 +125,35 @@ export async function PUT(
       priority,
       notes,
       scheduledDate,
-      managerId
+      managerId,
+      notifyManager,
+      previousStatus
     } = body;
 
     // Get the current maintenance request to check its status and requester
     const currentRequest = await prisma.maintenance.findUnique({
       where: { id: params.id },
-      select: {
-        status: true,
-        requesterId: true
+      include: {
+        asset: {
+          select: {
+            name: true,
+            serialNumber: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        }
       }
     });
 
@@ -195,12 +215,14 @@ export async function PUT(
           select: {
             name: true,
             email: true,
+            id: true,
           },
         },
         manager: {
           select: {
             name: true,
             email: true,
+            id: true,
           },
         },
       },
@@ -218,6 +240,54 @@ export async function PUT(
           nextMaintenance: nextMaintenanceDate,
         },
       });
+    }
+
+    // Send notification to manager if requested
+    if (notifyManager && maintenanceRequest.manager && previousStatus) {
+      try {
+        // Import the sendNotification function
+        const { sendNotification } = await import('@/lib/notifications');
+
+        // Create a user-friendly status name
+        const getStatusName = (status: string) => {
+          const statusMap: Record<string, string> = {
+            'PENDING_APPROVAL': 'Pending Approval',
+            'APPROVED': 'Approved',
+            'REJECTED': 'Rejected',
+            'SCHEDULED': 'Scheduled',
+            'IN_PROGRESS': 'In Progress',
+            'COMPLETED': 'Completed',
+            'CANCELLED': 'Cancelled'
+          };
+          return statusMap[status] || status;
+        };
+
+        // Get user-friendly status names
+        const oldStatusName = getStatusName(previousStatus);
+        const newStatusName = getStatusName(status);
+
+        // Create the notification message
+        const message = `Maintenance request for asset "${maintenanceRequest.asset.name}" has been updated from "${oldStatusName}" to "${newStatusName}" by ${maintenanceRequest.requester.name}.`;
+
+        // Send the notification to the manager
+        await sendNotification({
+          userId: maintenanceRequest.manager.id,
+          message,
+          type: 'maintenance_status_changed',
+          meta: {
+            assetId: maintenanceRequest.assetId,
+            maintenanceId: maintenanceRequest.id,
+            previousStatus,
+            newStatus: status,
+            updatedBy: maintenanceRequest.requester.id
+          },
+        });
+
+        console.log(`Sent status change notification to manager ${maintenanceRequest.manager.id}`);
+      } catch (notificationError) {
+        console.error('Error sending notification to manager:', notificationError);
+        // Continue even if notification fails
+      }
     }
 
     return NextResponse.json(maintenanceRequest);

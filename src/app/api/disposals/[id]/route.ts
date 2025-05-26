@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET /api/disposals/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const disposal = await prisma.disposal.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -40,14 +41,15 @@ export async function GET(
 // PUT /api/disposals/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { status, proceeds } = body;
 
     const disposal = await prisma.disposal.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         proceeds: proceeds ? parseFloat(proceeds) : null,

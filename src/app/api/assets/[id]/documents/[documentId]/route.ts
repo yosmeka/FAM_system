@@ -119,7 +119,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
 });
 
 // DELETE /api/assets/[id]/documents/[documentId] - Delete a specific document
-export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
+export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELETE(
   request: Request,
   { params }: { params: { id: string; documentId: string } }
 ) {

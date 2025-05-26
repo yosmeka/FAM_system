@@ -2,21 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import {
-  Plus,
-  Edit,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Calendar,
-  Wrench,
-  FileText,
-  ThumbsUp,
-  ThumbsDown,
-  Download,
-  FileIcon
-} from 'lucide-react';
-import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { MaintenanceModal } from './MaintenanceModal';
 import { MaintenanceApprovalModal } from './MaintenanceApprovalModal';
@@ -37,6 +23,7 @@ interface MaintenanceRecord {
   notes?: string | null;
   scheduledDate?: string | null;
   documentUrl?: string | null;
+  requesterId?: string;
   requester?: {
     name: string;
     email: string;
@@ -203,6 +190,30 @@ export function AssetMaintenanceTab({
     setSelectedRecord(null);
   };
 
+  const handleDelete = async (record: MaintenanceRecord) => {
+    // Show confirmation dialog
+    if (!window.confirm('Are you sure you want to delete this maintenance request? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/maintenance/${record.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete maintenance request');
+      }
+
+      toast.success('Maintenance request deleted successfully');
+      fetchMaintenanceRecords();
+      setExpandedRecordId(null);
+    } catch (error) {
+      console.error('Error deleting maintenance request:', error);
+      toast.error('Failed to delete maintenance request');
+    }
+  };
+
   const toggleExpandRecord = (id: string) => {
     if (expandedRecordId === id) {
       setExpandedRecordId(null);
@@ -232,49 +243,42 @@ export function AssetMaintenanceTab({
       case 'PENDING_APPROVAL':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-            <Clock className="w-3 h-3 mr-1" />
             Pending Approval
           </span>
         );
       case 'APPROVED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <ThumbsUp className="w-3 h-3 mr-1" />
             Approved
           </span>
         );
       case 'REJECTED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <ThumbsDown className="w-3 h-3 mr-1" />
             Rejected
           </span>
         );
       case 'SCHEDULED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Calendar className="w-3 h-3 mr-1" />
             Scheduled
           </span>
         );
       case 'IN_PROGRESS':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <Wrench className="w-3 h-3 mr-1" />
             In Progress
           </span>
         );
       case 'COMPLETED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1" />
             Completed
           </span>
         );
       case 'CANCELLED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="w-3 h-3 mr-1" />
             Cancelled
           </span>
         );
@@ -350,7 +354,6 @@ export function AssetMaintenanceTab({
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            <Plus size={16} className="mr-2" />
             {(isManager() || isAdmin()) ? "Schedule/Request Maintenance" : "Request Maintenance"}
           </button>
         )}
@@ -361,7 +364,6 @@ export function AssetMaintenanceTab({
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
-              <Wrench className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Total Records</p>
@@ -373,7 +375,6 @@ export function AssetMaintenanceTab({
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
-              <Clock className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Pending</p>
@@ -385,7 +386,6 @@ export function AssetMaintenanceTab({
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
-              <CheckCircle className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Completed</p>
@@ -397,7 +397,6 @@ export function AssetMaintenanceTab({
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="flex items-center">
             <div className={`p-3 rounded-full ${nextMaintenance ? (maintenanceStats.maintenanceDue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600') : 'bg-gray-100 text-gray-600'} mr-4`}>
-              <Calendar className="h-6 w-6" />
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Next Maintenance</p>
@@ -437,7 +436,6 @@ export function AssetMaintenanceTab({
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    <Wrench className="h-6 w-6 text-gray-400" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">
@@ -491,7 +489,6 @@ export function AssetMaintenanceTab({
                       {record.documentUrl ? (
                         <div className="flex items-start space-x-4">
                           <div className="flex-shrink-0 bg-red-100 rounded-full p-2">
-                            <FileIcon className="h-5 w-5 text-red-600" />
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-medium text-gray-900">
@@ -508,7 +505,6 @@ export function AssetMaintenanceTab({
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Download size={14} className="mr-1.5" />
                             Download
                           </a>
                         </div>
@@ -527,19 +523,9 @@ export function AssetMaintenanceTab({
                         }}
                         className="inline-flex items-center px-3 py-1.5 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50"
                       >
-                        <ThumbsUp size={14} className="mr-1.5" />
                         Review Request
                       </button>
                     )}
-
-                    <Link
-                      href="/documents"
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <FileText size={14} className="mr-1.5" />
-                      My Documents
-                    </Link>
 
                     {checkPermission('Asset edit') && (
                       <button
@@ -549,8 +535,21 @@ export function AssetMaintenanceTab({
                         }}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                       >
-                        <Edit size={14} className="mr-1.5" />
                         Edit
+                      </button>
+                    )}
+
+                    {/* Delete button - only shown for the user who created the request */}
+                    {record.requesterId && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(record);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
+                      >
+                        <Trash2 size={14} className="mr-1.5" />
+                        Delete
                       </button>
                     )}
                   </div>
@@ -562,7 +561,6 @@ export function AssetMaintenanceTab({
       ) : (
         <div className="text-center py-8 bg-gray-50 rounded-lg">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
-            <Wrench size={24} />
           </div>
           <h3 className="text-lg font-medium text-gray-900">No Maintenance Records</h3>
           <p className="mt-2 text-sm text-gray-500">
@@ -573,7 +571,6 @@ export function AssetMaintenanceTab({
               onClick={() => setIsAddModalOpen(true)}
               className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
-              <Plus size={16} className="mr-2" />
               {(isManager() || isAdmin()) ? "Schedule/Request First Maintenance" : "Request First Maintenance"}
             </button>
           )}

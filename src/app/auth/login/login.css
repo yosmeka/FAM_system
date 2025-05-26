@@ -1,0 +1,67 @@
+/* Zemen Bank Login Page Styles */
+
+.login-page-bg {
+  background-color: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-page-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/auth/login/zemen.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 600px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.login-page-bg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.75) 100%);
+  z-index: 1;
+}
+
+/* Background logo is now handled by the Image component in the React component */
+
+.login-container {
+  position: relative;
+  z-index: 2;
+}
+
+.zemen-red {
+  color: #c8102e;
+}
+
+.zemen-bg-red {
+  background-color: #c8102e;
+}
+
+.zemen-border-red {
+  border-color: #c8102e;
+}
+
+.zemen-ring-red {
+  --tw-ring-color: #c8102e;
+}
+
+.zemen-focus-red:focus {
+  --tw-ring-color: #c8102e;
+  border-color: #c8102e;
+}
+
+.login-card-shadow {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}

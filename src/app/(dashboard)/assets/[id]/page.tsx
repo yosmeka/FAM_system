@@ -12,6 +12,7 @@ import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
 import { AssetAuditTab } from '@/components/AssetAuditTab';
+import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
@@ -88,7 +89,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [isLinkingAsset, setIsLinkingAsset] = useState(false);
   const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
   // These state variables are used in the renderLinkingTab function
-  const [availableAssets] = useState<Asset[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -426,6 +427,55 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     );
   };
 
+  // Function to fetch available assets for linking
+  const fetchAvailableAssets = async () => {
+    try {
+      console.log("Fetching available assets for linking");
+      const response = await fetch('/api/assets');
+      if (!response.ok) {
+        throw new Error('Failed to fetch available assets');
+      }
+
+      const allAssets = await response.json();
+      console.log("All assets fetched:", allAssets.length);
+
+      // Filter out the current asset and any assets that are already linked
+      // or are children of other assets or have children
+      const filteredAssets = allAssets.filter((fetchedAsset: Asset) => {
+        // Exclude the current asset
+        if (fetchedAsset.id === resolvedParams.id) {
+          return false;
+        }
+
+        // Exclude assets that are already children of other assets
+        if (fetchedAsset.linkedFrom && fetchedAsset.linkedFrom.length > 0) {
+          return false;
+        }
+
+        // Exclude assets that already have children
+        if (fetchedAsset.linkedTo && fetchedAsset.linkedTo.length > 0) {
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log("Filtered available assets:", filteredAssets.length);
+      setAvailableAssets(filteredAssets);
+    } catch (error) {
+      console.error("Error fetching available assets:", error);
+      toast.error("Failed to load available assets for linking");
+    }
+  };
+
+  // Handle opening the linking modal
+  const handleOpenLinkingModal = () => {
+    // Fetch available assets when the modal is opened
+    fetchAvailableAssets();
+    // Then open the modal
+    setIsLinkingAsset(true);
+  };
+
   const renderLinkingTab = () => {
     return (
       <div>
@@ -438,7 +488,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         />
         <AssetLinkingTable
           asset={asset!} // Ensure asset is not null, or add a null check if needed
-          onLinkClick={() => setIsLinkingAsset(true)}
+          onLinkClick={handleOpenLinkingModal}
           onUnlinkSuccess={handleLinkSuccess}
         />
       </div>
@@ -462,14 +512,21 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             nextMaintenance={asset?.nextMaintenance}
           />
         );
-      case 'audit':
+      case 'docs':
         return (
-          <AssetAuditTab
+          <DocumentsTab
             assetId={resolvedParams.id}
             assetName={asset?.name || 'Asset'}
-            assetLocation={asset?.location}
           />
         );
+      // case 'audit':
+      //   return (
+      //     <AssetAuditTab
+      //       assetId={resolvedParams.id}
+      //       assetName={asset?.name || 'Asset'}
+      //       assetLocation={asset?.location}
+      //     />
+      //   );
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -722,7 +779,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${

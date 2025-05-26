@@ -77,7 +77,7 @@ const assetFormSchema = z.object({
   // Classification
   status: z.string().default("ACTIVE"),
   location: z.string().optional(),
-  department: z.string().optional(),
+  department: z.string().default("Zemen Bank"), // This is now used as Company Name
   category: z.string().optional(),
   type: z.string().optional(),
   supplier: z.string().optional(),
@@ -129,6 +129,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   const defaultValues: Partial<AssetFormValues> = {
     status: "ACTIVE",
     purchaseDate: new Date(),
+    department: "Zemen Bank", // Set default department to Zemen Bank
     ...formattedInitialData,
   }
 
@@ -891,14 +892,29 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="department"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Department</FormLabel>
+                        <FormLabel>Company Name</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Department"
-                            {...field}
-                            value={field.value || ""}
-                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
-                          />
+                          <div className="flex items-center">
+                            <Input
+                              placeholder="Company Name"
+                              {...field}
+                              value="Zemen Bank"
+                              disabled={true}
+                              className="border-purple-200 bg-purple-50 text-purple-800 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                            />
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="ml-2 cursor-help">
+                                    <InfoIcon className="h-4 w-4 text-purple-500" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>All assets belong to Zemen Bank</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
