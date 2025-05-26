@@ -96,17 +96,20 @@
 
 //     // Map the depreciation method from the database to the utility function
 //     let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+//     let effectiveDepreciationRate = depreciationRate;
 
 //     // Use the query method if provided, otherwise use the stored method
 //     const methodToUse = queryMethod || depreciationMethod;
-
 //     switch(methodToUse) {
 //       case 'STRAIGHT_LINE':
 //         calculationMethod = 'STRAIGHT_LINE';
 //         break;
 //       case 'DECLINING_BALANCE':
+//         calculationMethod = 'DECLINING_BALANCE';
+//         break;
 //       case 'DOUBLE_DECLINING':
 //         calculationMethod = 'DECLINING_BALANCE';
+//         effectiveDepreciationRate = 40; // Always use 40% for double declining
 //         break;
 //       case 'SUM_OF_YEARS_DIGITS':
 //         calculationMethod = 'SUM_OF_YEARS_DIGITS';
@@ -118,10 +121,6 @@
 //         calculationMethod = 'STRAIGHT_LINE'; // Default
 //     }
 
-//     // Check if we should calculate as a group
-//     const calculateAsGroup = queryCalculateAsGroup === 'true';
-//     console.log("API GET: Calculating depreciation with calculateAsGroup =", calculateAsGroup);
-
 //     // Calculate depreciation using the depreciableCost field
 //     // This already includes any capital improvements that have been added
 //     const depreciationResults = calculateDepreciation({
@@ -130,11 +129,9 @@
 //       usefulLife: usefulLifeYears,
 //       salvageValue: salvageValue,
 //       method: calculationMethod,
-//       depreciationRate: depreciationRate,
+//       depreciationRate: effectiveDepreciationRate,
 //       totalUnits: totalUnits,
-//       unitsPerYear: unitsPerYear,
-//       calculateAsGroup: calculateAsGroup,
-//       capitalImprovements: asset.capitalImprovements || []
+//       unitsPerYear: unitsPerYear
 //     });
 
 //     // Generate chart data
@@ -228,22 +225,18 @@
 
 //     // Map the method to handle special cases like DOUBLE_DECLINING
 //     let depreciationMethodValue = null;
+//     let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
 //     if (method) {
-//       // Handle special case for DOUBLE_DECLINING which isn't in the enum
 //       if (method === 'DOUBLE_DECLINING') {
 //         depreciationMethodValue = 'DECLINING_BALANCE';
+//         effectivePutDepreciationRate = 40; // Always use 40% for double declining
 //       } else {
-//         // Use the method directly for all other cases
 //         depreciationMethodValue = method;
 //       }
 //     }
 
 //     // Store the original method for our calculations
 //     const originalMethod = method;
-
-//     // Calculate total capital improvements cost
-//     const capitalImprovementsCost = asset.capitalImprovements?.reduce((sum: number, improvement: any) => sum + improvement.cost, 0) || 0;
-//     console.log("PUT: Total capital improvements cost:", capitalImprovementsCost);
 
 //     // Update the asset with the new depreciation settings
 //     const updatedAsset = await prisma.asset.update({
@@ -270,24 +263,26 @@
 //       : Array(parseInt(usefulLifeYears || '5')).fill(totalUnits / parseInt(usefulLifeYears || '5')); // Default to even distribution
 
 //     // Use the original method for calculation
-//     let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
-
+//     let calculationMethodPut: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
 //     switch(originalMethod) {
 //       case 'STRAIGHT_LINE':
-//         calculationMethod = 'STRAIGHT_LINE';
+//         calculationMethodPut = 'STRAIGHT_LINE';
 //         break;
 //       case 'DECLINING_BALANCE':
+//         calculationMethodPut = 'DECLINING_BALANCE';
+//         break;
 //       case 'DOUBLE_DECLINING':
-//         calculationMethod = 'DECLINING_BALANCE';
+//         calculationMethodPut = 'DECLINING_BALANCE';
+//         effectivePutDepreciationRate = 40;
 //         break;
 //       case 'SUM_OF_YEARS_DIGITS':
-//         calculationMethod = 'SUM_OF_YEARS_DIGITS';
+//         calculationMethodPut = 'SUM_OF_YEARS_DIGITS';
 //         break;
 //       case 'UNITS_OF_ACTIVITY':
-//         calculationMethod = 'UNITS_OF_ACTIVITY';
+//         calculationMethodPut = 'UNITS_OF_ACTIVITY';
 //         break;
 //       default:
-//         calculationMethod = 'STRAIGHT_LINE'; // Default
+//         calculationMethodPut = 'STRAIGHT_LINE';
 //     }
 
 //     // Calculate depreciation using the depreciableCost field
@@ -300,13 +295,10 @@
 //       purchaseDate: startDateValue.toISOString(),
 //       usefulLife: usefulLifeValue,
 //       salvageValue: updatedAsset.salvageValue || 0,
-//       method: calculationMethod,
-//       depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
+//       method: calculationMethodPut,
+//       depreciationRate: effectivePutDepreciationRate,
 //       totalUnits: totalUnits,
-//       unitsPerYear: unitsPerYear,
-//       calculateAsGroup: calculateAsGroup,
-//       // linkedAssets: linkedAssets,
-//       capitalImprovements: asset.capitalImprovements || []
+//       unitsPerYear: unitsPerYear
 //     });
 
 //     // Generate chart data
@@ -495,17 +487,20 @@ export async function GET(
 
     // Map the depreciation method from the database to the utility function
     let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+    let effectiveDepreciationRate = depreciationRate;
 
     // Use the query method if provided, otherwise use the stored method
     const methodToUse = queryMethod || depreciationMethod;
-
     switch(methodToUse) {
       case 'STRAIGHT_LINE':
         calculationMethod = 'STRAIGHT_LINE';
         break;
       case 'DECLINING_BALANCE':
+        calculationMethod = 'DECLINING_BALANCE';
+        break;
       case 'DOUBLE_DECLINING':
         calculationMethod = 'DECLINING_BALANCE';
+        effectiveDepreciationRate = 40; // Always use 40% for double declining
         break;
       case 'SUM_OF_YEARS_DIGITS':
         calculationMethod = 'SUM_OF_YEARS_DIGITS';
@@ -525,7 +520,7 @@ export async function GET(
       usefulLife: usefulLifeYears,
       salvageValue: salvageValue,
       method: calculationMethod,
-      depreciationRate: depreciationRate,
+      depreciationRate: effectiveDepreciationRate,
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear
     });
@@ -614,15 +609,19 @@ export async function PUT(
     const depreciationRate = url.searchParams.get('depreciationRate');
     const depreciableCost = url.searchParams.get('depreciableCost');
     const dateAcquired = url.searchParams.get('dateAcquired');
+    const calculateAsGroup = url.searchParams.get('calculateAsGroup') === 'true';
+
+    console.log("API PUT: Updating depreciation settings with calculateAsGroup =", calculateAsGroup);
+    console.log("API PUT: Query parameter value:", url.searchParams.get('calculateAsGroup'));
 
     // Map the method to handle special cases like DOUBLE_DECLINING
     let depreciationMethodValue = null;
+    let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
     if (method) {
-      // Handle special case for DOUBLE_DECLINING which isn't in the enum
       if (method === 'DOUBLE_DECLINING') {
         depreciationMethodValue = 'DECLINING_BALANCE';
+        effectivePutDepreciationRate = 40; // Always use 40% for double declining
       } else {
-        // Use the method directly for all other cases
         depreciationMethodValue = method;
       }
     }
@@ -655,24 +654,26 @@ export async function PUT(
       : Array(parseInt(usefulLifeYears || '5')).fill(totalUnits / parseInt(usefulLifeYears || '5')); // Default to even distribution
 
     // Use the original method for calculation
-    let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
-
+    let calculationMethodPut: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
     switch(originalMethod) {
       case 'STRAIGHT_LINE':
-        calculationMethod = 'STRAIGHT_LINE';
+        calculationMethodPut = 'STRAIGHT_LINE';
         break;
       case 'DECLINING_BALANCE':
+        calculationMethodPut = 'DECLINING_BALANCE';
+        break;
       case 'DOUBLE_DECLINING':
-        calculationMethod = 'DECLINING_BALANCE';
+        calculationMethodPut = 'DECLINING_BALANCE';
+        effectivePutDepreciationRate = 40;
         break;
       case 'SUM_OF_YEARS_DIGITS':
-        calculationMethod = 'SUM_OF_YEARS_DIGITS';
+        calculationMethodPut = 'SUM_OF_YEARS_DIGITS';
         break;
       case 'UNITS_OF_ACTIVITY':
-        calculationMethod = 'UNITS_OF_ACTIVITY';
+        calculationMethodPut = 'UNITS_OF_ACTIVITY';
         break;
       default:
-        calculationMethod = 'STRAIGHT_LINE'; // Default
+        calculationMethodPut = 'STRAIGHT_LINE';
     }
 
     // Calculate depreciation using the depreciableCost field
@@ -685,8 +686,8 @@ export async function PUT(
       purchaseDate: startDateValue.toISOString(),
       usefulLife: usefulLifeValue,
       salvageValue: updatedAsset.salvageValue || 0,
-      method: calculationMethod,
-      depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
+      method: calculationMethodPut,
+      depreciationRate: effectivePutDepreciationRate,
       totalUnits: totalUnits,
       unitsPerYear: unitsPerYear
     });

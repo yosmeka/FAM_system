@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Settings } from 'lucide-react';
 import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
@@ -36,7 +35,6 @@ interface DepreciationResult {
 export default function AssetDepreciationPage(props: { searchParams?: { assetId?: string } }) {
   const searchParams = props.searchParams || {};
   const assetId = searchParams.assetId || ""; // fallback to empty string if not provided
-  const router = useRouter();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
@@ -54,61 +52,64 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
     dateAcquired: new Date().toISOString().split('T')[0]
   });
 
-  useEffect(() => {
-    const fetchAssetAndDepreciation = async () => {
-      try {
-        // First fetch the asset
-        if (!assetId) return;
-        const assetResponse = await fetch(`/api/assets/${assetId}`);
-        if (!assetResponse.ok) {
-          throw new Error('Failed to fetch asset');
-        }
-        const assetData = await assetResponse.json();
-        setAsset(assetData);
-
-        // Then fetch the depreciation data
-        const depreciationResponse = await fetch(`/api/assets/${assetId}/depreciation`);
-        if (!depreciationResponse.ok) {
-          throw new Error('Failed to fetch depreciation data');
-        }
-        const depreciationData = await depreciationResponse.json();
-
-        // Update state with the fetched depreciation settings
-        setSalvageValue(depreciationData.depreciationSettings.salvageValue);
-        setUsefulLife(depreciationData.depreciationSettings.usefulLifeYears);
-        setDepreciationMethod(depreciationData.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
-
-        if (depreciationData.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
-          setDepreciationRate(depreciationData.depreciationSettings.depreciationRate || 20);
-        }
-
-        // Set the depreciation results
-        setDepreciationResults(depreciationData.depreciationResults);
-
-        // Update the depreciation settings for the modal
-        setDepreciationSettings({
-          isDepreciable: true,
-          depreciableCost: depreciationData.depreciationSettings.depreciableCost,
-          salvageValue: depreciationData.depreciationSettings.salvageValue,
-          usefulLifeMonths: depreciationData.depreciationSettings.usefulLifeMonths,
-          depreciationMethod: depreciationData.depreciationSettings.depreciationMethod,
-          dateAcquired: new Date(depreciationData.depreciationSettings.startDate).toISOString().split('T')[0]
-        });
-      } catch (error) {
-        toast.error('Failed to fetch asset details');
-        console.error('Error fetching asset:', error);
-      } finally {
-        setIsLoading(false);
+  const fetchAssetAndDepreciation = async () => {
+    try {
+      // First fetch the asset
+      if (!assetId) return;
+      const assetResponse = await fetch(`/api/assets/${assetId}`);
+      if (!assetResponse.ok) {
+        throw new Error('Failed to fetch asset');
       }
-    };
+      const assetData = await assetResponse.json();
+      setAsset(assetData);
 
+      // Then fetch the depreciation data
+      const depreciationResponse = await fetch(`/api/assets/${assetId}/depreciation`);
+      if (!depreciationResponse.ok) {
+        throw new Error('Failed to fetch depreciation data');
+      }
+      const depreciationData = await depreciationResponse.json();
+
+      // Update state with the fetched depreciation settings
+      setSalvageValue(depreciationData.depreciationSettings.salvageValue);
+      setUsefulLife(depreciationData.depreciationSettings.usefulLifeYears);
+      setDepreciationMethod(depreciationData.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+      if (depreciationData.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
+        setDepreciationRate(depreciationData.depreciationSettings.depreciationRate || 20);
+      }
+
+      // Set the depreciation results
+      setDepreciationResults(depreciationData.depreciationResults);
+
+      // Update the depreciation settings for the modal
+      setDepreciationSettings({
+        isDepreciable: true,
+        depreciableCost: depreciationData.depreciationSettings.depreciableCost,
+        salvageValue: depreciationData.depreciationSettings.salvageValue,
+        usefulLifeMonths: depreciationData.depreciationSettings.usefulLifeMonths,
+        depreciationMethod: depreciationData.depreciationSettings.depreciationMethod,
+        dateAcquired: new Date(depreciationData.depreciationSettings.startDate).toISOString().split('T')[0]
+      });
+    } catch (error) {
+      toast.error('Failed to fetch asset details');
+      console.error('Error fetching asset:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Suppress exhaustive-deps warning for fetchAssetAndDepreciation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(function fetchAssetAndDepreciationEffect() {
     if (searchParams.assetId) {
       fetchAssetAndDepreciation();
     }
   }, [searchParams.assetId]);
 
-  // Recalculate depreciation when settings change
-  useEffect(() => {
+  // Suppress exhaustive-deps warning for calculateDepreciation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(function calculateDepreciationEffect() {
     if (asset && !isLoading) {
       calculateDepreciation();
     }
@@ -196,23 +197,8 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
 
       if (!response.ok) throw new Error('Failed to update depreciation settings');
 
-      const data = await response.json();
-      setDepreciationResults(data.depreciationResults);
-
-      // Update local state
-      setSalvageValue(settings.salvageValue);
-      setUsefulLife(usefulLifeYears);
-      setDepreciationMethod(settings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
-
-      if (settings.depreciationMethod !== 'STRAIGHT_LINE') {
-        setDepreciationRate(settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20);
-      }
-
-      // Update the depreciation settings state
-      setDepreciationSettings({
-        ...settings,
-        usefulLifeMonths: settings.usefulLifeMonths,
-      });
+      // Refetch asset and depreciation data to ensure UI is up-to-date
+      await fetchAssetAndDepreciation();
 
       // Close the modal
       setIsManagingDepreciation(false);

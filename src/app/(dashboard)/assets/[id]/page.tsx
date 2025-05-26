@@ -11,7 +11,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
-import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -102,8 +101,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [usefulLife, setUsefulLife] = useState<number>(5);
   const [salvageValue, setSalvageValue] = useState<number>(0);
   const [depreciationMethod, setDepreciationMethod] = useState<DepreciationMethod>('STRAIGHT_LINE');
-  // Depreciation rate is used in the handleSaveDepreciationSettings function
-  const [, setDepreciationRate] = useState<number>(20);
+  const [depreciationRate, setDepreciationRate] = useState<number>(20);
   const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
     isDepreciable: true,
     depreciableCost: 0,
@@ -227,7 +225,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   // Check permissions first
   if (!checkPermission('Asset view (list and detail)')) {
     return (
-      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
         <h1 className="text-2xl font-semibold">Access Denied</h1>
         <p className="mt-2">You do not have permission to view asset details.</p>
       </div>
@@ -560,7 +558,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               onClose={() => setIsManagingDepreciation(false)}
               onSave={handleSaveDepreciationSettings}
               initialSettings={depreciationSettings}
-              assetId={resolvedParams.id}
             />
 
             {/* Depreciation Details */}
@@ -583,7 +580,29 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                       <td className="p-2 border">{formatCurrency(depreciationSettings.depreciableCost || asset?.depreciableCost || asset?.purchasePrice || 0)}</td>
                       <td className="p-2 border">{formatCurrency(salvageValue || 0)}</td>
                       <td className="p-2 border">{usefulLife * 12} months</td>
-                      <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
+                      <td className="p-2 border">{
+  (() => {
+    const method = depreciationSettings.depreciationMethod || depreciationMethod;
+    // Type guard for depreciationRate
+    const rate = (typeof (depreciationSettings as { depreciationRate?: unknown }).depreciationRate === 'number')
+      ? (depreciationSettings as { depreciationRate?: number }).depreciationRate!
+      : depreciationRate;
+    switch (method) {
+      case 'STRAIGHT_LINE':
+        return 'Straight Line';
+      case 'DECLINING_BALANCE':
+        return rate === 40 ? 'Double Declining' : 'Declining Balance';
+      case 'DOUBLE_DECLINING':
+        return 'Double Declining';
+      case 'SUM_OF_YEARS_DIGITS':
+        return 'Sum of Years Digits';
+      case 'UNITS_OF_ACTIVITY':
+        return 'Units of Activity';
+      default:
+        return method;
+    }
+  })()
+}</td>
                     </tr>
                   </tbody>
                 </table>
