@@ -227,7 +227,7 @@
 //     let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
 //     if (method) {
 //       if (method === 'DOUBLE_DECLINING') {
-//         depreciationMethodValue = 'DECLINING_BALANCE';
+//         depreciationMethodValue = 'DOUBLE_DECLINING'; // Store as DOUBLE_DECLINING
 //         effectivePutDepreciationRate = 40; // Always use 40% for double declining
 //       } else {
 //         depreciationMethodValue = method;
@@ -271,7 +271,7 @@
 //         calculationMethodPut = 'DECLINING_BALANCE';
 //         break;
 //       case 'DOUBLE_DECLINING':
-//         calculationMethodPut = 'DECLINING_BALANCE';
+//         calculationMethodPut = 'DOUBLE_DECLINING';
 //         effectivePutDepreciationRate = 40;
 //         break;
 //       case 'SUM_OF_YEARS_DIGITS':
@@ -617,7 +617,7 @@ export async function PUT(
     let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
     if (method) {
       if (method === 'DOUBLE_DECLINING') {
-        depreciationMethodValue = 'DECLINING_BALANCE';
+        depreciationMethodValue = 'DOUBLE_DECLINING'; // Store as DOUBLE_DECLINING
         effectivePutDepreciationRate = 40; // Always use 40% for double declining
       } else {
         depreciationMethodValue = method;
@@ -662,6 +662,7 @@ export async function PUT(
         break;
       case 'DOUBLE_DECLINING':
         calculationMethodPut = 'DOUBLE_DECLINING';
+        effectivePutDepreciationRate = 40;
         break;
       case 'SUM_OF_YEARS_DIGITS':
         calculationMethodPut = 'SUM_OF_YEARS_DIGITS';

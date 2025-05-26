@@ -266,6 +266,7 @@ enum DisposalMethod {
 enum DepreciationMethod {
   STRAIGHT_LINE
   DECLINING_BALANCE
+  DOUBLE_DECLINING
   SUM_OF_YEARS_DIGITS
   UNITS_OF_ACTIVITY
 }
