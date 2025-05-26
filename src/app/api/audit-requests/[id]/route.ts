@@ -136,6 +136,34 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
         reviewNotes: updateData.reviewNotes,
         managerId: currentRequest.managerId || userId, // Assign manager if not already assigned
       };
+
+      // Get the full request details for creating assignment
+      const fullRequest = await prisma.auditRequest.findUnique({
+        where: { id },
+        include: {
+          asset: true,
+          requester: true,
+        },
+      });
+
+      if (fullRequest) {
+        // Create audit assignment for the requester to perform the audit
+        await prisma.auditAssignment.create({
+          data: {
+            assetId: fullRequest.assetId,
+            assignedToId: fullRequest.requesterId, // Assign to the original requester
+            assignedById: userId, // Manager who approved the request
+            title: `Audit Assignment: ${fullRequest.title}`,
+            description: `Audit assignment created from approved request: ${fullRequest.title}`,
+            priority: fullRequest.urgency as any, // Map urgency to priority
+            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+            scheduledDate: fullRequest.requestedDate,
+            status: 'PENDING',
+            instructions: `Please perform the audit as requested. Original reason: ${fullRequest.reason}`,
+            estimatedHours: 2, // Default estimated hours
+          },
+        });
+      }
     } else if (action === 'reject' && userRole === 'MANAGER') {
       if (currentRequest.managerId !== userId && currentRequest.managerId !== null) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });

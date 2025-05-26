@@ -519,14 +519,14 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             assetName={asset?.name || 'Asset'}
           />
         );
-      case 'audit':
-        return (
-          <AssetAuditTab
-            assetId={resolvedParams.id}
-            assetName={asset?.name || 'Asset'}
-            assetLocation={asset?.location}
-          />
-        );
+      // case 'audit':
+      //   return (
+      //     <AssetAuditTab
+      //       assetId={resolvedParams.id}
+      //       assetName={asset?.name || 'Asset'}
+      //       assetLocation={asset?.location}
+      //     />
+      //   );
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -779,7 +779,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${
