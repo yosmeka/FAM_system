@@ -108,8 +108,7 @@
 //         calculationMethod = 'DECLINING_BALANCE';
 //         break;
 //       case 'DOUBLE_DECLINING':
-//         calculationMethod = 'DECLINING_BALANCE';
-//         effectiveDepreciationRate = 40; // Always use 40% for double declining
+//         calculationMethod = 'DOUBLE_DECLINING';
 //         break;
 //       case 'SUM_OF_YEARS_DIGITS':
 //         calculationMethod = 'SUM_OF_YEARS_DIGITS';
@@ -486,8 +485,8 @@ export async function GET(
       : Array(usefulLifeYears).fill(totalUnits / usefulLifeYears); // Default to even distribution
 
     // Map the depreciation method from the database to the utility function
-    let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
-    let effectiveDepreciationRate = depreciationRate;
+    let calculationMethod: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+    const effectiveDepreciationRate = depreciationRate;
 
     // Use the query method if provided, otherwise use the stored method
     const methodToUse = queryMethod || depreciationMethod;
@@ -499,8 +498,7 @@ export async function GET(
         calculationMethod = 'DECLINING_BALANCE';
         break;
       case 'DOUBLE_DECLINING':
-        calculationMethod = 'DECLINING_BALANCE';
-        effectiveDepreciationRate = 40; // Always use 40% for double declining
+        calculationMethod = 'DOUBLE_DECLINING';
         break;
       case 'SUM_OF_YEARS_DIGITS':
         calculationMethod = 'SUM_OF_YEARS_DIGITS';
@@ -654,7 +652,7 @@ export async function PUT(
       : Array(parseInt(usefulLifeYears || '5')).fill(totalUnits / parseInt(usefulLifeYears || '5')); // Default to even distribution
 
     // Use the original method for calculation
-    let calculationMethodPut: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
+    let calculationMethodPut: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
     switch(originalMethod) {
       case 'STRAIGHT_LINE':
         calculationMethodPut = 'STRAIGHT_LINE';
@@ -663,8 +661,7 @@ export async function PUT(
         calculationMethodPut = 'DECLINING_BALANCE';
         break;
       case 'DOUBLE_DECLINING':
-        calculationMethodPut = 'DECLINING_BALANCE';
-        effectivePutDepreciationRate = 40;
+        calculationMethodPut = 'DOUBLE_DECLINING';
         break;
       case 'SUM_OF_YEARS_DIGITS':
         calculationMethodPut = 'SUM_OF_YEARS_DIGITS';

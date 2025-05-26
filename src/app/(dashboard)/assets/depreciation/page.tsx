@@ -243,7 +243,6 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
             onClose={() => setIsManagingDepreciation(false)}
             onSave={handleSaveDepreciationSettings}
             initialSettings={depreciationSettings}
-            assetId={assetId}
           />
 
           <div className="bg-white p-6 rounded-lg shadow overflow-x-auto">
