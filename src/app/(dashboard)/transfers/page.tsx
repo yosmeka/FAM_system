@@ -14,29 +14,22 @@ import { toast } from 'react-hot-toast';
 import React from 'react';
 
 export default function TransfersPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
-
-  if (status === 'loading') return null;
-  if (status !== 'authenticated' || !session) {
-    return null;
-  }
-  if (session.user.role === 'ADMIN') {
-    return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
-        <p className="text-center">You do not have permission to view asset transfers.</p>
-      </div>
-    );
-  }
-
-
-
-
+  // All hooks MUST be called at the top, before any return!
   const [loading, setLoading] = useState(true);
   const [transfers, setTransfers] = useState<TransferRequest[]>([]);
   const [rejectModal, setRejectModal] = useState<{ open: boolean; transferId: string | null }>({ open: false, transferId: null });
   const [rejectReason, setRejectReason] = useState('');
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.ceil(transfers.length / pageSize);
+  const paginatedTransfers = transfers.slice((page - 1) * pageSize, page * pageSize);
+  // Reset page to 1 when transfers data changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [transfers]);
 
   // DEBUG: Log session user id and transfers
   if (typeof window !== 'undefined') {
@@ -122,14 +115,14 @@ export default function TransfersPage() {
       key: 'id',
       header: 'Actions',
       render: (value, item) => {
-        const canEditOrDelete = item.status === 'PENDING' && session?.user?.id === item.requester?.id;
+        const transferId = typeof value === 'string' ? value : '';
         const isManager = session?.user?.role === 'MANAGER';
         const isPending = item.status === 'PENDING';
         const isRequester = session?.user?.id === item.requester?.id;
         return (
           <div className="flex space-x-2">
             <RoleBasedButton
-              onClick={() => router.push(`/transfers/${value}`)}
+              onClick={() => router.push(`/transfers/${transferId}`)}
               variant="secondary"
               size="sm"
             >
@@ -141,7 +134,7 @@ export default function TransfersPage() {
                 <RoleBasedButton
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
-                    router.push(`/transfers/${value}/edit`);
+                    router.push(`/transfers/${transferId}/edit`);
                   }}
                   variant="primary"
                   size="sm"
@@ -154,12 +147,12 @@ export default function TransfersPage() {
                     if (window.confirm('Are you sure you want to delete this transfer request?')) {
                       (async () => {
                         try {
-                          const response = await fetch(`/api/transfers/${value}`, { method: 'DELETE' });
+                          const response = await fetch(`/api/transfers/${transferId}`, { method: 'DELETE' });
                           if (!response.ok) throw new Error('Failed to delete');
                           toast.success('Transfer request deleted');
                           router.push('/transfers');
                           router.refresh();
-                        } catch (err) {
+                        } catch {
                           toast.error('Failed to delete transfer');
                         }
                       })();
@@ -179,11 +172,11 @@ export default function TransfersPage() {
                   onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
                     try {
-                      const response = await fetch(`/api/transfers/${value}/approve`, { method: 'POST' });
+                      const response = await fetch(`/api/transfers/${transferId}/approve`, { method: 'POST' });
                       if (!response.ok) throw new Error('Failed to approve');
                       toast.success('Transfer approved');
                       fetchTransfers();
-                    } catch (err) {
+                    } catch {
                       toast.error('Failed to approve transfer');
                     }
                   }}
@@ -195,7 +188,7 @@ export default function TransfersPage() {
                 <RoleBasedButton
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
-                    setRejectModal({ open: true, transferId: value });
+                    setRejectModal({ open: true, transferId: typeof transferId === 'string' ? transferId : null });
                   }}
                   variant="danger"
                   size="sm"
@@ -214,37 +207,61 @@ export default function TransfersPage() {
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold">Asset Transfers</h1>
-        <div className="flex space-x-4">
-          {session.user.role === 'USER' && (
-            <>
-              <RoleBasedButton
-                variant="secondary"
-                onClick={() => router.push('/transfers/documents')}
-                className="flex items-center space-x-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span>My Documents</span>
-              </RoleBasedButton>
-              <RoleBasedButton
-                onClick={() => router.push('/transfers/new')}
-                variant="primary"
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                New Transfer
-              </RoleBasedButton>
-            </>
-          )}
-        </div>
+        {session && (
+          <div className="flex space-x-4">
+            {session.user.role === 'USER' && (
+              <>
+                <RoleBasedButton
+                  variant="secondary"
+                  onClick={() => router.push('/transfers/documents')}
+                  className="flex items-center space-x-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>My Documents</span>
+                </RoleBasedButton>
+                <RoleBasedButton
+                  onClick={() => router.push('/transfers/new')}
+                  variant="primary"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  New Transfer
+                </RoleBasedButton>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <RoleBasedTable
-        data={transfers}
+        data={paginatedTransfers}
         columns={columns}
         loading={loading}
         onRowClick={(row) => router.push(`/transfers/${row.id}`)}
       />
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Rejection Reason Modal */}
       {rejectModal.open && (
@@ -284,7 +301,7 @@ export default function TransfersPage() {
                     if (!response.ok) throw new Error('Failed to reject');
                     toast.success('Transfer rejected');
                     fetchTransfers();
-                  } catch (err) {
+                  } catch {
                     toast.error('Failed to reject transfer');
                   } finally {
                     setRejectModal({ open: false, transferId: null });
