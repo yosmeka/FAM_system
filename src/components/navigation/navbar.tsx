@@ -136,7 +136,7 @@ export default function Navbar() {
 											style={{ marginRight: 20 }}
 										/>
 									</span>
-									<span className="text-sky-400 text-2xl font-bold tracking-wider group-hover:text-sky-200 transition-colors duration-300 ease-in-out">
+									<span className="text-red-400 text-2xl font-bold tracking-wider group-hover:text-sky-200 transition-colors duration-300 ease-in-out">
 										FAMS
 									</span>
 								</Link>
