@@ -36,6 +36,10 @@ model User {
   updatedAt           DateTime      @updatedAt
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
   managedMaintenance  Maintenance[] @relation("MaintenanceManagedBy")
+  assignedMaintenance Maintenance[] @relation("MaintenanceAssignedTo")
+  createdSchedules    MaintenanceSchedule[] @relation("ScheduleCreatedBy")
+  assignedSchedules   MaintenanceSchedule[] @relation("ScheduleAssignedTo")
+  createdTemplates    MaintenanceTemplate[] @relation("TemplateCreatedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
@@ -91,6 +95,7 @@ model Asset {
   disposalRequests    Disposal[]
   documents           Document[]
   maintenanceRequests Maintenance[]
+  maintenanceSchedules MaintenanceSchedule[]
   transferRequests    Transfer[]
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
@@ -129,11 +134,24 @@ model Maintenance {
   managerId    String?
   status       MaintenanceStatus   @default(PENDING_APPROVAL)
   notes        String?
+  maintenanceType MaintenanceType  @default(CORRECTIVE)
+  scheduleId   String?             // Reference to MaintenanceSchedule if auto-generated
+  templateId   String?             // Reference to MaintenanceTemplate if using template
+  assignedToId String?             // USER (technician) assigned to perform maintenance
+  estimatedHours Float?
+  actualHours  Float?
+  checklistItems String?           // JSON array of checklist items with completion status
   asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
   manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
+  assignedTo   User?               @relation("MaintenanceAssignedTo", fields: [assignedToId], references: [id])
+  schedule     MaintenanceSchedule? @relation(fields: [scheduleId], references: [id])
+  template     MaintenanceTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([managerId])
+  @@index([assignedToId])
+  @@index([scheduleId])
+  @@index([templateId])
 }
 
 model Disposal {
@@ -238,6 +256,7 @@ enum MaintenanceStatus {
   REJECTED
   SCHEDULED
   IN_PROGRESS
+  PENDING_REVIEW
   COMPLETED
   CANCELLED
 }
@@ -247,6 +266,23 @@ enum MaintenancePriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUALLY
+  ANNUALLY
+  CUSTOM
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  INACTIVE
+  PAUSED
+  EXPIRED
 }
 
 enum DisposalStatus {
@@ -342,6 +378,78 @@ model CapitalImprovement {
   asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
+}
+
+model MaintenanceSchedule {
+  id              String            @id @default(cuid())
+  assetId         String
+  title           String
+  description     String?
+  frequency       ScheduleFrequency
+  customInterval  Int?              // For CUSTOM frequency (in days)
+  priority        MaintenancePriority @default(MEDIUM)
+  estimatedHours  Float?
+  status          ScheduleStatus    @default(ACTIVE)
+  createdById     String            // MANAGER who created the schedule
+  assignedToId    String?           // Default USER (technician) for generated tasks
+  templateId      String?           // Optional template to use
+
+  // Schedule timing
+  startDate       DateTime
+  endDate         DateTime?         // Optional end date for schedule
+  lastGenerated   DateTime?         // Last time a task was generated
+  nextDue         DateTime?         // Next scheduled maintenance date
+
+  // Schedule settings
+  leadTimeDays    Int               @default(7)  // Days before due date to generate task
+  autoAssign      Boolean           @default(true) // Auto-assign to assignedToId
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  asset           Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  createdBy       User              @relation("ScheduleCreatedBy", fields: [createdById], references: [id])
+  assignedTo      User?             @relation("ScheduleAssignedTo", fields: [assignedToId], references: [id])
+  template        MaintenanceTemplate? @relation(fields: [templateId], references: [id])
+  maintenanceTasks Maintenance[]
+
+  @@index([assetId])
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([nextDue])
+}
+
+model MaintenanceTemplate {
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  maintenanceType MaintenanceType   @default(PREVENTIVE)
+  priority        MaintenancePriority @default(MEDIUM)
+  estimatedHours  Float?
+  instructions    String?           // Detailed maintenance instructions
+  checklistItems  String?           // JSON array of checklist items
+  requiredSkills  String?           // Skills required for this maintenance
+  safetyNotes     String?           // Safety considerations
+  toolsRequired   String?           // Tools/equipment needed
+  partsRequired   String?           // Parts that might be needed
+
+  // Template settings
+  isActive        Boolean           @default(true)
+  createdById     String            // MANAGER who created the template
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  createdBy       User              @relation("TemplateCreatedBy", fields: [createdById], references: [id])
+  schedules       MaintenanceSchedule[]
+  maintenanceTasks Maintenance[]
+
+  @@index([createdById])
+  @@index([maintenanceType])
+  @@index([isActive])
 }
 
 enum AuditStatus {

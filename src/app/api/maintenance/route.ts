@@ -24,11 +24,18 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
     // Build the query
     const query: any = {};
 
-    // If user is a manager, only show requests assigned to them
-    // Admins can see all requests
+    // Role-based filtering
     if (userRole === 'MANAGER') {
+      // Managers see requests assigned to them
       query.managerId = userId;
+    } else if (userRole === 'USER') {
+      // Users (technicians) see requests they created or are assigned to
+      query.OR = [
+        { requesterId: userId },
+        { assignedToId: userId }
+      ];
     }
+    // Admins can see all requests (no additional filtering)
 
     // Filter by status if provided
     if (status) {

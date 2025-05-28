@@ -10,8 +10,8 @@ import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
-import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
-import { AssetAuditTab } from '@/components/AssetAuditTab';
+// import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
+// import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -503,15 +503,15 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderLinkingTab();
       case 'capital_improvment':
         return <CapitalImprovementsTab assetId={resolvedParams.id} />;
-      case 'maint':
-        return (
-          <AssetMaintenanceTab
-            assetId={resolvedParams.id}
-            assetName={asset?.name || 'Asset'}
-            lastMaintenance={asset?.lastMaintenance}
-            nextMaintenance={asset?.nextMaintenance}
-          />
-        );
+      // case 'maint':
+      //   return (
+      //     <AssetMaintenanceTab
+      //       assetId={resolvedParams.id}
+      //       assetName={asset?.name || 'Asset'}
+      //       lastMaintenance={asset?.lastMaintenance}
+      //       nextMaintenance={asset?.nextMaintenance}
+      //     />
+      //   );
       case 'docs':
         return (
           <DocumentsTab
@@ -779,7 +779,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'history'].map((tab) => (
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'contracts', 'capital_improvment', 'history'].map((tab) => (
           <button
             key={tab}
             className={`py-2 ${
