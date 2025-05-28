@@ -20,6 +20,8 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
     // Parse query parameters
     const url = new URL(request.url);
     const status = url.searchParams.get('status');
+    const maintenanceType = url.searchParams.get('maintenanceType');
+    const requester = url.searchParams.get('requester');
 
     // Build the query
     const query: any = {};
@@ -30,16 +32,27 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
       query.managerId = userId;
     } else if (userRole === 'USER') {
       // Users (technicians) see requests they created or are assigned to
-      query.OR = [
-        { requesterId: userId },
-        { assignedToId: userId }
-      ];
+      if (requester === 'me') {
+        // Only show requests created by this user
+        query.requesterId = userId;
+      } else {
+        // Show both created and assigned requests
+        query.OR = [
+          { requesterId: userId },
+          { assignedToId: userId }
+        ];
+      }
     }
     // Admins can see all requests (no additional filtering)
 
     // Filter by status if provided
     if (status) {
       query.status = status;
+    }
+
+    // Filter by maintenance type if provided
+    if (maintenanceType) {
+      query.maintenanceType = maintenanceType;
     }
 
     const maintenanceRequests = await prisma.maintenance.findMany({

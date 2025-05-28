@@ -141,6 +141,14 @@ model Maintenance {
   estimatedHours Float?
   actualHours  Float?
   checklistItems String?           // JSON array of checklist items with completion status
+
+  // Corrective maintenance specific fields
+  issueType    String?             // Type of issue (Equipment Failure, Performance Issue, etc.)
+  urgencyLevel String?             // Immediate, Urgent, Normal, Low
+  reportedBy   String?             // Who reported the issue (if different from requester)
+  assetDowntime Boolean           @default(false) // Is asset currently down/unusable
+  impactDescription String?        // Description of operational impact
+  photoUrls    String?             // JSON array of photo URLs for issue documentation
   asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
   manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
