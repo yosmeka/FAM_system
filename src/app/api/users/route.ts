@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { hash } from 'bcryptjs'; // Import hash function
 
 import { hasPermission } from './[id]/route';
 
@@ -18,13 +19,13 @@ export async function GET(request: NextRequest) {
     const role = url.searchParams.get('role');
 
     // Build the query
-    const query: any = {};
+    const query: { role?: string } = {};
     if (role) {
-      query.role = role;
+      query.role = role; // Role will be a string, Prisma handles enum conversion if field is enum
     }
 
     const users = await prisma.user.findMany({
-      where: query,
+      where: query, // Let Prisma handle the type for 'where' based on the User model
       select: {
         id: true,
         name: true,
@@ -53,16 +54,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, role } = body;
 
+    if (!password) {
+      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+    }
+
+    const hashedPassword = await hash(password, 12);
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
-        password,
+        password: hashedPassword, // Store hashed password
         role,
       },
     });
 
-    return NextResponse.json(user);
+    // Return user object without the password
+    const { password: _password, ...userWithoutPassword } = user; // _password signals intentional omission
+    return NextResponse.json(userWithoutPassword);
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -13,11 +13,6 @@ import { useSession } from 'next-auth/react';
 
 export default function RolePermissionPage() {
   const { data: session, status } = useSession();
-
-  if (status === 'loading') return <div>Loading...</div>;
-  if (!session?.user || session.user.role !== 'ADMIN') {
-    return <div className="p-8 text-center text-red-600 text-xl font-bold">Access Denied</div>;
-  }
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [selectedRole, setSelectedRole] = useState('MANAGER');
@@ -26,6 +21,9 @@ export default function RolePermissionPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (status === 'loading' || !session?.user || session.user.role !== 'ADMIN') {
+      return; // Do not fetch if loading or not authorized
+    }
     // Fetch roles
     fetch('/api/roles')
       .then(res => {
@@ -68,6 +66,9 @@ export default function RolePermissionPage() {
   // setRoles(['ADMIN', 'MANAGER', 'USER']);
 
   useEffect(() => {
+    if (status === 'loading' || !session?.user || session.user.role !== 'ADMIN') {
+      return; // Do not fetch if loading or not authorized
+    }
     if (!selectedRole) return;
     setLoading(true);
     fetch(`/api/role-permissions?role=${selectedRole}`)
@@ -112,20 +113,27 @@ export default function RolePermissionPage() {
         toast.error(errorMessage);
       } else {
         try {
-          const data = await res.json();
+          // const data = await res.json(); // data not used
+          await res.json(); // consume the promise
           toast.success('Permissions updated successfully!');
-        } catch (jsonError) {
-          console.log('Response was OK but no JSON returned');
-          toast.success('Permissions updated successfully!');
+        } catch (jsonErr) { // renamed to avoid conflict
+          console.log('Response was OK but no JSON returned, or error parsing JSON:', jsonErr);
+          toast.success('Permissions updated successfully!'); // Assume success if res.ok
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) { // Changed to unknown for better type safety
       console.error('Error saving permissions:', e);
-      toast.error(`An error occurred: ${e.message || 'Unknown error'}`);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      toast.error(`An error occurred: ${errorMessage}`);
     } finally {
       setSaving(false);
     }
   };
+
+  if (status === 'loading') return <div>Loading...</div>;
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return <div className="p-8 text-center text-red-600 text-xl font-bold">Access Denied</div>;
+  }
 
   // --- Permission Categories ---
   const permissionCategories: { [category: string]: string[] } = {
@@ -148,21 +156,34 @@ export default function RolePermissionPage() {
       'Maintenance request edit/update',
       'Maintenance request delete/cancel',
     ],
-    'User Management': [
-      'User view (list and detail)',
-      'User create/invite',
-      'User edit/update',
-      'User delete',
-      'User role assignment/change',
-      'Assign role to user',
-      'Password reset',
+    // 'User Management': [ // Removed as these are admin-only and not assigned to MANAGER/USER roles here
+    //   'User view (list and detail)',
+    //   'User create/invite',
+    //   'User edit/update',
+    //   'User delete',
+    //   'User role assignment/change',
+    //   'Assign role to user',
+    //   'Password reset',
+    // ],
+    'Audits': [ // Added Audits category
+      'Audit view',
+      'Audit create',
+      'Audit perform',
+      'Audit review',
+      // Add more specific audit permissions as needed
     ],
-    'Dashboard & Settings': [
-      'Dashboard view',
-      'Settings view/update',
-      'Notifications (e.g. toast messages for actions)',
-      'Access denied handling (UI feedback, redirects)',
+    'Reports': [ // Added Reports category
+      'Report view general', // General permission to view any report
+      'View asset report',
+      'View audit report',
+      // Add more specific report permissions as needed
     ],
+    // 'Dashboard & Settings': [
+    //   'Dashboard view',
+    //   'Settings view/update',
+    //   'Notifications (e.g. toast messages for actions)',
+    //   'Access denied handling (UI feedback, redirects)',
+    // ],
   };
 
   // Group permissions by category
@@ -180,7 +201,7 @@ export default function RolePermissionPage() {
       <div className="rp-rolebar">
         {roles.length === 0 ? (
           <span className="rp-rolebar__error">
-            No roles found. Please check your API or database.
+            No roles found. Please check your database.
           </span>
         ) : (
           <select

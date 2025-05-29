@@ -23,7 +23,7 @@ export default function TransfersPage() {
   const [rejectReason, setRejectReason] = useState('');
   // Pagination state
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 6;
   const totalPages = Math.ceil(transfers.length / pageSize);
   const paginatedTransfers = transfers.slice((page - 1) * pageSize, page * pageSize);
   // Reset page to 1 when transfers data changes

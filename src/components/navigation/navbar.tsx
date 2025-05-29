@@ -148,7 +148,7 @@ export default function Navbar() {
 												href={item.href}
 												className={classNames(
 													pathname === item.href
-														? "bg-sky-600 text-white shadow-md font-semibold"
+														? "text-sky-400 border-b-[3px] border-sky-500 font-semibold" // Active desktop link
 														: "text-gray-300 hover:text-sky-300 hover:bg-gray-700/50 focus:text-sky-300 focus:bg-gray-700/60 transition-all duration-300 ease-in-out",
 													"rounded-lg px-3.5 py-2 text-sm font-medium focus:outline-none transform hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-sm"
 												)}
@@ -234,7 +234,7 @@ export default function Navbar() {
 									href={item.href}
 									className={classNames(
 										pathname === item.href
-											? "bg-sky-600/30 text-sky-300"
+											? "text-sky-300 font-semibold border-l-[3px] border-sky-400" // Active mobile link
 											: "text-gray-400 hover:bg-gray-700/70 hover:text-sky-300",
 										"block rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ease-in-out"
 									)}
