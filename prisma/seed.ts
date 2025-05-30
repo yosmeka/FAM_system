@@ -56,12 +56,13 @@ async function main() {
     // --- User Management (Admin only, not assigned via roles page, but exist for direct assignment if ever needed) ---
     // { name: 'User role assignment/change', description: 'Assign or change user roles' },
     // { name: 'Password reset', description: 'Reset passwords' },
-    // --- Dashboard & Settings (Removed as per previous request) ---
-    // { name: 'Dashboard view', description: 'View dashboard' },
-    // { name: 'Assign role to user', description: 'Assign roles to users' },
-    // { name: 'Access denied handling (UI feedback, redirects)', description: 'Handle access denied (UI/redirects)' },
-    // { name: 'Settings view/update', description: 'View or update settings' },
-    // { name: 'Notifications (e.g. toast messages for actions)', description: 'Show notifications for actions' },
+    
+    // --- Dashboard & Settings (Re-adding Dashboard view specifically) ---
+    { name: 'Dashboard view', description: 'View dashboard' },
+    // { name: 'Assign role to user', description: 'Assign roles to users' }, // This was admin-only, keeping out for now
+    // { name: 'Access denied handling (UI feedback, redirects)', description: 'Handle access denied (UI/redirects)' }, // Generally not a toggleable permission
+    // { name: 'Settings view/update', description: 'View or update settings' }, // Specific settings might need own perms
+    // { name: 'Notifications (e.g. toast messages for actions)', description: 'Show notifications for actions' }, // Usually implicit
 
     // --- New Audit Permissions ---
     { name: 'Audit view', description: 'View audit information and assignments' },
@@ -141,10 +142,12 @@ async function main() {
   // 'User edit/update' and 'User view (list and detail)' are already assigned above, but this ensures it if they weren't.
   await assignPermissionToRole('ADMIN', 'User edit/update');
   await assignPermissionToRole('ADMIN', 'User view (list and detail)');
+  await assignPermissionToRole('ADMIN', 'Dashboard view'); // Assign Dashboard view to ADMIN
 
 
   // Default permissions for MANAGER
   await assignPermissionToRole('MANAGER', 'Asset view (list and detail)');
+  await assignPermissionToRole('MANAGER', 'Dashboard view'); // Assign Dashboard view to MANAGER
 
   // Default permissions for USER
   await assignPermissionToRole('USER', 'Asset create');

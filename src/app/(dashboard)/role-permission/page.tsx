@@ -53,7 +53,20 @@ export default function RolePermissionPage() {
         return res.json();
       })
       .then(data => {
-        setPermissions(data.permissions || []);
+        // Filter out admin-only permissions from the list shown in this UI
+        const adminOnlyPermissionNames = [
+          'User view (list and detail)',
+          'User create/invite',
+          'User edit/update',
+          'User delete',
+          'User role assignment/change',
+          'Assign role to user',
+          'Password reset',
+        ];
+        const filteredPermissions = (data.permissions || []).filter(
+          (p: Permission) => !adminOnlyPermissionNames.includes(p.name)
+        );
+        setPermissions(filteredPermissions);
       })
       .catch(error => {
         console.error('Error fetching permissions:', error);
