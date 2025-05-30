@@ -13,8 +13,16 @@ export async function GET() {
   const notifications = await (prisma as any).notification.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
-    take: 5,
-    select: { id: true, userId: true, message: true, createdAt: true, read: true }
+    // No limit - show all notifications
+    select: {
+      id: true,
+      userId: true,
+      message: true,
+      createdAt: true,
+      read: true,
+      type: true,
+      meta: true // Include meta for document links
+    }
   });
   return NextResponse.json({ notifications });
 }

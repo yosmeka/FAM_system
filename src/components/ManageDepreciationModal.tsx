@@ -173,8 +173,9 @@ export function ManageDepreciationModal({
                   <input
                     type="number"
                     name="depreciableCost"
-                    value={settings.depreciableCost}
+                    value={isNaN(settings.depreciableCost) ? 0 : settings.depreciableCost}
                     onChange={handleChange}
+                    onClick={(e) => e.currentTarget.select()}
                     className="flex-1 rounded-r-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     min="0"
                     step="0.01"
@@ -192,8 +193,9 @@ export function ManageDepreciationModal({
                   <input
                     type="number"
                     name="salvageValue"
-                    value={settings.salvageValue}
+                    value={isNaN(settings.salvageValue) ? 0 : settings.salvageValue}
                     onChange={handleChange}
+                    onClick={(e) => e.currentTarget.select()}
                     className="flex-1 rounded-r-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     min="0"
                     step="0.01"
@@ -206,8 +208,9 @@ export function ManageDepreciationModal({
                 <input
                   type="number"
                   name="usefulLifeMonths"
-                  value={settings.usefulLifeMonths}
+                  value={isNaN(settings.usefulLifeMonths) ? 60 : settings.usefulLifeMonths}
                   onChange={handleChange}
+                  onClick={(e) => e.currentTarget.select()}
                   className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   min="1"
                 />
@@ -238,6 +241,7 @@ export function ManageDepreciationModal({
                       name="totalUnits"
                       value={settings.totalUnits || 10000}
                       onChange={handleChange}
+                      onClick={(e) => e.currentTarget.select()}
                       className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                       min="1"
                     />
@@ -261,6 +265,7 @@ export function ManageDepreciationModal({
                                 unitsPerYear: newUnitsPerYear
                               });
                             }}
+                            onClick={(e) => e.currentTarget.select()}
                             className="flex-1 rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-1 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             min="0"
                           />

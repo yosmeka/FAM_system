@@ -41,6 +41,74 @@ export interface DepreciationData {
   depreciation: number;
 }
 
+// Audit Reports
+export interface AuditStats {
+  totalAudits: number;
+  completedAudits: number;
+  pendingAudits: number;
+  failedAudits: number;
+  needsReviewAudits: number;
+  totalDiscrepancies: number;
+  unresolvedDiscrepancies: number;
+  complianceRate: number;
+  avgAuditFrequency: number;
+  overdueAudits: number;
+  auditGrowth: number;
+  avgResolutionTime: number;
+}
+
+export interface AuditStatusData {
+  status: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AuditConditionData {
+  condition: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AuditDepartmentData {
+  department: string;
+  totalAudits: number;
+  completedAudits: number;
+  complianceRate: number;
+  discrepancies: number;
+}
+
+export interface AuditTrendData {
+  month: string;
+  totalAudits: number;
+  completedAudits: number;
+  discrepancies: number;
+  complianceRate: number;
+}
+
+export interface AuditAssetData {
+  assetId: string;
+  assetName: string;
+  serialNumber: string;
+  department: string;
+  category: string;
+  totalAudits: number;
+  lastAuditDate: string | null;
+  nextAuditDate: string | null;
+  condition: string;
+  discrepancies: number;
+  isOverdue: boolean;
+}
+
+export interface AuditDiscrepancyData {
+  id: string;
+  assetName: string;
+  auditDate: string;
+  discrepancy: string;
+  resolved: boolean;
+  resolvedDate: string | null;
+  daysPending: number;
+}
+
 // Maintenance Reports
 export interface MaintenanceStats {
   totalRequests: number;

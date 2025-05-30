@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 // GET all capital improvements for an asset
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Get session for authentication
@@ -16,10 +16,13 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the asset ID from the context
+    const assetId = context.params.id;
+
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id: assetId,
       },
     });
 
@@ -30,7 +33,7 @@ export async function GET(
     // Get all capital improvements for the asset
     const capitalImprovements = await prisma.capitalImprovement.findMany({
       where: {
-        assetId: params.id,
+        assetId: assetId,
       },
       orderBy: {
         improvementDate: 'desc',
@@ -50,7 +53,7 @@ export async function GET(
 // POST a new capital improvement
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     // Get session for authentication
@@ -60,10 +63,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the asset ID from the context
+    const assetId = context.params.id;
+
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id: assetId,
       },
     });
 
@@ -85,7 +91,7 @@ export async function POST(
     // Create the capital improvement
     const capitalImprovement = await prisma.capitalImprovement.create({
       data: {
-        assetId: params.id,
+        assetId: assetId,
         description: body.description,
         improvementDate: new Date(body.improvementDate),
         cost: parseFloat(body.cost),
@@ -95,29 +101,62 @@ export async function POST(
       },
     });
 
-    // Update the asset's current value to include the improvement cost
-    await prisma.asset.update({
-      where: {
-        id: params.id,
-      },
-      data: {
-        currentValue: {
-          increment: parseFloat(body.cost),
+    // Determine the new depreciable cost
+    let newDepreciableCost: number;
+
+    // If a current asset value was provided in the request, use it as the base
+    if (body.currentAssetValue) {
+      // Extract the numeric value from the currency string (remove $ and commas)
+      const currentValueString = body.currentAssetValue.replace(/[$,]/g, '');
+      const currentDepreciatedCost = parseFloat(currentValueString);
+
+      // If we have a valid number, use it as the base and add the improvement cost
+      if (!isNaN(currentDepreciatedCost)) {
+        newDepreciableCost = currentDepreciatedCost + parseFloat(body.cost);
+
+        // Update only the depreciable cost field
+        await prisma.asset.update({
+          where: {
+            id: assetId,
+          },
+          data: {
+            depreciableCost: newDepreciableCost,
+          },
+        });
+      } else {
+        // If the current value string couldn't be parsed, fall back to incrementing existing depreciable cost
+        newDepreciableCost = (asset.depreciableCost || asset.purchasePrice) + parseFloat(body.cost);
+
+        await prisma.asset.update({
+          where: {
+            id: assetId,
+          },
+          data: {
+            depreciableCost: newDepreciableCost,
+          },
+        });
+      }
+    } else {
+      // If no current value was provided, just add to the existing depreciable cost
+      newDepreciableCost = (asset.depreciableCost || asset.purchasePrice) + parseFloat(body.cost);
+
+      await prisma.asset.update({
+        where: {
+          id: assetId,
         },
-        // Also update the depreciable cost if it exists
-        depreciableCost: asset.depreciableCost
-          ? { increment: parseFloat(body.cost) }
-          : undefined,
-      },
-    });
+        data: {
+          depreciableCost: newDepreciableCost,
+        },
+      });
+    }
 
     // Create an asset history record
     await prisma.assetHistory.create({
       data: {
-        assetId: params.id,
-        field: 'Capital Improvement',
-        oldValue: asset.currentValue.toString(),
-        newValue: (asset.currentValue + parseFloat(body.cost)).toString(),
+        assetId: assetId,
+        field: 'Capital Improvement - Depreciable Cost',
+        oldValue: body.currentAssetValue || (asset.depreciableCost || asset.purchasePrice).toString(),
+        newValue: newDepreciableCost.toString(),
         changedBy: session.user?.name || 'system',
       },
     });

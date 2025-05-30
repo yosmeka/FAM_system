@@ -35,9 +35,17 @@ model User {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   maintenanceRequests Maintenance[] @relation("MaintenanceRequestedBy")
+  managedMaintenance  Maintenance[] @relation("MaintenanceManagedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
+
+  // Audit relations
+  auditsPerformed     AssetAudit[]       @relation("AuditPerformedBy")
+  auditAssignments    AuditAssignment[]  @relation("AuditAssignedTo")
+  auditAssignmentsMade AuditAssignment[] @relation("AuditAssignedBy")
+  auditRequests       AuditRequest[]     @relation("AuditRequestedBy")
+  auditRequestsReviewed AuditRequest[]   @relation("AuditRequestReviewedBy")
 }
 
 model Notification {
@@ -73,6 +81,8 @@ model Asset {
   usefulLifeMonths    Int?
   depreciationMethod  DepreciationMethod?
   depreciationStartDate DateTime?
+  lastAuditDate       DateTime?
+  nextAuditDate       DateTime?
   assetDepreciations  AssetDepreciation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
@@ -84,10 +94,10 @@ model Asset {
   transferRequests    Transfer[]
   linkedTo            LinkedAsset[]  @relation("LinkedToAsset")
   linkedFrom          LinkedAsset[]  @relation("LinkedFromAsset")
-  lastAuditDate       DateTime?
-  nextAuditDate       DateTime?
   capitalImprovements CapitalImprovement[]
   audits              AssetAudit[]
+  auditAssignments    AuditAssignment[]
+  auditRequests       AuditRequest[]
 }
 
 model Transfer {
@@ -106,18 +116,24 @@ model Transfer {
 }
 
 model Maintenance {
-  id          String              @id @default(cuid())
-  assetId     String
-  description String
-  cost        Float?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  completedAt DateTime?
-  priority    MaintenancePriority
-  requesterId String
-  status      MaintenanceStatus   @default(PENDING)
-  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  requester   User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  id           String              @id @default(cuid())
+  assetId      String
+  description  String
+  cost         Float?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  completedAt  DateTime?
+  scheduledDate DateTime?
+  priority     MaintenancePriority
+  requesterId  String
+  managerId    String?
+  status       MaintenanceStatus   @default(PENDING_APPROVAL)
+  notes        String?
+  asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
+  manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
+
+  @@index([managerId])
 }
 
 model Disposal {
@@ -140,13 +156,14 @@ model Document {
   assetId   String
   type      DocumentType
   url       String
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
   fileName  String?      // Original file name
   fileSize  Int?         // File size in bytes
   filePath  String?      // Local file path (if stored locally)
   mimeType  String?      // MIME type of the file
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  meta      Json?        // Metadata for the document (e.g., transferId, status)
 }
 
 model Depreciation {
@@ -216,7 +233,9 @@ enum MaintenanceType {
 }
 
 enum MaintenanceStatus {
-  PENDING
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
   SCHEDULED
   IN_PROGRESS
   COMPLETED
@@ -256,6 +275,10 @@ enum DocumentType {
   WARRANTY
   MANUAL
   MAINTENANCE_RECORD
+  TRANSFER_APPROVAL
+  TRANSFER_REJECTION
+  MAINTENANCE_APPROVAL
+  MAINTENANCE_REJECTION
   OTHER
 }
 
@@ -304,6 +327,7 @@ model RolePermission {
   permission   Permission @relation(fields: [permissionId], references: [id])
   @@unique([role, permissionId])
 }
+
 model CapitalImprovement {
   id                String   @id @default(cuid())
   assetId           String
@@ -319,6 +343,7 @@ model CapitalImprovement {
 
   @@index([assetId])
 }
+
 enum AuditStatus {
   PENDING
   COMPLETED
@@ -335,27 +360,154 @@ enum AuditCondition {
   MISSING
 }
 
+enum AuditAssignmentStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+  CANCELLED
+}
+
+enum AuditRequestStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum AuditWorkflowStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REQUIRES_REVISION
+}
+
 model AssetAudit {
-  id                String        @id @default(cuid())
+  id                String              @id @default(cuid())
   assetId           String
   auditDate         DateTime
   auditedBy         String
-  status            AuditStatus   @default(COMPLETED)
-  condition         AuditCondition
-  locationVerified  Boolean       @default(true)
+  auditorId         String?             // Reference to User who performed audit
+  status            AuditStatus         @default(PENDING)
+  workflowStatus    AuditWorkflowStatus @default(DRAFT)
+  condition         AuditCondition?
+  locationVerified  Boolean             @default(true)
+  actualLocation    String?             // Actual location if different from expected
   notes             String?
   discrepancies     String?
-  discrepancyResolved Boolean     @default(false)
+  recommendations   String?             // Audit recommendations
+  checklistItems    String?             // JSON array of checklist items with results
+  discrepancyResolved Boolean           @default(false)
   resolvedDate      DateTime?
   resolvedBy        String?
   resolutionNotes   String?
-  photoUrls         String?       // Comma-separated URLs
+  photoUrls         String?             // Comma-separated URLs
   nextAuditDate     DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  asset             Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // Workflow fields
+  assignmentId      String?             // Reference to AuditAssignment
+  requestId         String?             // Reference to AuditRequest
+  reviewedBy        String?             // Manager who reviewed
+  reviewedAt        DateTime?
+  reviewNotes       String?
+  managerApproval   Boolean?            // Manager approval status
+
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  // Relations
+  asset             Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  auditor           User?               @relation("AuditPerformedBy", fields: [auditorId], references: [id])
+  assignment        AuditAssignment?    @relation(fields: [assignmentId], references: [id])
+  request           AuditRequest?       @relation(fields: [requestId], references: [id])
 
   @@index([assetId])
   @@index([auditDate])
   @@index([status])
+  @@index([workflowStatus])
+  @@index([auditorId])
+}
+
+model AuditAssignment {
+  id              String                @id @default(cuid())
+  assetId         String
+  assignedToId    String                // User ID of assigned auditor
+  assignedById    String                // Manager ID who assigned
+  title           String
+  description     String?
+  priority        MaintenancePriority   @default(MEDIUM)
+  dueDate         DateTime
+  scheduledDate   DateTime?
+  status          AuditAssignmentStatus @default(PENDING)
+  instructions    String?
+  checklistItems  String?               // JSON array of checklist items
+  estimatedHours  Float?
+  actualHours     Float?
+
+  // Assignment workflow
+  acceptedAt      DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancellationReason String?
+
+  // Notifications
+  notificationSent Boolean              @default(false)
+  remindersSent   Int                   @default(0)
+
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  // Relations
+  asset           Asset                 @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assignedTo      User                  @relation("AuditAssignedTo", fields: [assignedToId], references: [id])
+  assignedBy      User                  @relation("AuditAssignedBy", fields: [assignedById], references: [id])
+  audits          AssetAudit[]
+
+  @@index([assetId])
+  @@index([assignedToId])
+  @@index([assignedById])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model AuditRequest {
+  id              String              @id @default(cuid())
+  assetId         String
+  requesterId     String              // User who requested the audit
+  managerId       String?             // Manager who will review
+  title           String
+  reason          String              // Why audit is needed
+  urgency         MaintenancePriority @default(MEDIUM)
+  requestedDate   DateTime            // When audit should happen
+  status          AuditRequestStatus  @default(PENDING_APPROVAL)
+
+  // Manager review
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  approvedBy      String?             // Manager who approved/rejected
+  rejectionReason String?
+
+  // Request details
+  description     String?
+  expectedFindings String?            // What the requester expects to find
+  attachments     String?             // URLs to supporting documents
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  asset           Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  requester       User                @relation("AuditRequestedBy", fields: [requesterId], references: [id])
+  manager         User?               @relation("AuditRequestReviewedBy", fields: [managerId], references: [id])
+  audits          AssetAudit[]
+
+  @@index([assetId])
+  @@index([requesterId])
+  @@index([managerId])
+  @@index([status])
+  @@index([requestedDate])
 }

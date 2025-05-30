@@ -161,7 +161,7 @@ export const PUT = withRole(['MANAGER'], async function PUT(
         currentValue: parseFloat(body.currentValue),
         status: body.status,
         location: body.location,
-        department: body.department,
+        department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
         category: body.category,
         type: body.type,
         supplier: body.supplier,

@@ -52,10 +52,11 @@ export const POST = withPermission(async function POST(request: Request) {
         serialNumber: body.serialNumber,
         purchaseDate: new Date(body.purchaseDate),
         purchasePrice: parseFloat(body.purchasePrice),
-        currentValue: parseFloat(body.currentValue),
+        // Set currentValue to purchasePrice if not provided
+        currentValue: body.currentValue ? parseFloat(body.currentValue) : parseFloat(body.purchasePrice),
         status: body.status,
         location: body.location,
-        department: body.department,
+        department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
         category: body.category,
         type: body.type,
         supplier: body.supplier,
@@ -71,6 +72,38 @@ export const POST = withPermission(async function POST(request: Request) {
         depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
       },
     });
+
+    // Track initial asset creation in history
+    const fields = [
+      'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
+      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
+      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
+      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
+    ];
+
+    console.log('New asset created:', asset);
+
+    const changes = fields.map(field => ({
+      assetId: asset.id,
+      field,
+      oldValue: null,
+      newValue: asset[field]?.toString() || null,
+      changedBy: session.user?.email || 'system',
+    }));
+
+    console.log('Initial history records to be created:', changes);
+
+    try {
+      // Create history records one by one instead of using createMany
+      for (const change of changes) {
+        await prisma.assetHistory.create({
+          data: change
+        });
+      }
+      console.log('Initial history records created successfully');
+    } catch (error) {
+      console.error('Error creating initial history records:', error);
+    }
 
     return NextResponse.json(asset);
   } catch (error: any) {

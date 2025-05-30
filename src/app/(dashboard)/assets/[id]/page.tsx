@@ -10,6 +10,9 @@ import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
+import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
+import { AssetAuditTab } from '@/components/AssetAuditTab';
+import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
@@ -29,6 +32,11 @@ interface Asset {
   purchaseDate: string;
   purchasePrice: number;
   currentValue: number;
+  depreciableCost?: number;
+  salvageValue?: number;
+  usefulLifeMonths?: number;
+  depreciationMethod?: string;
+  depreciationStartDate?: string;
   status: string;
   location: string;
   department: string;
@@ -81,7 +89,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [isLinkingAsset, setIsLinkingAsset] = useState(false);
   const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
   // These state variables are used in the renderLinkingTab function
-  const [availableAssets] = useState<Asset[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<Asset[]>([]);
   const [depreciationData, setDepreciationData] = useState<Array<{year: number, value: number}>>([]);
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
@@ -128,6 +136,28 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     fetchAsset();
   }, [resolvedParams.id]);
 
+  // Update depreciation settings when asset changes
+  useEffect(() => {
+    if (asset) {
+      // Update depreciation settings based on asset data
+      setDepreciationSettings({
+        isDepreciable: true,
+        depreciableCost: asset.depreciableCost || asset.purchasePrice || 0,
+        salvageValue: asset.salvageValue || 0,
+        usefulLifeMonths: asset.usefulLifeMonths || 60,
+        depreciationMethod: asset.depreciationMethod || 'STRAIGHT_LINE',
+        dateAcquired: asset.depreciationStartDate
+          ? new Date(asset.depreciationStartDate).toISOString().split('T')[0]
+          : (asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+      });
+
+      // Update other depreciation state variables
+      setSalvageValue(asset.salvageValue || 0);
+      setUsefulLife(Math.ceil((asset.usefulLifeMonths || 60) / 12));
+      setDepreciationMethod(asset.depreciationMethod === 'DECLINING_BALANCE' ? 'DECLINING_BALANCE' : 'STRAIGHT_LINE');
+    }
+  }, [asset]);
+
 
 
   // Add useEffect for history tab
@@ -152,6 +182,47 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
     fetchHistory();
   }, [activeTab, resolvedParams.id]);
+
+  // Add useEffect for depreciation tab
+  useEffect(() => {
+    // Function to fetch depreciation data
+    const fetchDepreciationData = async () => {
+      if (activeTab === 'depreciation' && asset) {
+        try {
+          const response = await fetch(`/api/assets/${resolvedParams.id}/depreciation`);
+          if (!response.ok) throw new Error('Failed to fetch depreciation data');
+          const data = await response.json();
+
+          // Update depreciation results and chart data
+          setDepreciationResults(data.depreciationResults);
+          setDepreciationData(data.chartData);
+
+          // Update depreciation settings
+          if (data.depreciationSettings) {
+            setSalvageValue(data.depreciationSettings.salvageValue || 0);
+            setUsefulLife(data.depreciationSettings.usefulLifeYears || 5);
+            setDepreciationMethod(data.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+
+            setDepreciationSettings({
+              isDepreciable: true,
+              depreciableCost: data.depreciationSettings.depreciableCost || asset.purchasePrice || 0,
+              salvageValue: data.depreciationSettings.salvageValue || 0,
+              usefulLifeMonths: data.depreciationSettings.usefulLifeMonths || 60,
+              depreciationMethod: data.depreciationSettings.depreciationMethod || 'STRAIGHT_LINE',
+              dateAcquired: data.depreciationSettings.startDate
+                ? new Date(data.depreciationSettings.startDate).toISOString().split('T')[0]
+                : (asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching depreciation data:', error);
+          toast.error('Failed to load depreciation data');
+        }
+      }
+    };
+
+    fetchDepreciationData();
+  }, [activeTab, resolvedParams.id, asset]);
 
   // Check permissions first
   if (!checkPermission('Asset view (list and detail)')) {
@@ -229,6 +300,18 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         ...settings,
         usefulLifeMonths: settings.usefulLifeMonths,
       });
+
+      // Update the asset state with the new values
+      if (asset) {
+        setAsset({
+          ...asset,
+          depreciableCost: settings.depreciableCost,
+          salvageValue: settings.salvageValue,
+          usefulLifeMonths: settings.usefulLifeMonths,
+          depreciationMethod: settings.depreciationMethod,
+          depreciationStartDate: settings.dateAcquired
+        });
+      }
 
       // Close the modal
       setIsManagingDepreciation(false);
@@ -344,6 +427,55 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     );
   };
 
+  // Function to fetch available assets for linking
+  const fetchAvailableAssets = async () => {
+    try {
+      console.log("Fetching available assets for linking");
+      const response = await fetch('/api/assets');
+      if (!response.ok) {
+        throw new Error('Failed to fetch available assets');
+      }
+
+      const allAssets = await response.json();
+      console.log("All assets fetched:", allAssets.length);
+
+      // Filter out the current asset and any assets that are already linked
+      // or are children of other assets or have children
+      const filteredAssets = allAssets.filter((fetchedAsset: Asset) => {
+        // Exclude the current asset
+        if (fetchedAsset.id === resolvedParams.id) {
+          return false;
+        }
+
+        // Exclude assets that are already children of other assets
+        if (fetchedAsset.linkedFrom && fetchedAsset.linkedFrom.length > 0) {
+          return false;
+        }
+
+        // Exclude assets that already have children
+        if (fetchedAsset.linkedTo && fetchedAsset.linkedTo.length > 0) {
+          return false;
+        }
+
+        return true;
+      });
+
+      console.log("Filtered available assets:", filteredAssets.length);
+      setAvailableAssets(filteredAssets);
+    } catch (error) {
+      console.error("Error fetching available assets:", error);
+      toast.error("Failed to load available assets for linking");
+    }
+  };
+
+  // Handle opening the linking modal
+  const handleOpenLinkingModal = () => {
+    // Fetch available assets when the modal is opened
+    fetchAvailableAssets();
+    // Then open the modal
+    setIsLinkingAsset(true);
+  };
+
   const renderLinkingTab = () => {
     return (
       <div>
@@ -356,7 +488,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         />
         <AssetLinkingTable
           asset={asset!} // Ensure asset is not null, or add a null check if needed
-          onLinkClick={() => setIsLinkingAsset(true)}
+          onLinkClick={handleOpenLinkingModal}
           onUnlinkSuccess={handleLinkSuccess}
         />
       </div>
@@ -369,8 +501,32 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderHistoryTab();
       case 'linking':
         return renderLinkingTab();
-        case 'capital_improvment':
+      case 'capital_improvment':
         return <CapitalImprovementsTab assetId={resolvedParams.id} />;
+      case 'maint':
+        return (
+          <AssetMaintenanceTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
+            lastMaintenance={asset?.lastMaintenance}
+            nextMaintenance={asset?.nextMaintenance}
+          />
+        );
+      case 'docs':
+        return (
+          <DocumentsTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
+          />
+        );
+      // case 'audit':
+      //   return (
+      //     <AssetAuditTab
+      //       assetId={resolvedParams.id}
+      //       assetName={asset?.name || 'Asset'}
+      //       assetLocation={asset?.location}
+      //     />
+      //   );
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -424,8 +580,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                   <tbody>
                     <tr>
                       <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
-                      <td className="p-2 border">{formatCurrency(asset?.purchasePrice || 0)}</td>
-                      <td className="p-2 border">{formatCurrency(salvageValue || (asset?.purchasePrice || 0) * 0.1)}</td>
+                      <td className="p-2 border">{formatCurrency(depreciationSettings.depreciableCost || asset?.depreciableCost || asset?.purchasePrice || 0)}</td>
+                      <td className="p-2 border">{formatCurrency(salvageValue || 0)}</td>
                       <td className="p-2 border">{usefulLife * 12} months</td>
                       <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
                     </tr>
@@ -584,6 +740,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         </div>
         {!isAssetDisposed(asset) && checkPermission('Asset edit') && (
           <button
+        {checkPermission('Asset edit') && (
+          <button
             onClick={() => router.push(`/assets/${asset.id}/edit`)}
             className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
           >
@@ -591,6 +749,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           </button>
         )}
         {!isAssetDisposed(asset) && checkPermission('Asset delete') && (
+          <button
+        {checkPermission('Asset delete') && (
           <button
             onClick={handleDelete}
             className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
@@ -609,7 +769,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           <div>
             <p><span className="font-semibold">Asset Tag ID:</span> {asset.serialNumber}</p>
             <p><span className="font-semibold">Purchase Date:</span> {formatDate(asset.purchaseDate)}</p>
-            <p><span className="font-semibold">Cost:</span> {formatCurrency(asset.purchasePrice)}</p>
+            <p><span className="font-semibold">Purchase Price:</span> {formatCurrency(asset.purchasePrice)}</p>
             <p><span className="font-semibold">Brand:</span> {asset.supplier || 'Not specified'}</p>
             <p><span className="font-semibold">Model:</span> {asset.name}</p>
           </div>
@@ -642,6 +802,18 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </button>
           );
         })}
+      <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'history'].map((tab) => (
+          <button
+            key={tab}
+            className={`py-2 ${
+              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
