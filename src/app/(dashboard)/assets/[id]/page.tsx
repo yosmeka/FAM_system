@@ -11,7 +11,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
-import { AssetAuditTab } from '@/components/AssetAuditTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -519,14 +518,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             assetName={asset?.name || 'Asset'}
           />
         );
-      // case 'audit':
-      //   return (
-      //     <AssetAuditTab
-      //       assetId={resolvedParams.id}
-      //       assetName={asset?.name || 'Asset'}
-      //       assetLocation={asset?.location}
-      //     />
-      //   );
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -738,26 +729,24 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             <p className="text-sm">Asset Tag ID: {asset.serialNumber} • Site: {asset.location}</p>
           </div>
         </div>
-        {!isAssetDisposed(asset) && checkPermission('Asset edit') && (
-          <button
-        {checkPermission('Asset edit') && (
-          <button
-            onClick={() => router.push(`/assets/${asset.id}/edit`)}
-            className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
-          >
-            Edit
-          </button>
-        )}
-        {!isAssetDisposed(asset) && checkPermission('Asset delete') && (
-          <button
-        {checkPermission('Asset delete') && (
-          <button
-            onClick={handleDelete}
-            className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
-          >
-            Delete
-          </button>
-        )}
+        <div className="flex gap-2">
+          {!isAssetDisposed(asset) && checkPermission('Asset edit') && (
+            <button
+              onClick={() => router.push(`/assets/${asset.id}/edit`)}
+              className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
+            >
+              Edit
+            </button>
+          )}
+          {!isAssetDisposed(asset) && checkPermission('Asset delete') && (
+            <button
+              onClick={handleDelete}
+              className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Asset Info Section */}
@@ -802,18 +791,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </button>
           );
         })}
-      <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'history'].map((tab) => (
-          <button
-            key={tab}
-            className={`py-2 ${
-              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
       </div>
 
       {/* Tab Content */}
