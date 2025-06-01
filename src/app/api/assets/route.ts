@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 import { withRole } from '@/middleware/rbac';
+import { withPermission } from '@/middleware/permission';
 
 export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   try {
@@ -32,7 +33,7 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET() {
   }
 });
 
-export const POST = withRole(['MANAGER'], async function POST(request: Request) {
+export const POST = withPermission(async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -126,4 +127,4 @@ export const POST = withRole(['MANAGER'], async function POST(request: Request) 
       code: error.code
     }, { status: 500 });
   }
-});
+}, 'Asset create');

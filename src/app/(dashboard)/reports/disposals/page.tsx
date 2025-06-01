@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
+import { usePDF } from 'react-to-pdf';
+import { Download } from 'lucide-react';
 import type {
   DisposalStats,
   DisposalMethodData,
@@ -15,9 +17,62 @@ import type {
 } from '@/types/reports';
 
 import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 
 export default function DisposalReportsPage() {
   const { data: session, status } = useSession();
+  const { toPDF, targetRef } = usePDF({
+    filename: `disposal-report-${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
+  const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);
+  const [monthlyTrends, setMonthlyTrends] = useState<DisposalTrendData[]>([]);
+  const [valueRecovery, setValueRecovery] = useState<ValueRecoveryData[]>([]);
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchDisposalReports(true);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetchDisposalReports();
+  }, []);
+
+  const fetchDisposalReports = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const response = await fetch('/api/reports/disposals');
+      if (!response.ok) throw new Error('Failed to fetch disposal reports');
+      const data = await response.json();
+      
+      setDisposalStats(data.stats);
+      setMethodDistribution(data.methodDistribution);
+      setMonthlyTrends(data.monthlyTrends);
+      setValueRecovery(data.valueRecovery);
+
+      if (isRefresh) {
+        toast.success('Report data refreshed');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to fetch disposal reports');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
@@ -28,40 +83,36 @@ export default function DisposalReportsPage() {
       </div>
     );
   }
-  const [loading, setLoading] = useState(true);
-  const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
-  const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);
-  const [monthlyTrends, setMonthlyTrends] = useState<DisposalTrendData[]>([]);
-  const [valueRecovery, setValueRecovery] = useState<ValueRecoveryData[]>([]);
-
-  useEffect(() => {
-    fetchDisposalReports();
-  }, []);
-
-  const fetchDisposalReports = async () => {
-    try {
-      const response = await fetch('/api/reports/disposals');
-      if (!response.ok) throw new Error('Failed to fetch disposal reports');
-      const data = await response.json();
-      
-      setDisposalStats(data.stats);
-      setMethodDistribution(data.methodDistribution);
-      setMonthlyTrends(data.monthlyTrends);
-      setValueRecovery(data.valueRecovery);
-    } catch (error) {
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-6">Disposal Reports</h1>
+    <div className="container mx-auto p-6" ref={targetRef}>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold">Disposal Reports</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => fetchDisposalReports(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+            disabled={refreshing}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            onClick={() => toPDF()}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            <Download size={16} />
+            Export PDF
+          </button>
+        </div>
+      </div>
 
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -95,7 +146,7 @@ export default function DisposalReportsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4">Disposal Methods Distribution</h2>
           <RoleBasedChart
@@ -124,62 +175,60 @@ export default function DisposalReportsPage() {
               ]
             }}
           />
-          <RoleBasedStats
-            name="Total Value"
-            value={disposalStats?.totalRecovered || 0}
-            variant="success"
-          />
         </div>
       </div>
 
       {/* Value Recovery Table */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Value Recovery Analysis</h2>
-          <RoleBasedTable
-            data={valueRecovery}
-            columns={[
-              {
-                key: 'month',
-                header: 'Month',
-                render: (value) => String(value),
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-4">Value Recovery Analysis</h2>
+        <RoleBasedTable
+          data={valueRecovery}
+          columns={[
+            {
+              key: 'month',
+              header: 'Month',
+              render: (value) => String(value),
+            },
+            {
+              key: 'expected',
+              header: 'Expected Value',
+              render: (value) => `$${Number(value).toFixed(2)}`,
+            },
+            {
+              key: 'actual',
+              header: 'Actual Value',
+              render: (value) => `$${Number(value).toFixed(2)}`,
+            },
+            {
+              key: 'rate',
+              header: 'Recovery Rate',
+              render: (value, item) => {
+                const actual = typeof item.actual === 'number' ? item.actual : Number(item.actual) || 0;
+                const expected = typeof item.expected === 'number' && item.expected !== 0 ? item.expected : Number(item.expected) || 1;
+                const rate = (expected !== 0 ? (actual / expected) * 100 : 0);
+                return (
+                  <span
+                    className={`px-2 py-1 rounded-full text-sm ${
+                      rate >= 90
+                        ? 'bg-green-100 text-green-800'
+                        : rate >= 70
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {rate.toFixed(1)}%
+                  </span>
+                );
               },
-              {
-                key: 'expected',
-                header: 'Expected Value',
-                render: (value) => `$${Number(value).toFixed(2)}`,
-              },
-              {
-                key: 'actual',
-                header: 'Actual Value',
-                render: (value) => `$${Number(value).toFixed(2)}`,
-              },
-              {
-                key: 'rate',
-                header: 'Recovery Rate',
-                render: (value, item) => {
-                  const actual = typeof item.actual === 'number' ? item.actual : Number(item.actual) || 0;
-                  const expected = typeof item.expected === 'number' && item.expected !== 0 ? item.expected : Number(item.expected) || 1;
-                  const rate = (expected !== 0 ? (actual / expected) * 100 : 0);
-                  return (
-                    <span
-                      className={`px-2 py-1 rounded-full text-sm ${
-                        rate >= 90
-                          ? 'bg-green-100 text-green-800'
-                          : rate >= 70
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {rate.toFixed(1)}%
-                    </span>
-                  );
-                },
-              },
-            ]}
+            },
+          ]}
+        />
+      </div>
 
-          />
-        </div>
+      {/* Report Footer */}
+      <div className="mt-8 text-center text-sm text-gray-500">
+        <p>Report generated on {new Date().toLocaleString()}</p>
+        <p>Data refreshes automatically every 5 minutes</p>
       </div>
     </div>
   );

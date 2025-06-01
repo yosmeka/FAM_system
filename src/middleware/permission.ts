@@ -9,7 +9,7 @@ import { authOptions } from '@/lib/auth';
  */
 import { userHasPermission } from "@/lib/server/permissions";
 
-export function withPermission(handler: any, requiredPermission: string) {
+export function withPermission(handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse>, requiredPermission: string) {
   return async (req: NextRequest, ...rest: any[]) => {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -22,6 +22,11 @@ export function withPermission(handler: any, requiredPermission: string) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     // User has permission
-    return handler(req, ...rest);
+    try {
+      return await handler(req, ...rest);
+    } catch (error) {
+      console.error('Error in permission-protected handler:', error);
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
   };
 }

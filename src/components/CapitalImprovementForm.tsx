@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { Calculator } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { calculateDepreciation, DepreciationMethod } from '@/utils/depreciation';
 
 // Define the schema for capital improvement validation
@@ -33,6 +33,7 @@ interface CapitalImprovement {
 
 interface Asset {
   id: string;
+  name: string;
   purchaseDate: string;
   purchasePrice: number;
   currentValue: number;
@@ -262,7 +263,7 @@ export function CapitalImprovementForm({
             disabled={isCalculating || !asset}
             className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
           >
-            <Calculator size={16} className="mr-1" />
+            <Plus size={16} className="mr-1" />
             {isCalculating ? 'Calculating...' : 'Calculate'}
           </button>
         </div>

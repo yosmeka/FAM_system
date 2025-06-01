@@ -116,6 +116,15 @@ export default function AssetsPage() {
     }
   };
 
+  // const filteredAssets = assets.filter((asset) => {
+  //   const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+  //   const matchesStatus = statusFilter === "ALL" || asset.status === statusFilter;
+  //   const matchesCategory = categoryFilter === "ALL" || asset.category === categoryFilter;
+  //   const matchesDepartment = departmentFilter === "ALL" || asset.department === departmentFilter;
+  //   return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
+  // });
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -136,11 +145,13 @@ export default function AssetsPage() {
       case "TRANSFERRED":
         return "bg-blue-100 text-blue-800";
       case "DISPOSED":
-        return "bg-red-100 text-red-800";
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const isAssetDisposed = (asset: Asset) => asset.status === "DISPOSED";
 
   if (error) {
     return (
@@ -226,7 +237,7 @@ export default function AssetsPage() {
             <option value="ALL">All Categories</option>
             {categories.map((category) => (
               <option key={category} value={category}>
-                 {category}
+                {category}
               </option>
             ))}
           </select>
@@ -247,36 +258,19 @@ export default function AssetsPage() {
         </div>
       </div>
 
-      {filteredAssets.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
-            No assets found
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || statusFilter !== "ALL"
-              ? "Try adjusting your search or filter to find what you're looking for."
-              : "Get started by creating a new asset."}
-          </p>
+      {isLoading ? (
+        <div className="text-center py-4">Loading assets...</div>
+      ) : error ? (
+        <div className="text-center py-4 text-red-600">
+          Error loading assets. Please try again.
         </div>
+      ) : filteredAssets.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">No assets found</div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200">
-            {paginatedAssets.map((asset) => (
-              <li key={asset.id} className="hover:bg-gray-50">
+            {filteredAssets.map((asset) => (
+              <li key={asset.id} className={`hover:bg-gray-50 ${isAssetDisposed(asset) ? 'bg-gray-50' : ''}`}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -293,14 +287,14 @@ export default function AssetsPage() {
                         </span>
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
                       <Link
                         href={`/assets/${asset.id}`}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         View
                       </Link>
-                      {(checkPermission('Asset edit') || checkPermission('Asset delete')) && (
+                      {!isAssetDisposed(asset) && (checkPermission('Asset edit') || checkPermission('Asset delete')) && (
                         <>
                           {checkPermission('Asset edit') && (
                             <Link

@@ -114,6 +114,21 @@ async function main() {
     });
   }
 
+  // Assign 'User create/invite' permission to ADMIN role
+  const userCreatePermission = await prisma.permission.findUnique({
+    where: { name: 'User create/invite' },
+  });
+  if (userCreatePermission) {
+    await prisma.rolePermission.upsert({
+      where: { role_permissionId: { role: 'ADMIN', permissionId: userCreatePermission.id } },
+      update: {},
+      create: {
+        role: 'ADMIN',
+        permissionId: userCreatePermission.id,
+      },
+    });
+  }
+
   console.log({ user, permissionsSeeded: permissions.length });
 
   // Helper function to assign a permission to a role

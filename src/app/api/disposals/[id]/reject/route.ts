@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendNotification } from '@/lib/notifications';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // POST /api/disposals/[id]/reject
 export async function POST(
@@ -8,13 +10,16 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const id = params.id;
     const disposal = await prisma.disposal.update({
-      where: { id: params.id },
+      where: { id },
       data: {
-        status: 'REJECTED',
-        approvedAt: new Date(),
-        // In a real app, get this from the session
-        approvedBy: 'user-id',
+        status: 'REJECTED'
       },
       include: {
         asset: {
@@ -24,18 +29,26 @@ export async function POST(
             purchasePrice: true,
           },
         },
+        requester: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
-    // Send notification to requester (if available)
-    if (disposal?.requestedById && disposal?.asset?.name) {
+    // Send notification to requester
+    if (disposal.requester?.id) {
       await sendNotification({
-        userId: disposal.requestedById,
+        userId: disposal.requester.id,
         message: `Your disposal request for asset "${disposal.asset.name}" has been rejected.`,
         type: 'disposal_rejected',
         meta: { assetId: disposal.asset.id, disposalId: disposal.id },
       });
     }
+
     return NextResponse.json(disposal);
   } catch (error) {
     console.error('Error:', error);
