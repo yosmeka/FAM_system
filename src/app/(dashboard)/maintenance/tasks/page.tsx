@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, AlertCircle, Settings } from 'lucide-react';
+import { CheckCircle, AlertCircle, Settings, Play, FileText, Clock, DollarSign } from 'lucide-react';
+import WorkDocumentationModal from '@/components/maintenance/WorkDocumentationModal';
 
 interface MaintenanceTask {
   id: string;
@@ -15,6 +16,15 @@ interface MaintenanceTask {
   actualHours?: number;
   checklistItems?: string;
   notes?: string;
+  maintenanceType: string;
+  issueType?: string;
+  urgencyLevel?: string;
+  assetDowntime?: boolean;
+  workPerformed?: string;
+  laborHours?: number;
+  totalCost?: number;
+  workStartedAt?: string;
+  workCompletedAt?: string;
   asset: {
     id: string;
     name: string;
@@ -39,6 +49,8 @@ export default function MyTasksPage() {
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
+  const [showWorkModal, setShowWorkModal] = useState(false);
 
   useEffect(() => {
     fetchMyTasks();
@@ -58,10 +70,43 @@ export default function MyTasksPage() {
     }
   };
 
+  const handleStartWork = async (task: MaintenanceTask) => {
+    try {
+      const response = await fetch(`/api/maintenance/${task.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'IN_PROGRESS',
+          workStartedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to start work');
+
+      fetchMyTasks(); // Refresh tasks
+    } catch (error) {
+      console.error('Error starting work:', error);
+    }
+  };
+
+  const handleDocumentWork = (task: MaintenanceTask) => {
+    setSelectedTask(task);
+    setShowWorkModal(true);
+  };
+
+  const handleWorkCompleted = () => {
+    fetchMyTasks(); // Refresh tasks
+    setSelectedTask(null);
+    setShowWorkModal(false);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'APPROVED': return 'text-blue-400';
       case 'SCHEDULED': return 'text-blue-400';
       case 'IN_PROGRESS': return 'text-yellow-400';
+      case 'WORK_COMPLETED': return 'text-orange-400';
+      case 'PENDING_REVIEW': return 'text-purple-400';
       case 'COMPLETED': return 'text-green-400';
       case 'CANCELLED': return 'text-red-400';
       default: return 'text-gray-400';
@@ -80,8 +125,11 @@ export default function MyTasksPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'APPROVED': return <Settings className="w-4 h-4" />;
       case 'SCHEDULED': return <Settings className="w-4 h-4" />;
       case 'IN_PROGRESS': return <AlertCircle className="w-4 h-4" />;
+      case 'WORK_COMPLETED': return <FileText className="w-4 h-4" />;
+      case 'PENDING_REVIEW': return <Clock className="w-4 h-4" />;
       case 'COMPLETED': return <CheckCircle className="w-4 h-4" />;
       default: return <Settings className="w-4 h-4" />;
     }
@@ -144,8 +192,8 @@ export default function MyTasksPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-4 mb-6">
-        {['all', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED'].map((status) => (
+      <div className="flex gap-4 mb-6 flex-wrap">
+        {['all', 'APPROVED', 'IN_PROGRESS', 'WORK_COMPLETED', 'COMPLETED'].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -158,7 +206,9 @@ export default function MyTasksPage() {
               backgroundColor: filter === status ? '#2697FF' : '#2A2D3E',
             }}
           >
-            {status === 'all' ? 'All Tasks' : status.charAt(0) + status.slice(1).toLowerCase()}
+            {status === 'all' ? 'All Tasks' :
+             status === 'WORK_COMPLETED' ? 'Work Completed' :
+             status.charAt(0) + status.slice(1).toLowerCase()}
           </button>
         ))}
       </div>
@@ -168,26 +218,42 @@ export default function MyTasksPage() {
         {filteredTasks.map((task) => (
           <div
             key={task.id}
-            className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+            className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
             style={{ backgroundColor: '#2A2D3E' }}
-            onClick={() => router.push(`/maintenance/${task.id}`)}
           >
             {/* Header */}
             <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-1">
-                  {task.schedule?.title || task.description}
-                </h3>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-lg font-semibold text-white">
+                    {task.schedule?.title || task.description}
+                  </h3>
+                  {task.maintenanceType === 'CORRECTIVE' && (
+                    <span className="px-2 py-1 text-xs bg-red-600 text-white rounded-full">
+                      CORRECTIVE
+                    </span>
+                  )}
+                  {task.assetDowntime && (
+                    <span className="px-2 py-1 text-xs bg-orange-600 text-white rounded-full">
+                      ASSET DOWN
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-400">
                   {task.asset.name} ({task.asset.serialNumber})
                 </p>
+                {task.issueType && (
+                  <p className="text-xs text-orange-400 mt-1">
+                    Issue: {task.issueType}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <span className={`${getStatusIcon(task.status)} ${getStatusColor(task.status)}`}>
+                <span className={getStatusColor(task.status)}>
                   {getStatusIcon(task.status)}
                 </span>
                 <span className={`text-sm font-medium ${getStatusColor(task.status)}`}>
-                  {task.status}
+                  {task.status.replace('_', ' ')}
                 </span>
               </div>
             </div>
@@ -206,13 +272,28 @@ export default function MyTasksPage() {
                 <AlertCircle className="w-4 h-4" />
                 <span className={`${getPriorityColor(task.priority)} font-medium`}>
                   {task.priority} Priority
+                  {task.urgencyLevel && ` (${task.urgencyLevel})`}
                 </span>
               </div>
 
               {task.estimatedHours && (
                 <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <Settings className="w-4 h-4" />
+                  <Clock className="w-4 h-4" />
                   <span>Est. {task.estimatedHours}h</span>
+                </div>
+              )}
+
+              {task.laborHours && (
+                <div className="flex items-center gap-2 text-sm text-gray-300">
+                  <Clock className="w-4 h-4" />
+                  <span>Actual: {task.laborHours}h</span>
+                </div>
+              )}
+
+              {task.totalCost && (
+                <div className="flex items-center gap-2 text-sm text-green-400">
+                  <DollarSign className="w-4 h-4" />
+                  <span>Cost: ${task.totalCost.toFixed(2)}</span>
                 </div>
               )}
 
@@ -222,6 +303,63 @@ export default function MyTasksPage() {
                   <span>{task.template.name}</span>
                 </div>
               )}
+
+              {task.workStartedAt && (
+                <div className="flex items-center gap-2 text-sm text-blue-400">
+                  <Play className="w-4 h-4" />
+                  <span>Started: {new Date(task.workStartedAt).toLocaleDateString()}</span>
+                </div>
+              )}
+
+              {task.workCompletedAt && (
+                <div className="flex items-center gap-2 text-sm text-orange-400">
+                  <FileText className="w-4 h-4" />
+                  <span>Completed: {new Date(task.workCompletedAt).toLocaleDateString()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 mb-4">
+              {/* Start Work Button */}
+              {(task.status === 'APPROVED' || task.status === 'SCHEDULED') && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartWork(task);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  <Play className="w-4 h-4" />
+                  Start Work
+                </button>
+              )}
+
+              {/* Document Work Button */}
+              {task.status === 'IN_PROGRESS' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDocumentWork(task);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  Complete Work
+                </button>
+              )}
+
+              {/* View Details Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/maintenance/${task.id}`);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                View Details
+              </button>
             </div>
 
             {/* Progress Indicator */}
@@ -258,6 +396,14 @@ export default function MyTasksPage() {
           </p>
         </div>
       )}
+
+      {/* Work Documentation Modal */}
+      <WorkDocumentationModal
+        open={showWorkModal}
+        onClose={() => setShowWorkModal(false)}
+        task={selectedTask}
+        onWorkCompleted={handleWorkCompleted}
+      />
     </div>
   );
 }

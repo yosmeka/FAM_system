@@ -29,10 +29,18 @@ export default function MaintenancePage() {
     },
     {
       title: 'Review Requests',
-      description: 'Review and approve maintenance requests from technicians',
+      description: 'Review and approve corrective maintenance requests from technicians',
       icon: CheckCircle,
       href: '/maintenance/requests',
       color: 'bg-green-600',
+      roles: ['MANAGER', 'ADMIN']
+    },
+    {
+      title: 'Review Completed Work',
+      description: 'Review and approve completed maintenance work and costs',
+      icon: CheckCircle,
+      href: '/maintenance/work-review',
+      color: 'bg-orange-600',
       roles: ['MANAGER', 'ADMIN']
     },
     {

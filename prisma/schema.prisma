@@ -149,6 +149,21 @@ model Maintenance {
   assetDowntime Boolean           @default(false) // Is asset currently down/unusable
   impactDescription String?        // Description of operational impact
   photoUrls    String?             // JSON array of photo URLs for issue documentation
+
+  // Work documentation and cost tracking
+  workPerformed String?            // Detailed description of work performed
+  partsUsed    String?             // JSON array of parts/materials used
+  laborHours   Float?              // Actual labor hours spent
+  partsCost    Float?              // Cost of parts/materials used
+  laborCost    Float?              // Cost of labor
+  totalCost    Float?              // Total cost (parts + labor + other)
+  workStartedAt DateTime?          // When technician started the work
+  workCompletedAt DateTime?        // When technician completed the work
+  technicianNotes String?          // Technician's notes about the work performed
+  managerReviewNotes String?       // Manager's review notes for final approval
+  finalApprovedAt DateTime?        // When manager gave final approval
+  finalApprovedBy String?          // Manager who gave final approval
+  workPhotos   String?             // JSON array of before/after work photos
   asset        Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester    User                @relation("MaintenanceRequestedBy", fields: [requesterId], references: [id])
   manager      User?               @relation("MaintenanceManagedBy", fields: [managerId], references: [id])
@@ -259,14 +274,15 @@ enum MaintenanceType {
 }
 
 enum MaintenanceStatus {
-  PENDING_APPROVAL
-  APPROVED
-  REJECTED
-  SCHEDULED
-  IN_PROGRESS
-  PENDING_REVIEW
-  COMPLETED
-  CANCELLED
+  PENDING_APPROVAL      // Initial request waiting for manager approval
+  APPROVED             // Manager approved, work can start
+  REJECTED             // Manager rejected the request
+  SCHEDULED            // Work is scheduled
+  IN_PROGRESS          // Technician is working on it
+  WORK_COMPLETED       // Technician completed work, waiting for manager review
+  PENDING_REVIEW       // Manager reviewing completed work
+  COMPLETED            // Manager approved completed work
+  CANCELLED            // Work was cancelled
 }
 
 enum MaintenancePriority {

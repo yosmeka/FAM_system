@@ -6,11 +6,12 @@ import { authOptions } from '@/lib/auth';
 // GET /api/maintenance/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const maintenanceRequest = await prisma.maintenance.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -159,9 +160,10 @@ export async function GET(
 // PUT /api/maintenance/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const {
       status,
@@ -174,12 +176,26 @@ export async function PUT(
       previousStatus,
       actualHours,
       checklistItems,
-      completedAt
+      completedAt,
+      // Work documentation fields
+      workPerformed,
+      partsUsed,
+      laborHours,
+      partsCost,
+      laborCost,
+      totalCost,
+      workStartedAt,
+      workCompletedAt,
+      technicianNotes,
+      managerReviewNotes,
+      finalApprovedAt,
+      finalApprovedBy,
+      assignedToId
     } = body;
 
     // Get the current maintenance request to check its status and requester
     const currentRequest = await prisma.maintenance.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -251,6 +267,21 @@ export async function PUT(
     if (managerId !== undefined) updateData.managerId = managerId || null; // Allow unsetting manager with empty string
     if (actualHours !== undefined) updateData.actualHours = actualHours;
     if (checklistItems !== undefined) updateData.checklistItems = checklistItems;
+    if (assignedToId !== undefined) updateData.assignedToId = assignedToId;
+
+    // Work documentation fields
+    if (workPerformed !== undefined) updateData.workPerformed = workPerformed;
+    if (partsUsed !== undefined) updateData.partsUsed = partsUsed;
+    if (laborHours !== undefined) updateData.laborHours = laborHours;
+    if (partsCost !== undefined) updateData.partsCost = partsCost;
+    if (laborCost !== undefined) updateData.laborCost = laborCost;
+    if (totalCost !== undefined) updateData.totalCost = totalCost;
+    if (workStartedAt !== undefined) updateData.workStartedAt = workStartedAt ? new Date(workStartedAt) : null;
+    if (workCompletedAt !== undefined) updateData.workCompletedAt = workCompletedAt ? new Date(workCompletedAt) : null;
+    if (technicianNotes !== undefined) updateData.technicianNotes = technicianNotes;
+    if (managerReviewNotes !== undefined) updateData.managerReviewNotes = managerReviewNotes;
+    if (finalApprovedAt !== undefined) updateData.finalApprovedAt = finalApprovedAt ? new Date(finalApprovedAt) : null;
+    if (finalApprovedBy !== undefined) updateData.finalApprovedBy = finalApprovedBy;
 
     // Handle status changes
     if (status !== undefined) {
@@ -263,7 +294,7 @@ export async function PUT(
     }
 
     const maintenanceRequest = await prisma.maintenance.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         asset: {

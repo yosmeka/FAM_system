@@ -22,14 +22,23 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
     const status = url.searchParams.get('status');
     const maintenanceType = url.searchParams.get('maintenanceType');
     const requester = url.searchParams.get('requester');
+    const workReview = url.searchParams.get('workReview');
 
     // Build the query
     const query: any = {};
 
     // Role-based filtering
     if (userRole === 'MANAGER') {
-      // Managers see requests assigned to them
-      query.managerId = userId;
+      if (workReview === 'true') {
+        // For work review, managers see tasks assigned to them that need review
+        query.managerId = userId;
+        query.status = {
+          in: ['WORK_COMPLETED', 'PENDING_REVIEW', 'COMPLETED']
+        };
+      } else {
+        // Regular requests assigned to them
+        query.managerId = userId;
+      }
     } else if (userRole === 'USER') {
       // Users (technicians) see requests they created or are assigned to
       if (requester === 'me') {
@@ -45,8 +54,11 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
     }
     // Admins can see all requests (no additional filtering)
 
-    // Filter by status if provided
-    if (status) {
+    // Filter by status if provided (but don't override work review status filtering)
+    if (status && workReview !== 'true') {
+      query.status = status;
+    } else if (status && workReview === 'true') {
+      // For work review, filter by specific status within the allowed statuses
       query.status = status;
     }
 
@@ -62,6 +74,7 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
           select: {
             name: true,
             serialNumber: true,
+            location: true,
           },
         },
         requester: {
@@ -76,11 +89,19 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
             email: true,
           },
         },
+        assignedTo: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
+
+
 
     return NextResponse.json(maintenanceRequests);
   } catch (error) {

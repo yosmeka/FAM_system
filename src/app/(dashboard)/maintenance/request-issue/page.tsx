@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, Eye, Play, FileText, DollarSign } from 'lucide-react';
 import MaintenanceRequestForm from '@/components/maintenance/MaintenanceRequestForm';
+import WorkDocumentationModal from '@/components/maintenance/WorkDocumentationModal';
 
 interface MaintenanceRequest {
   id: string;
@@ -16,6 +17,11 @@ interface MaintenanceRequest {
   issueType?: string;
   urgencyLevel?: string;
   assetDowntime: boolean;
+  workPerformed?: string;
+  laborHours?: number;
+  totalCost?: number;
+  workStartedAt?: string;
+  workCompletedAt?: string;
   asset: {
     name: string;
     serialNumber: string;
@@ -23,6 +29,10 @@ interface MaintenanceRequest {
   };
   manager?: {
     name: string;
+  };
+  assignedTo?: {
+    name: string;
+    email: string;
   };
 }
 
@@ -33,6 +43,8 @@ export default function RequestIssuePage() {
   const [loading, setLoading] = useState(true);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [filter, setFilter] = useState('ALL');
+  const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
+  const [showWorkModal, setShowWorkModal] = useState(false);
 
   useEffect(() => {
     fetchMyRequests();
@@ -65,12 +77,47 @@ export default function RequestIssuePage() {
     toast.success('Maintenance request submitted successfully!');
   };
 
+  const handleStartWork = async (request: MaintenanceRequest) => {
+    try {
+      const response = await fetch(`/api/maintenance/${request.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'IN_PROGRESS',
+          workStartedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to start work');
+
+      fetchMyRequests(); // Refresh requests
+      toast.success('Work started successfully!');
+    } catch (error) {
+      console.error('Error starting work:', error);
+      toast.error('Failed to start work');
+    }
+  };
+
+  const handleDocumentWork = (request: MaintenanceRequest) => {
+    setSelectedRequest(request);
+    setShowWorkModal(true);
+  };
+
+  const handleWorkCompleted = () => {
+    fetchMyRequests(); // Refresh requests
+    setSelectedRequest(null);
+    setShowWorkModal(false);
+    toast.success('Work completed and submitted for manager review!');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING_APPROVAL': return 'text-yellow-600 bg-yellow-100';
       case 'APPROVED': return 'text-green-600 bg-green-100';
       case 'REJECTED': return 'text-red-600 bg-red-100';
       case 'IN_PROGRESS': return 'text-blue-600 bg-blue-100';
+      case 'WORK_COMPLETED': return 'text-orange-600 bg-orange-100';
+      case 'PENDING_REVIEW': return 'text-purple-600 bg-purple-100';
       case 'COMPLETED': return 'text-green-600 bg-green-100';
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -129,6 +176,7 @@ export default function RequestIssuePage() {
           { key: 'PENDING_APPROVAL', label: 'Pending', count: requests.filter(r => r.status === 'PENDING_APPROVAL').length },
           { key: 'APPROVED', label: 'Approved', count: requests.filter(r => r.status === 'APPROVED').length },
           { key: 'IN_PROGRESS', label: 'In Progress', count: requests.filter(r => r.status === 'IN_PROGRESS').length },
+          { key: 'WORK_COMPLETED', label: 'Work Done', count: requests.filter(r => r.status === 'WORK_COMPLETED').length },
           { key: 'COMPLETED', label: 'Completed', count: requests.filter(r => r.status === 'COMPLETED').length },
           { key: 'REJECTED', label: 'Rejected', count: requests.filter(r => r.status === 'REJECTED').length }
         ].map((tab) => (
@@ -245,6 +293,81 @@ export default function RequestIssuePage() {
                 </p>
               </div>
 
+              {/* Work Information */}
+              {request.workStartedAt && (
+                <div className="mb-4 p-3 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-blue-400 mb-2">
+                    <Play className="w-4 h-4" />
+                    <span>Started: {new Date(request.workStartedAt).toLocaleDateString()}</span>
+                  </div>
+                  {request.assignedTo && (
+                    <div className="text-sm text-gray-300">
+                      Assigned to: {request.assignedTo.name}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {request.workCompletedAt && (
+                <div className="mb-4 p-3 bg-orange-900/20 border border-orange-600/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm text-orange-400 mb-2">
+                    <FileText className="w-4 h-4" />
+                    <span>Completed: {new Date(request.workCompletedAt).toLocaleDateString()}</span>
+                  </div>
+                  {request.laborHours && (
+                    <div className="text-sm text-gray-300 mb-1">
+                      Labor Hours: {request.laborHours}h
+                    </div>
+                  )}
+                  {request.totalCost && (
+                    <div className="flex items-center gap-2 text-sm text-green-400">
+                      <DollarSign className="w-4 h-4" />
+                      <span>Total Cost: ${request.totalCost.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 mb-4">
+                {/* Start Work Button */}
+                {request.status === 'APPROVED' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStartWork(request);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex-1"
+                  >
+                    <Play className="w-4 h-4" />
+                    Start Work
+                  </button>
+                )}
+
+                {/* Complete Work Button */}
+                {request.status === 'IN_PROGRESS' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDocumentWork(request);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex-1"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Complete Work
+                  </button>
+                )}
+
+                {/* View Details Button */}
+                <button
+                  onClick={() => router.push(`/maintenance/${request.id}`)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+                >
+                  <Eye className="w-4 h-4" />
+                  Details
+                </button>
+              </div>
+
               {/* Status Indicator */}
               <div className="flex items-center justify-center">
                 {request.status === 'PENDING_APPROVAL' && (
@@ -256,7 +379,7 @@ export default function RequestIssuePage() {
                 {request.status === 'APPROVED' && (
                   <div className="flex items-center gap-2 text-green-400">
                     <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm">Approved - Work will be scheduled</span>
+                    <span className="text-sm">Ready to start work</span>
                   </div>
                 )}
                 {request.status === 'REJECTED' && (
@@ -267,14 +390,20 @@ export default function RequestIssuePage() {
                 )}
                 {request.status === 'IN_PROGRESS' && (
                   <div className="flex items-center gap-2 text-blue-400">
-                    <Eye className="w-4 h-4" />
+                    <Play className="w-4 h-4" />
                     <span className="text-sm">Work in progress</span>
+                  </div>
+                )}
+                {request.status === 'WORK_COMPLETED' && (
+                  <div className="flex items-center gap-2 text-orange-400">
+                    <FileText className="w-4 h-4" />
+                    <span className="text-sm">Awaiting manager review</span>
                   </div>
                 )}
                 {request.status === 'COMPLETED' && (
                   <div className="flex items-center gap-2 text-green-400">
                     <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm">Work completed</span>
+                    <span className="text-sm">Work completed and approved</span>
                   </div>
                 )}
               </div>
@@ -288,6 +417,14 @@ export default function RequestIssuePage() {
         isOpen={showRequestForm}
         onClose={() => setShowRequestForm(false)}
         onRequestCreated={handleRequestCreated}
+      />
+
+      {/* Work Documentation Modal */}
+      <WorkDocumentationModal
+        open={showWorkModal}
+        onClose={() => setShowWorkModal(false)}
+        task={selectedRequest}
+        onWorkCompleted={handleWorkCompleted}
       />
     </div>
   );
