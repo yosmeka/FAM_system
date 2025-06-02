@@ -153,27 +153,10 @@ export default function MyTasksPage() {
 
   return (
     <div className="p-6" style={{ backgroundColor: '#212332' }}>
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs - Only show My Tasks for technicians */}
       <div className="mb-6">
         <div className="flex space-x-1 p-1 rounded-lg w-fit" style={{ backgroundColor: '#2A2D3E' }}>
           <button
-            onClick={() => router.push('/maintenance/scheduled')}
-            className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Scheduled Maintenance
-          </button>
-
-          <button
-            onClick={() => router.push('/maintenance/templates')}
-            className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Templates
-          </button>
-
-          <button
-            onClick={() => {/* Current page */}}
             className="flex items-center gap-2 px-4 py-2 rounded-md text-white shadow-sm font-medium"
             style={{ backgroundColor: '#2697FF' }}
           >

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Plus, Calendar, Clock, User, Settings, Play, Wrench, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Settings, CheckCircle } from 'lucide-react';
 import CreateScheduleModal from '@/components/maintenance/CreateScheduleModal';
 import ManagerReviewModal from '@/components/maintenance/ManagerReviewModal';
 
@@ -47,7 +47,7 @@ export default function ScheduledMaintenancePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [generatingTasks, setGeneratingTasks] = useState(false);
+
 
   // Manager review states
   const [activeTab, setActiveTab] = useState('schedules'); // 'schedules' or 'reviews'
@@ -114,46 +114,7 @@ export default function ScheduledMaintenancePage() {
     setShowReviewModal(false);
   };
 
-  const generateTasks = async () => {
-    console.log('Generate Tasks button clicked!');
-    setGeneratingTasks(true);
-    try {
-      console.log('Sending request to generate tasks...');
-      const response = await fetch('/api/maintenance-schedules/generate-tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ forceGenerate: true }),
-      });
-      console.log('Generate tasks response status:', response.status);
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Generate tasks result:', result);
-
-        if (result.generatedTasks > 0) {
-          alert(`Successfully generated ${result.generatedTasks} maintenance tasks!`);
-        } else {
-          alert('No new tasks were generated. All schedules may already have tasks or are not due yet.');
-        }
-        if (result.errors && result.errors.length > 0) {
-          console.error('Task generation errors:', result.errors);
-          alert(`Generated ${result.generatedTasks} tasks, but ${result.errors.length} schedules had errors. Check console for details.`);
-        }
-        fetchSchedules(); // Refresh the list
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Generate tasks failed:', response.status, errorData);
-        alert(`Failed to generate tasks: ${errorData.error || 'Unknown error'}`);
-      }
-    } catch (error) {
-      console.error('Error generating tasks:', error);
-      alert('Error generating tasks');
-    } finally {
-      setGeneratingTasks(false);
-    }
-  };
 
   const getFrequencyDisplay = (frequency: string) => {
     const frequencyMap: { [key: string]: string } = {
@@ -214,7 +175,7 @@ export default function ScheduledMaintenancePage() {
             }`}
             style={{ backgroundColor: activeTab === 'schedules' ? '#2697FF' : 'transparent' }}
           >
-            <Calendar className="w-4 h-4" />
+            <Settings className="w-4 h-4" />
             Scheduled Maintenance
           </button>
 
@@ -228,7 +189,7 @@ export default function ScheduledMaintenancePage() {
               }`}
               style={{ backgroundColor: activeTab === 'reviews' ? '#2697FF' : 'transparent' }}
             >
-              <Eye className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
               Manager Review
               {pendingReviews.length > 0 && (
                 <span className="ml-1 px-2 py-1 text-xs bg-red-500 text-white rounded-full">
@@ -238,20 +199,22 @@ export default function ScheduledMaintenancePage() {
             </button>
           )}
 
-          <button
-            onClick={() => router.push('/maintenance/templates')}
-            className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
-          >
-            <Settings className="w-4 h-4" />
-            Templates
-          </button>
+          {(session?.user?.role === 'MANAGER' || session?.user?.role === 'ADMIN') && (
+            <button
+              onClick={() => router.push('/maintenance/templates')}
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Templates
+            </button>
+          )}
 
           {session?.user?.role === 'USER' && (
             <button
               onClick={() => router.push('/maintenance/tasks')}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
             >
-              <User className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
               My Tasks
             </button>
           )}
@@ -278,36 +241,15 @@ export default function ScheduledMaintenancePage() {
           </div>
 
           {session?.user?.role === 'MANAGER' && (
-            <>
-              <button
-                onClick={generateTasks}
-                disabled={generatingTasks}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#2697FF' }}
-              >
-                <Play className="w-4 h-4" />
-                {generatingTasks ? 'Generating...' : 'Generate Tasks'}
-              </button>
-
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                style={{ backgroundColor: '#2697FF' }}
-              >
-                <Plus className="w-4 h-4" />
-                Create Schedule
-              </button>
-            </>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
+              style={{ backgroundColor: '#2697FF' }}
+            >
+              <Plus className="w-4 h-4" />
+              Create Schedule
+            </button>
           )}
-
-          {/* Debug: Always visible generate button for testing */}
-          <button
-            onClick={generateTasks}
-            disabled={generatingTasks}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors bg-orange-600"
-          >
-            🐛 Debug Generate
-          </button>
         </div>
       </div>
 
@@ -351,17 +293,17 @@ export default function ScheduledMaintenancePage() {
                   {/* Task Info */}
                   <div className="space-y-3 mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <User className="w-4 h-4" />
+                      <Settings className="w-4 h-4" />
                       <span>Technician: {task.assignedTo?.name}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <Calendar className="w-4 h-4" />
+                      <Settings className="w-4 h-4" />
                       <span>Completed: {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <Clock className="w-4 h-4" />
+                      <Settings className="w-4 h-4" />
                       <span>Priority: {task.priority}</span>
                     </div>
                   </div>
@@ -372,7 +314,7 @@ export default function ScheduledMaintenancePage() {
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: '#2697FF' }}
                   >
-                    <Eye className="w-4 h-4" />
+                    <Settings className="w-4 h-4" />
                     Review Task
                   </button>
                 </div>
@@ -429,12 +371,12 @@ export default function ScheduledMaintenancePage() {
                 {/* Schedule Info */}
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <Calendar className="w-4 h-4" />
+                    <Settings className="w-4 h-4" />
                     <span>Every {getFrequencyDisplay(schedule.frequency)}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-sm">
-                    <Clock className="w-4 h-4" />
+                    <Settings className="w-4 h-4" />
                     <span className={isOverdue(schedule.nextDue) ? 'text-red-400' : 'text-gray-300'}>
                       Next due: {new Date(schedule.nextDue).toLocaleDateString()}
                       {isOverdue(schedule.nextDue) && ' (Overdue)'}
@@ -443,7 +385,7 @@ export default function ScheduledMaintenancePage() {
 
                   {schedule.assignedTo && (
                     <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <User className="w-4 h-4" />
+                      <Settings className="w-4 h-4" />
                       <span>{schedule.assignedTo.name}</span>
                     </div>
                   )}

@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Settings, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Settings, AlertCircle, CheckCircle, Trash2, Play } from 'lucide-react';
 
 interface MaintenanceSchedule {
   id: string;
@@ -57,6 +57,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
   const resolvedParams = use(params);
   const [schedule, setSchedule] = useState<MaintenanceSchedule | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingTask, setGeneratingTask] = useState(false);
 
   useEffect(() => {
     fetchSchedule();
@@ -74,6 +75,44 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
       console.error('Error fetching schedule:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateTask = async () => {
+    if (!confirm('Generate a new maintenance task for this schedule?')) {
+      return;
+    }
+
+    try {
+      setGeneratingTask(true);
+      const response = await fetch('/api/maintenance-schedules/generate-tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          scheduleId: resolvedParams.id,
+          forceGenerate: true
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.generatedTasks > 0) {
+          alert(`Successfully generated ${result.generatedTasks} maintenance task!`);
+          fetchSchedule(); // Refresh to show the new task
+        } else {
+          alert('No new task was generated. A task may already exist or the schedule is not due yet.');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`Failed to generate task: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error generating task:', error);
+      alert('Error generating task');
+    } finally {
+      setGeneratingTask(false);
     }
   };
 
@@ -190,6 +229,15 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
         {/* Manager Actions */}
         {canManageSchedule() && (
           <div className="flex gap-2">
+            <button
+              onClick={generateTask}
+              disabled={generatingTask}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            >
+              <Play className="w-4 h-4" />
+              {generatingTask ? 'Generating...' : 'Generate Task'}
+            </button>
+
             <button
               onClick={() => router.push(`/maintenance/scheduled/${schedule.id}/edit`)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"

@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/hooks/useRole';
-import { Plus, Settings, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Plus, Settings, CheckCircle } from 'lucide-react';
 
 export default function MaintenancePage() {
   const { data: session } = useSession();
@@ -17,7 +17,7 @@ export default function MaintenancePage() {
       icon: Plus,
       href: '/maintenance/scheduled',
       color: 'bg-blue-600',
-      roles: ['MANAGER', 'USER']
+      roles: ['MANAGER', 'ADMIN']
     },
     {
       title: 'Report Issues',
