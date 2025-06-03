@@ -148,62 +148,103 @@ export const PUT = withRole(['MANAGER'], async function PUT(
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
+    // Prepare data for update, handling potential invalid values from frontend
+    const updateData: Record<string, any> = {
+      name: body.name,
+      serialNumber: body.serialNumber,
+      status: body.status,
+      location: body.location,
+      department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
+      category: body.category,
+      type: body.type,
+      supplier: body.supplier,
+      description: body.description,
+    };
+
+    // Handle number fields, converting to float and checking for NaN
+    const numberFields = ['purchasePrice', 'currentValue', 'depreciableCost', 'salvageValue', 'usefulLifeMonths'];
+    numberFields.forEach(field => {
+      const value = parseFloat(body[field]);
+      if (!isNaN(value)) {
+        updateData[field] = value;
+      } else if (field === 'purchasePrice') {
+        // purchasePrice is required, throw error if invalid
+        console.error(`Invalid number format for required field: ${field}`, body[field]);
+        throw new Error(`Invalid number format for ${field}`);
+      } else {
+        // For optional fields, set to null if invalid
+        updateData[field] = null;
+      }
+    });
+
+    // Handle date fields, converting to Date and checking for Invalid Date
+    const dateFields = ['purchaseDate', 'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciationStartDate'];
+    dateFields.forEach(field => {
+      if (body[field]) {
+        const date = new Date(body[field]);
+        if (!isNaN(date.getTime())) {
+          updateData[field] = date;
+        } else if (field === 'purchaseDate') {
+          // purchaseDate is required, throw error if invalid
+          console.error(`Invalid date format for required field: ${field}`, body[field]);
+          throw new Error(`Invalid date format for ${field}`);
+        } else {
+          // For optional fields, set to null if invalid
+          updateData[field] = null;
+        }
+      } else if (field === 'purchaseDate') {
+        // purchaseDate is required, throw error if missing
+        console.error(`Missing required date field: ${field}`);
+        throw new Error(`Missing required date field: ${field}`);
+      } else {
+        // For optional fields, set to null if missing
+        updateData[field] = null;
+      }
+    });
+
     // Update the asset
     const updatedAsset = await prisma.asset.update({
       where: {
         id: id,
       },
-      data: {
-        name: body.name,
-        serialNumber: body.serialNumber,
-        purchaseDate: new Date(body.purchaseDate),
-        purchasePrice: parseFloat(body.purchasePrice),
-        currentValue: parseFloat(body.currentValue),
-        status: body.status,
-        location: body.location,
-        department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
-        category: body.category,
-        type: body.type,
-        supplier: body.supplier,
-        description: body.description,
-        warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
-        lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
-        nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
-        // Depreciation fields
-        depreciableCost: body.depreciableCost ? parseFloat(body.depreciableCost) : null,
-        salvageValue: body.salvageValue ? parseFloat(body.salvageValue) : null,
-        usefulLifeMonths: body.usefulLifeMonths ? parseInt(body.usefulLifeMonths) : null,
-        depreciationMethod: body.depreciationMethod || null,
-        depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
-      },
+      data: updateData,
     });
 
     // Track changes in asset history
     const changes = [];
-    const fields = [
-      'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
-      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
-      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
-      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
-    ];
+    // Use the keys from updateData to track changes more accurately
+    const fieldsToTrack = Object.keys(updateData);
 
     console.log('Current asset:', currentAsset);
     console.log('Updated asset:', updatedAsset);
 
-    for (const field of fields) {
-      const oldValue = currentAsset[field];
-      const newValue = updatedAsset[field];
+    for (const field of fieldsToTrack) {
+      // Ensure the field exists on both objects before comparing
+      if (Object.prototype.hasOwnProperty.call(currentAsset, field) && Object.prototype.hasOwnProperty.call(updatedAsset, field)) {
+        const oldValue = currentAsset[field as keyof typeof currentAsset];
+        const newValue = updatedAsset[field as keyof typeof updatedAsset];
 
-      console.log(`Field: ${field}, Old: ${oldValue}, New: ${newValue}`);
+        // Compare values, handling dates and potential nulls/undefineds carefully
+        let areDifferent = false;
 
-      if (oldValue?.toString() !== newValue?.toString()) {
-        changes.push({
-          assetId: id,
-          field,
-          oldValue: oldValue?.toString() || null,
-          newValue: newValue?.toString() || null,
-          changedBy: session.user?.name || 'system',
-        });
+        if (oldValue instanceof Date && newValue instanceof Date) {
+          areDifferent = oldValue.getTime() !== newValue.getTime();
+        } else if (oldValue !== newValue) {
+          // Handle null vs undefined, and other value types
+          areDifferent = true;
+        }
+
+        console.log(`Field: ${field}, Old: ${oldValue}, New: ${newValue}, Different: ${areDifferent}`);
+
+        if (areDifferent) {
+          changes.push({
+            assetId: id,
+            field,
+            oldValue: oldValue !== null && oldValue !== undefined ? String(oldValue) : null,
+            newValue: newValue !== null && newValue !== undefined ? String(newValue) : null,
+            changedBy: session.user?.name || 'system',
+          });
+        }
       }
     }
 
@@ -211,12 +252,15 @@ export const PUT = withRole(['MANAGER'], async function PUT(
 
     if (changes.length > 0) {
       try {
-        const result = await prisma.assetHistory.createMany({
+        // Ensure the model name is correct based on your schema
+        const result = await (prisma as any).assetHistory.createMany({
           data: changes,
         });
         console.log('History records created:', result);
       } catch (error) {
         console.error('Error creating history records:', error);
+        // Decide if history saving failure should prevent asset update success
+        // Currently, it just logs an error.
       }
     }
 
@@ -224,10 +268,31 @@ export const PUT = withRole(['MANAGER'], async function PUT(
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error updating asset:', error.message);
+      // Return a more specific error response for invalid data
+      if (error.message.startsWith('Invalid number format') || error.message.startsWith('Invalid date format') || error.message.startsWith('Missing required date field')) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
     } else {
       console.error('Unknown error updating asset:', error);
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // Check for Prisma unique constraint error (P2002)
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
+      // This block seems to be duplicated, the one below is more detailed.
+      // Keep the more detailed handling below.
+    }
+
+    // More detailed handling for Prisma unique constraint error (P2002)
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
+      // Assuming the unique constraint is on the serialNumber field
+      return NextResponse.json({
+        error: 'Serial number must be unique',
+        code: 'P2002',
+        field: 'serialNumber',
+        message: 'This serial number is already in use. Please enter a unique serial number.',
+      }, { status: 409 }); // Use 409 Conflict for unique constraint errors
+    }
+
+    return NextResponse.json({ error: 'Failed to update asset' }, { status: 500 });
   }
 });
 

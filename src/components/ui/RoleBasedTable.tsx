@@ -42,7 +42,7 @@ export function RoleBasedTable<T>({
           <tr>
             {filteredColumns.map((column) => (
               <th
-                key={column.key as string}
+                key={String(column.key)}
                 scope="col"
                 className={cn(
                   "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider",
@@ -66,7 +66,7 @@ export function RoleBasedTable<T>({
             >
               {filteredColumns.map((column) => (
                 <td
-                  key={column.key as string}
+                  key={`${String(column.key)}-${index}`}
                   className={cn(
                     "px-6 py-4 whitespace-nowrap text-sm text-gray-500",
                     column.className
