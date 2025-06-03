@@ -21,19 +21,30 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchPermissions = async () => {
-    if (!user?.role) {
+    if (!user?.id) { // Check for user.id as it's needed for the API call
       setPermissions([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/role-permissions?role=${user.role}`);
-      if (!res.ok) throw new Error("Failed to fetch permissions");
+      // Fetch effective permissions for the specific user
+      const res = await fetch(`/api/users/${user.id}/permissions`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({})); // Try to parse error, default to empty
+        console.error("Failed to fetch effective permissions:", res.status, errorData);
+        throw new Error(errorData.error || "Failed to fetch effective permissions");
+      }
       const data = await res.json();
-      setPermissions(data.permissions?.map((p: any) => p.name || p.id) || []);
-    } catch (e) {
-      setPermissions([]);
+      // effectivePermissions is an object like { "permName": true/false }
+      const effectivePermsArray = Object.entries(data.effectivePermissions || {})
+        .filter(([, granted]) => granted)
+        .map(([name]) => name);
+      setPermissions(effectivePermsArray);
+    } catch (e: unknown) { // Changed to unknown for better type safety
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error("Error in fetchPermissions:", errorMessage);
+      setPermissions([]); // Clear permissions on error
     } finally {
       setLoading(false);
     }
@@ -41,9 +52,9 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     fetchPermissions();
-    // Only re-run when user.role changes
+    // Re-run when user.id changes (implies user has changed or logged in/out)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role]);
+  }, [user?.id]); // Changed dependency to user.id
 
   return (
     <PermissionsContext.Provider value={{ permissions, loading, refreshPermissions: fetchPermissions }}>

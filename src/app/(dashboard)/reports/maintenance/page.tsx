@@ -1,62 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
-import { RoleBasedCard } from '@/components/ui/RoleBasedCard';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Filter, RefreshCw, TrendingUp, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Download, CheckCircle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
 export default function MaintenanceReportsPage() {
-  const { data: session, status } = useSession();
-  if (status === 'loading') return null;
-  if (!session || !session.user) return null;
-  if (session.user.role === 'ADMIN') {
-    return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
-        <p className="text-center">You do not have permission to view maintenance reports.</p>
-      </div>
-    );
-  }
+  useSession(); // Only call for auth, don't destructure unused vars
 
+  // All hooks must be at the top, before any early returns!
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [priorityDistribution, setPriorityDistribution] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [departmentDistribution, setDepartmentDistribution] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [topAssets, setTopAssets] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState('12months');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [generatedOn, setGeneratedOn] = useState<string>("");
+  const [generatedTime, setGeneratedTime] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [debug, setDebug] = useState<any>(null);
 
   useEffect(() => {
     fetchMaintenanceReports();
+    setGeneratedOn(new Date().toLocaleDateString());
+    setGeneratedTime(new Date().toLocaleTimeString());
   }, [selectedTimeRange, selectedDepartment]);
-
-  const [error, setError] = useState<string | null>(null);
-  const [debug, setDebug] = useState<any>(null);
 
   const fetchMaintenanceReports = async () => {
     try {
       setLoading(true);
       setError(null);
       console.log('Fetching maintenance reports...');
-
       const response = await fetch('/api/reports/maintenance');
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to fetch maintenance reports: ${response.status} ${errorText}`);
       }
-
       const data = await response.json();
       console.log('Maintenance reports data:', data);
-
-      // Save debug info
       setDebug({
         statusDistributionLength: data.statusDistribution?.length || 0,
         priorityDistributionLength: data.priorityDistribution?.length || 0,
@@ -65,7 +62,6 @@ export default function MaintenanceReportsPage() {
         topAssetsLength: data.topAssets?.length || 0,
         recentActivityLength: data.recentActivity?.length || 0,
       });
-
       setMaintenanceStats(data.stats);
       setStatusDistribution(data.statusDistribution || []);
       setPriorityDistribution(data.priorityDistribution || []);
@@ -120,7 +116,7 @@ export default function MaintenanceReportsPage() {
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex items-center space-x-2">
-            <RefreshCw className="h-6 w-6 animate-spin text-blue-600" />
+            <span className="inline-block h-6 w-6 animate-spin text-blue-600">⟳</span>
             <span className="text-lg text-gray-600">Loading maintenance reports...</span>
           </div>
         </div>
@@ -135,7 +131,7 @@ export default function MaintenanceReportsPage() {
           <h1 className="text-2xl font-bold text-red-700 mb-4">Error Loading Maintenance Reports</h1>
           <p className="text-red-600 mb-4">{error}</p>
           <Button onClick={fetchMaintenanceReports} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <span className="h-4 w-4 mr-2">⟳</span>
             Try Again
           </Button>
         </div>
@@ -155,7 +151,7 @@ export default function MaintenanceReportsPage() {
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
             <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
               <SelectTrigger className="w-40">
-                <Calendar className="h-4 w-4 mr-2" />
+                <span className="inline-block h-4 w-4 mr-2">📅</span>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -167,7 +163,7 @@ export default function MaintenanceReportsPage() {
             </Select>
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger className="w-40">
-                <Filter className="h-4 w-4 mr-2" />
+                <span className="inline-block h-4 w-4 mr-2">⏷</span>
                 <SelectValue placeholder="Department" />
               </SelectTrigger>
               <SelectContent>
@@ -184,7 +180,7 @@ export default function MaintenanceReportsPage() {
               Export
             </Button>
             <Button onClick={fetchMaintenanceReports} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <span className="h-4 w-4 mr-2">⟳</span>
               Refresh
             </Button>
           </div>
@@ -294,7 +290,7 @@ export default function MaintenanceReportsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Priority Distribution</h2>
-            <AlertTriangle className="h-5 w-5 text-orange-600" />
+            <span className="inline-block h-5 w-5 text-orange-600">⚠️</span>
           </div>
           {priorityDistribution && priorityDistribution.length > 0 ? (
             <RoleBasedChart
@@ -320,7 +316,7 @@ export default function MaintenanceReportsPage() {
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Monthly Maintenance Trends</h2>
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+            <span className="inline-block h-5 w-5 text-blue-600">📈</span>
           </div>
           {monthlyTrends && monthlyTrends.length > 0 ? (
             <RoleBasedChart
@@ -328,11 +324,7 @@ export default function MaintenanceReportsPage() {
               data={monthlyTrends}
               options={{
                 xAxis: monthlyTrends.map((item) => {
-                  try {
-                    return item.monthDisplay || new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-                  } catch (e) {
-                    return 'Unknown';
-                  }
+                  return item.monthDisplay || new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
                 }),
                 series: [
                   {
@@ -361,7 +353,7 @@ export default function MaintenanceReportsPage() {
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">By Department</h2>
-            <Filter className="h-5 w-5 text-purple-600" />
+            <span className="inline-block h-5 w-5 text-purple-600">⏷</span>
           </div>
           {departmentDistribution && departmentDistribution.length > 0 ? (
             <RoleBasedChart
@@ -388,7 +380,7 @@ export default function MaintenanceReportsPage() {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Top Assets Requiring Maintenance</h2>
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <span className="inline-block h-5 w-5 text-red-600">⚠️</span>
             </div>
             {topAssets && topAssets.length > 0 ? (
               <RoleBasedTable
@@ -481,7 +473,7 @@ export default function MaintenanceReportsPage() {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <Clock className="h-5 w-5 text-blue-600" />
+              <span className="inline-block h-5 w-5 text-blue-600">🕒</span>
             </div>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {recentActivity && recentActivity.length > 0 ? (
@@ -539,7 +531,7 @@ export default function MaintenanceReportsPage() {
       {/* Footer */}
       <div className="bg-white rounded-lg shadow-sm p-6 text-center">
         <p className="text-gray-600 text-sm">
-          Report generated on {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}
+          Report generated on {generatedOn} at {generatedTime}
         </p>
         <p className="text-gray-500 text-xs mt-1">
           Data includes all maintenance requests and activities across the organization

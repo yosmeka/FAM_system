@@ -10,8 +10,7 @@ import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
-// import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
-// import { AssetAuditTab } from '@/components/AssetAuditTab';
+import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -102,8 +101,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [usefulLife, setUsefulLife] = useState<number>(5);
   const [salvageValue, setSalvageValue] = useState<number>(0);
   const [depreciationMethod, setDepreciationMethod] = useState<DepreciationMethod>('STRAIGHT_LINE');
-  // Depreciation rate is used in the handleSaveDepreciationSettings function
-  const [, setDepreciationRate] = useState<number>(20);
+  const [depreciationRate, setDepreciationRate] = useState<number>(20);
   const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
     isDepreciable: true,
     depreciableCost: 0,
@@ -227,7 +225,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   // Check permissions first
   if (!checkPermission('Asset view (list and detail)')) {
     return (
-      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 dark:text-gray-100 min-h-screen">
+      <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
         <h1 className="text-2xl font-semibold">Access Denied</h1>
         <p className="mt-2">You do not have permission to view asset details.</p>
       </div>
@@ -519,14 +517,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             assetName={asset?.name || 'Asset'}
           />
         );
-      // case 'audit':
-      //   return (
-      //     <AssetAuditTab
-      //       assetId={resolvedParams.id}
-      //       assetName={asset?.name || 'Asset'}
-      //       assetLocation={asset?.location}
-      //     />
-      //   );
       case 'depreciation':
         return (
           <div ref={targetRef}>
@@ -560,7 +550,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               onClose={() => setIsManagingDepreciation(false)}
               onSave={handleSaveDepreciationSettings}
               initialSettings={depreciationSettings}
-              assetId={resolvedParams.id}
             />
 
             {/* Depreciation Details */}
@@ -583,7 +572,29 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                       <td className="p-2 border">{formatCurrency(depreciationSettings.depreciableCost || asset?.depreciableCost || asset?.purchasePrice || 0)}</td>
                       <td className="p-2 border">{formatCurrency(salvageValue || 0)}</td>
                       <td className="p-2 border">{usefulLife * 12} months</td>
-                      <td className="p-2 border">{depreciationMethod === 'STRAIGHT_LINE' ? 'Straight Line' : 'Declining Balance'}</td>
+                      <td className="p-2 border">{
+  (() => {
+    const method = depreciationSettings.depreciationMethod || depreciationMethod;
+    // Type guard for depreciationRate
+    const rate = (typeof (depreciationSettings as { depreciationRate?: unknown }).depreciationRate === 'number')
+      ? (depreciationSettings as { depreciationRate?: number }).depreciationRate!
+      : depreciationRate;
+    switch (method) {
+      case 'STRAIGHT_LINE':
+        return 'Straight Line';
+      case 'DECLINING_BALANCE':
+        return rate === 40 ? 'Double Declining' : 'Declining Balance';
+      case 'DOUBLE_DECLINING':
+        return 'Double Declining';
+      case 'SUM_OF_YEARS_DIGITS':
+        return 'Sum of Years Digits';
+      case 'UNITS_OF_ACTIVITY':
+        return 'Units of Activity';
+      default:
+        return method;
+    }
+  })()
+}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -725,37 +736,41 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  const isAssetDisposed = (asset: Asset) => asset.status === "DISPOSED";
+
   return (
     <div className="max-w-6xl mx-auto p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-md rounded-lg">
       {/* Header Bar */}
-      <div className="bg-red-500 text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+      <div className={`${isAssetDisposed(asset) ? 'bg-gray-500' : 'bg-red-500'} text-white p-4 rounded-md flex flex-col md:flex-row md:items-center md:justify-between mb-4`}>
         <div className="flex items-center gap-4 mb-2 md:mb-0">
-          <ArrowLeft className="cursor-pointer" onClick={() => router.back()} />
+          <ArrowLeft className="cursor-pointer" onClick={() => router.push('/assets')} />
           <div>
             <h1 className="text-lg font-semibold">{asset.name}</h1>
             <p className="text-sm">Asset Tag ID: {asset.serialNumber} • Site: {asset.location}</p>
           </div>
         </div>
-        {checkPermission('Asset edit') && (
-          <button
-            onClick={() => router.push(`/assets/${asset.id}/edit`)}
-            className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
-          >
-            Edit
-          </button>
-        )}
-        {checkPermission('Asset delete') && (
-          <button
-            onClick={handleDelete}
-            className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
-          >
-            Delete
-          </button>
-        )}
+        <div className="flex gap-2">
+          {!isAssetDisposed(asset) && checkPermission('Asset edit') && (
+            <button
+              onClick={() => router.push(`/assets/${asset.id}/edit`)}
+              className="bg-white text-blue-600 px-4 py-2 rounded-md font-medium hover:bg-blue-50"
+            >
+              Edit
+            </button>
+          )}
+          {!isAssetDisposed(asset) && checkPermission('Asset delete') && (
+            <button
+              onClick={handleDelete}
+              className="bg-white text-red-600 px-4 py-2 rounded-md font-medium hover:bg-red-50"
+            >
+              Delete
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Asset Info Section */}
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
+      <div className="flex flex-col md:flex-row gap-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
         <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 border rounded flex items-center justify-center">
           <span className="text-gray-400">No image</span>
         </div>
@@ -778,22 +793,42 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Tabs */}
-      <div className="border-b mb-4 flex gap-4 text-sm overflow-x-auto">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'contracts', 'capital_improvment', 'history'].map((tab) => (
-          <button
-            key={tab}
-            className={`py-2 ${
-              activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => {
+          const isAllowedForDisposed = ['photos', 'docs', 'history'].includes(tab);
+          const isDisabled = isAssetDisposed(asset) && !isAllowedForDisposed;
+          
+          return (
+            <button
+              key={tab}
+              className={`py-1.5 px-2 mx-0.5 text-sm ${
+                activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+              } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => !isDisabled && setActiveTab(tab)}
+              disabled={isDisabled}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          );
+        })}
       </div>
 
       {/* Tab Content */}
-      {renderTabContent()}
+      {isAssetDisposed(asset) && !['photos', 'docs', 'history'].includes(activeTab.toLowerCase()) ? (
+        <div className="p-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-600 mb-4">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900">Asset is Disposed</h3>
+          <p className="mt-2 text-sm text-gray-500">
+            This asset has been disposed and is now in read-only mode. You can view the asset details but cannot make any modifications.
+          </p>
+        </div>
+      ) : (
+        renderTabContent()
+      )}
     </div>
   );
 }

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { X } from 'lucide-react';
 
 interface ManageDepreciationModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (settings: DepreciationSettings) => void;
   initialSettings: DepreciationSettings;
-  assetId: string;
 }
 
 export interface DepreciationSettings {
@@ -25,9 +23,8 @@ export function ManageDepreciationModal({
   open,
   onClose,
   onSave,
-  initialSettings,
-  assetId
-}: ManageDepreciationModalProps) {
+  initialSettings
+}: Omit<ManageDepreciationModalProps, 'assetId'>) {
   const [settings, setSettings] = useState<DepreciationSettings>({
     ...initialSettings,
     totalUnits: initialSettings.totalUnits || 10000,
@@ -49,42 +46,33 @@ export function ManageDepreciationModal({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
-    if (type === 'checkbox') {
-      const checkbox = e.target as HTMLInputElement;
-      setSettings({
-        ...settings,
-        [name]: checkbox.checked
-      });
-    } else if (type === 'number') {
-      setSettings({
-        ...settings,
-        [name]: parseFloat(value)
-      });
-
-      // If changing totalUnits, update unitsPerYear with even distribution
-      if (name === 'totalUnits') {
+    // For number fields, always parse as float
+    if (type === 'number') {
+      // Only update unitsPerYear if method is UNITS_OF_ACTIVITY and relevant field is changed
+      if (name === 'totalUnits' && settings.depreciationMethod === 'UNITS_OF_ACTIVITY') {
         const totalUnits = parseFloat(value);
         const yearsCount = Math.ceil(settings.usefulLifeMonths / 12);
         const unitsPerYear = Array(yearsCount).fill(totalUnits / yearsCount);
-
         setSettings(prev => ({
           ...prev,
           totalUnits,
           unitsPerYear
         }));
-      }
-
-      // If changing usefulLifeMonths, update unitsPerYear array length
-      if (name === 'usefulLifeMonths') {
+      } else if (name === 'usefulLifeMonths' && settings.depreciationMethod === 'UNITS_OF_ACTIVITY') {
         const months = parseFloat(value);
         const yearsCount = Math.ceil(months / 12);
         const totalUnits = settings.totalUnits || 10000;
         const unitsPerYear = Array(yearsCount).fill(totalUnits / yearsCount);
-
         setSettings(prev => ({
           ...prev,
           usefulLifeMonths: months,
           unitsPerYear
+        }));
+      } else {
+        // For all other number fields, just update the field
+        setSettings(prev => ({
+          ...prev,
+          [name]: parseFloat(value)
         }));
       }
     } else if (name === 'depreciationMethod') {
@@ -93,24 +81,29 @@ export function ManageDepreciationModal({
         const totalUnits = settings.totalUnits || 10000;
         const yearsCount = Math.ceil(settings.usefulLifeMonths / 12);
         const unitsPerYear = settings.unitsPerYear || Array(yearsCount).fill(totalUnits / yearsCount);
-
-        setSettings({
-          ...settings,
+        setSettings(prev => ({
+          ...prev,
           depreciationMethod: value,
           totalUnits,
           unitsPerYear
-        });
+        }));
       } else {
-        setSettings({
-          ...settings,
+        setSettings(prev => ({
+          ...prev,
           depreciationMethod: value
-        });
+        }));
       }
+    } else if (type === 'checkbox') {
+      const checkbox = e.target as HTMLInputElement;
+      setSettings(prev => ({
+        ...prev,
+        [name]: checkbox.checked
+      }));
     } else {
-      setSettings({
-        ...settings,
+      setSettings(prev => ({
+        ...prev,
         [name]: value
-      });
+      }));
     }
   };
 
@@ -122,7 +115,7 @@ export function ManageDepreciationModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-900 text-white rounded-lg shadow-lg w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
@@ -173,12 +166,13 @@ export function ManageDepreciationModal({
                   <input
                     type="number"
                     name="depreciableCost"
-                    value={isNaN(settings.depreciableCost) ? 0 : settings.depreciableCost}
+                    value={isNaN(settings.depreciableCost) ? '' : settings.depreciableCost}
                     onChange={handleChange}
                     onClick={(e) => e.currentTarget.select()}
                     className="flex-1 rounded-r-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     min="0"
                     step="0.01"
+                    inputMode="decimal"
                   />
                 </div>
                 <p className="text-sm text-gray-400 mt-1">including sales tax, freight and installation</p>
@@ -193,12 +187,13 @@ export function ManageDepreciationModal({
                   <input
                     type="number"
                     name="salvageValue"
-                    value={isNaN(settings.salvageValue) ? 0 : settings.salvageValue}
+                    value={isNaN(settings.salvageValue) ? '' : settings.salvageValue}
                     onChange={handleChange}
                     onClick={(e) => e.currentTarget.select()}
                     className="flex-1 rounded-r-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     min="0"
                     step="0.01"
+                    inputMode="decimal"
                   />
                 </div>
               </div>
@@ -208,11 +203,13 @@ export function ManageDepreciationModal({
                 <input
                   type="number"
                   name="usefulLifeMonths"
-                  value={isNaN(settings.usefulLifeMonths) ? 60 : settings.usefulLifeMonths}
+                  value={isNaN(settings.usefulLifeMonths) ? '' : settings.usefulLifeMonths}
                   onChange={handleChange}
                   onClick={(e) => e.currentTarget.select()}
                   className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                   min="1"
+                  step="1"
+                  inputMode="numeric"
                 />
               </div>
 
@@ -279,18 +276,13 @@ export function ManageDepreciationModal({
 
               <div className="mb-6">
                 <label className="block mb-2">Date Acquired</label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    name="dateAcquired"
-                    value={settings.dateAcquired}
-                    onChange={handleChange}
-                    className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <Calendar size={20} className="text-gray-400" />
-                  </div>
-                </div>
+                <input
+                  type="date"
+                  name="dateAcquired"
+                  value={settings.dateAcquired}
+                  onChange={handleChange}
+                  className="w-full rounded-md bg-gray-800 border border-gray-700 text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                />
               </div>
             </>
           )}

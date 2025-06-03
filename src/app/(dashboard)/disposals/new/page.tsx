@@ -1,35 +1,57 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedForm } from '@/components/ui/RoleBasedForm';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 
 const DISPOSAL_METHODS = [
   'SALE',
   'DONATION',
-  'RECYCLING',
-  'SCRAPPING',
-  'TRADE_IN',
+  'RECYCLE',
+  'SCRAP'
 ];
 
-import { useSession } from 'next-auth/react';
+interface Asset {
+  id: string;
+  name: string;
+  serialNumber: string;
+  currentValue: number;
+  status: string;
+}
 
 export default function NewDisposalPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-
-  if (status === 'loading') return null;
-  if (!session || (session.user.role !== 'USER' && session.user.role !== 'MANAGER')) {
-    if (typeof window !== 'undefined') {
-      router.replace('/dashboard');
-      toast.error('Access denied: Only User and Managers can create disposal requests.');
-    }
-    return null;
-  }
-
   const [loading, setLoading] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) {
+      router.replace('/dashboard');
+      toast.error('Access denied: Please log in to create disposal requests.');
+      return;
+    }
+
+    // Fetch available assets
+    fetchAssets();
+  }, [session, status, router]);
+
+  const fetchAssets = async () => {
+    try {
+      const response = await fetch('/api/assets');
+      if (!response.ok) throw new Error('Failed to fetch assets');
+      const data = await response.json();
+      // Filter out already disposed assets
+      setAssets(data.filter((asset: Asset) => asset.status !== 'DISPOSED'));
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to load assets');
+    }
+  };
 
   const handleSubmit = async (formData: FormData) => {
     try {
@@ -38,7 +60,7 @@ export default function NewDisposalPage() {
         assetId: formData.get('assetId'),
         reason: formData.get('reason'),
         method: formData.get('method'),
-        proceeds: formData.get('proceeds'),
+        proceeds: formData.get('expectedValue'),
       };
 
       const response = await fetch('/api/disposals', {
@@ -49,20 +71,25 @@ export default function NewDisposalPage() {
         body: JSON.stringify(data),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to create disposal request');
+        throw new Error(result.error || 'Failed to create disposal request');
       }
 
       toast.success('Disposal request created successfully');
       router.push('/disposals');
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
-      toast.error('Failed to create disposal request');
+      toast.error(error.message || 'Failed to create disposal request');
     } finally {
       setLoading(false);
     }
   };
+
+  if (status === 'loading') return null;
+  if (!session) return null;
 
   return (
     <div className="container mx-auto p-6">
@@ -82,7 +109,11 @@ export default function NewDisposalPage() {
                 required
               >
                 <option value="">Select Asset</option>
-                {/* We'll fetch and populate assets here */}
+                {assets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.name} ({asset.serialNumber}) - Current Value: ${asset.currentValue}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -120,17 +151,17 @@ export default function NewDisposalPage() {
             </div>
 
             <div>
-              <label htmlFor="proceeds" className="block text-sm font-medium">
-                Expected Proceeds (if applicable)
+              <label htmlFor="expectedValue" className="block text-sm font-medium">
+                Expected Value (if applicable)
               </label>
               <input
                 type="number"
-                id="proceeds"
-                name="proceeds"
+                id="expectedValue"
+                name="expectedValue"
                 step="0.01"
                 min="0"
                 className="mt-1 block w-full rounded-md border border-gray-300 p-2"
-                placeholder="Enter amount if selling or trading in"
+                placeholder="Enter expected value if selling or trading in"
               />
             </div>
 

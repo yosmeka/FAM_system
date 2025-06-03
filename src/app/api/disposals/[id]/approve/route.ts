@@ -1,68 +1,115 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
+import { Prisma } from '@prisma/client';
 
 // POST /api/disposals/[id]/approve
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  const id = params.id;
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is a manager
+    if (session.user.role !== 'MANAGER') {
+      return NextResponse.json(
+        { error: 'Only managers can approve disposal requests' },
+        { status: 403 }
+      );
+    }
+
+    // Get the disposal request
+    const disposal = await prisma.disposal.findUnique({
+      where: { id },
+      include: {
+        asset: true,
+        requester: true
+      }
+    });
+
+    if (!disposal) {
+      return NextResponse.json(
+        { error: 'Disposal request not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if the request is still pending
+    if (disposal.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: 'Can only approve pending disposal requests' },
+        { status: 400 }
+      );
+    }
+
     // Start a transaction since we need to update both disposal and asset
-    let disposal;
-    try {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Update the disposal status
-      disposal = await prisma.disposal.update({
-        where: { id: params.id },
+      const updatedDisposal = await tx.disposal.update({
+        where: { id },
         data: {
-          status: 'APPROVED',
-          approvedAt: new Date(),
-          // In a real app, get this from the session
-          approvedBy: 'user-id',
+          status: 'APPROVED'
         },
         include: {
           asset: true,
-        },
+          requester: true
+        }
       });
 
       // Update the asset status to DISPOSED
-      const asset = await prisma.asset.update({
+      await tx.asset.update({
         where: { id: disposal.assetId },
         data: {
           status: 'DISPOSED',
           currentValue: 0, // Asset is no longer valuable to the organization
-        },
+        }
       });
-    } catch (error) {
-      console.error('Error updating asset:', error);
-      // Revert the disposal update
-      await prisma.disposal.update({
-        where: { id: params.id },
-        data: {
-          status: 'PENDING',
-          approvedAt: null,
-          approvedBy: null,
-        },
+
+      // Create asset history records
+      await tx.assetHistory.createMany({
+        data: [
+          {
+            assetId: disposal.assetId,
+            field: 'status',
+            oldValue: disposal.asset.status,
+            newValue: 'DISPOSED',
+            changedBy: session.user.email || 'system',
+          },
+          {
+            assetId: disposal.assetId,
+            field: 'currentValue',
+            oldValue: disposal.asset.currentValue?.toString() || '0',
+            newValue: '0',
+            changedBy: session.user.email || 'system',
+          }
+        ]
       });
-      throw error;
+
+      return updatedDisposal;
+    });
+
+    // Send notification to requester
+    if (result.requester?.id) {
+      await sendNotification({
+        userId: result.requester.id,
+        message: `Your disposal request for asset "${result.asset.name}" has been approved.`,
+        type: 'disposal_approved',
+        meta: { assetId: result.asset.id, disposalId: result.id },
+      });
     }
 
-    // Send notification to requester (if available)
-    if (disposal?.requestedById && disposal?.asset?.name) {
-      await sendNotification({
-        userId: disposal.requestedById,
-        message: `Your disposal request for asset "${disposal.asset.name}" has been approved.`,
-        type: 'disposal_approved',
-        meta: { assetId: disposal.asset.id, disposalId: disposal.id },
-      });
-    }
-    return NextResponse.json(disposal!);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error updating disposal or asset:', error);
+    console.error('Error approving disposal:', error);
     return NextResponse.json(
-      { error: 'Failed to approve disposal' },
+      { error: 'Failed to approve disposal request' },
       { status: 500 }
     );
   }
@@ -74,7 +121,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

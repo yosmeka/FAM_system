@@ -35,7 +35,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Navbar />
-      <main className="py-10">
+      <main className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
       </main>
     </div>

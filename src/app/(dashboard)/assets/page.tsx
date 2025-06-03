@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useSession } from "next-auth/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 
@@ -26,16 +25,16 @@ interface Asset {
 export default function AssetsPage() {
   // All hooks MUST be called at the top, before any return!
   const { checkPermission, loading } = usePermissions();
-  const { data: session } = useSession();
-  // const router = useRouter(); // Initialize the router hook
   const queryClient = useQueryClient();
-
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
-
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  // Fetch assets
   const {
     data: assets = [],
     isLoading,
@@ -50,7 +49,33 @@ export default function AssetsPage() {
       return response.json();
     },
   });
+  // Get unique categories and departments
+  const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));
+  const departments = Array.from(new Set(assets.map(asset => asset.department).filter(Boolean)));
+  // Filtered and paginated assets
+  const filteredAssets = assets.filter((asset) => {
+    const matchesSearch =
+      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      asset.department?.toLowerCase().includes(searchTerm.toLowerCase());
 
+    const matchesStatus =
+      statusFilter === "ALL" || asset.status === statusFilter;
+
+    const matchesCategory =
+      categoryFilter === "ALL" || asset.category === categoryFilter;
+
+    const matchesDepartment =
+      departmentFilter === "ALL" || asset.department === departmentFilter;
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
+  });
+  const totalPages = Math.ceil(filteredAssets.length / pageSize);
+  const paginatedAssets = filteredAssets.slice((page - 1) * pageSize, page * pageSize);
+  // Reset page to 1 when filters/search change
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, categoryFilter, departmentFilter]);
   // Only after ALL hooks, check loading/permissions and return early if needed
   if (loading) {
     return (
@@ -59,7 +84,6 @@ export default function AssetsPage() {
       </div>
     );
   }
-
   if (!checkPermission('Asset view (list and detail)')) {
     return (
       <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
@@ -70,10 +94,6 @@ export default function AssetsPage() {
   }
   // ...rest of your component
 
-
-  // Get unique categories and departments
-  const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));
-  const departments = Array.from(new Set(assets.map(asset => asset.department).filter(Boolean)));
 
   const handleDelete = async (id: string) => {
     try {
@@ -96,23 +116,14 @@ export default function AssetsPage() {
     }
   };
 
-  const filteredAssets = assets.filter((asset) => {
-    const matchesSearch =
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.department?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "ALL" || asset.status === statusFilter;
-
-    const matchesCategory =
-      categoryFilter === "ALL" || asset.category === categoryFilter;
-
-    const matchesDepartment =
-      departmentFilter === "ALL" || asset.department === departmentFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
-  });
+  // const filteredAssets = assets.filter((asset) => {
+  //   const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+  //   const matchesStatus = statusFilter === "ALL" || asset.status === statusFilter;
+  //   const matchesCategory = categoryFilter === "ALL" || asset.category === categoryFilter;
+  //   const matchesDepartment = departmentFilter === "ALL" || asset.department === departmentFilter;
+  //   return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
+  // });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
@@ -134,11 +145,13 @@ export default function AssetsPage() {
       case "TRANSFERRED":
         return "bg-blue-100 text-blue-800";
       case "DISPOSED":
-        return "bg-red-100 text-red-800";
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const isAssetDisposed = (asset: Asset) => asset.status === "DISPOSED";
 
   if (error) {
     return (
@@ -224,7 +237,7 @@ export default function AssetsPage() {
             <option value="ALL">All Categories</option>
             {categories.map((category) => (
               <option key={category} value={category}>
-                 {category}
+                {category}
               </option>
             ))}
           </select>
@@ -245,36 +258,19 @@ export default function AssetsPage() {
         </div>
       </div>
 
-      {filteredAssets.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
-            No assets found
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || statusFilter !== "ALL"
-              ? "Try adjusting your search or filter to find what you're looking for."
-              : "Get started by creating a new asset."}
-          </p>
+      {isLoading ? (
+        <div className="text-center py-4">Loading assets...</div>
+      ) : error ? (
+        <div className="text-center py-4 text-red-600">
+          Error loading assets. Please try again.
         </div>
+      ) : filteredAssets.length === 0 ? (
+        <div className="text-center py-4 text-gray-500">No assets found</div>
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200">
             {filteredAssets.map((asset) => (
-              <li key={asset.id} className="hover:bg-gray-50">
+              <li key={asset.id} className={`hover:bg-gray-50 ${isAssetDisposed(asset) ? 'bg-gray-50' : ''}`}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -291,14 +287,14 @@ export default function AssetsPage() {
                         </span>
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
                       <Link
                         href={`/assets/${asset.id}`}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         View
                       </Link>
-                      {(checkPermission('Asset edit') || checkPermission('Asset delete')) && (
+                      {!isAssetDisposed(asset) && (checkPermission('Asset edit') || checkPermission('Asset delete')) && (
                         <>
                           {checkPermission('Asset edit') && (
                             <Link
@@ -340,6 +336,28 @@ export default function AssetsPage() {
               </li>
             ))}
           </ul>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
+              <button
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       )}
 

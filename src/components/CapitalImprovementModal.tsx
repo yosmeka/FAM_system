@@ -38,7 +38,7 @@ export function CapitalImprovementModal({
 
   return (
     <Transition show={open} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
         <Transition
           show={open}
           as={Fragment}

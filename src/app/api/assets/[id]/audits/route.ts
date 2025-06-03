@@ -73,7 +73,7 @@ export async function POST(
 
     // Parse the request body
     const body = await request.json();
-    
+
     // Validate required fields
     if (!body.auditDate || !body.condition) {
       return NextResponse.json(

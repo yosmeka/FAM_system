@@ -15,8 +15,8 @@ model RoleChangeLog {
   changedBy  String
   changedAt  DateTime @default(now())
 
-  user       User     @relation("RoleChangedUser", fields: [userId], references: [id])
-  changedByUser User  @relation("RoleChangedBy", fields: [changedBy], references: [id])
+  user       User     @relation("RoleChangedUser", fields: [userId], references: [id], onDelete: Cascade)
+  changedByUser User  @relation("RoleChangedBy", fields: [changedBy], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -326,6 +326,7 @@ enum DisposalMethod {
 enum DepreciationMethod {
   STRAIGHT_LINE
   DECLINING_BALANCE
+  DOUBLE_DECLINING
   SUM_OF_YEARS_DIGITS
   UNITS_OF_ACTIVITY
 }
@@ -375,7 +376,8 @@ model UserPermission {
   userId       String
   permissionId String
   granted      Boolean     // true = explicitly granted, false = explicitly denied
-  user         User        @relation(fields: [userId], references: [id])
+  createdAt    DateTime    @default(now()) // Added createdAt field
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade) // Added onDelete: Cascade
   permission   Permission  @relation(fields: [permissionId], references: [id])
   @@unique([userId, permissionId])
 }

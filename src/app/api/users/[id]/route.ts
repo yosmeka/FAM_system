@@ -13,7 +13,7 @@ export async function hasPermission(user: { id: string, role: string }, permissi
     }
     return false;
   }
-  const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
+  const permission = await prisma.oryy.findUnique({ where: { name: permissionName } });
   if (!permission) return false;
 
   // Check for user-specific override first
@@ -32,7 +32,7 @@ export async function hasPermission(user: { id: string, role: string }, permissi
 }
 
 // PUT /api/users/[id] -- update user info
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params: { id } }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
 
@@ -44,18 +44,18 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json();
     const { name, email, role } = body;
     // Fetch current user to check for role change
-    const existingUser = await prisma.user.findUnique({ where: { id: params.id } });
+    const existingUser = await prisma.user.findUnique({ where: { id } });
     let updatedUser;
     if (existingUser) {
       updatedUser = await prisma.user.update({
-        where: { id: params.id },
+        where: { id },
         data: { name, email, role },
       });
       // If role actually changed, create RoleChangeLog
       if (role && existingUser.role !== role) {
         await prisma.roleChangeLog.create({
           data: {
-            userId: params.id,
+            userId: id,
             oldRole: existingUser.role,
             newRole: role,
             changedBy: user.id,
@@ -72,17 +72,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params: { id } }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
   if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User delete'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
   try {
-    await prisma.user.delete({ where: { id: params.id } });
+    await prisma.user.delete({ where: { id } });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error deleting user:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // Check if it's a Prisma known request error for foreign key constraints
+    // and if error is an object with a 'code' property
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2003') {
+      return NextResponse.json({ error: 'Cannot delete user. They are referenced in other records (e.g., logs, assignments). Please reassign or remove these references first.' }, { status: 409 }); // 409 Conflict
+    }
+    // Check if error is an object with a 'message' property
+    const details = (typeof error === 'object' && error !== null && 'message' in error) ? String(error.message) : String(error);
+    return NextResponse.json({ error: 'Internal Server Error', details }, { status: 500 });
   }
 }
