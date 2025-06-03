@@ -9,7 +9,13 @@ import { hasPermission } from './[id]/route';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !(await hasPermission(session.user, 'User view (list and detail)'))) {
+
+  // Allow managers to view users for assignment purposes, and admins for user management
+  const canViewUsers = session?.user?.role === 'ADMIN' ||
+                      session?.user?.role === 'MANAGER' ||
+                      (session?.user && await hasPermission(session.user, 'User view (list and detail)'));
+
+  if (!session?.user || !canViewUsers) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

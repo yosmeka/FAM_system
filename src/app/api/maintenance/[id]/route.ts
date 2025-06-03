@@ -6,17 +6,19 @@ import { authOptions } from '@/lib/auth';
 // GET /api/maintenance/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const maintenanceRequest = await prisma.maintenance.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
             id: true,
             name: true,
             serialNumber: true,
+            location: true,
           },
         },
         requester: {
@@ -29,6 +31,29 @@ export async function GET(
           select: {
             name: true,
             email: true,
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        schedule: {
+          include: {
+            template: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                instructions: true,
+                safetyNotes: true,
+                toolsRequired: true,
+                partsRequired: true,
+                checklistItems: true,
+              },
+            },
           },
         },
       },
@@ -99,10 +124,30 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({
-      ...maintenanceRequest,
-      documentUrl
-    });
+    // Parse template JSON strings if template exists
+    let processedRequest = { ...maintenanceRequest, documentUrl };
+
+    if (processedRequest.schedule?.template) {
+      const safeParseJSON = (jsonString: string | null): any[] => {
+        if (!jsonString) return [];
+        try {
+          const parsed = JSON.parse(jsonString);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.error('Error parsing template JSON:', error);
+          return [];
+        }
+      };
+
+      processedRequest.schedule.template = {
+        ...processedRequest.schedule.template,
+        toolsRequired: safeParseJSON(processedRequest.schedule.template.toolsRequired),
+        partsRequired: safeParseJSON(processedRequest.schedule.template.partsRequired),
+        checklistItems: safeParseJSON(processedRequest.schedule.template.checklistItems),
+      };
+    }
+
+    return NextResponse.json(processedRequest);
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json(
@@ -115,9 +160,10 @@ export async function GET(
 // PUT /api/maintenance/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const {
       status,
@@ -127,12 +173,29 @@ export async function PUT(
       scheduledDate,
       managerId,
       notifyManager,
-      previousStatus
+      previousStatus,
+      actualHours,
+      checklistItems,
+      completedAt,
+      // Work documentation fields
+      workPerformed,
+      partsUsed,
+      laborHours,
+      partsCost,
+      laborCost,
+      totalCost,
+      workStartedAt,
+      workCompletedAt,
+      technicianNotes,
+      managerReviewNotes,
+      finalApprovedAt,
+      finalApprovedBy,
+      assignedToId
     } = body;
 
     // Get the current maintenance request to check its status and requester
     const currentRequest = await prisma.maintenance.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         asset: {
           select: {
@@ -169,16 +232,28 @@ export async function PUT(
     const userId = session?.user?.id;
     const userRole = session?.user?.role;
 
-    // Check if the user is the requester and trying to change status from PENDING_APPROVAL
+    // Check user permissions
     const isRequester = userId === currentRequest.requesterId;
+    const isAssignedTechnician = userId === currentRequest.assignedToId;
     const isPendingApproval = currentRequest.status === 'PENDING_APPROVAL';
 
-    // If regular user is trying to change status of a pending request, prevent it
-    if (isRequester && isPendingApproval && status !== undefined && status !== 'PENDING_APPROVAL' && userRole === 'USER') {
-      return NextResponse.json(
-        { error: 'Regular users cannot change the status of a pending request' },
-        { status: 403 }
-      );
+    // Authorization logic
+    if (userRole === 'USER') {
+      // Regular users (technicians) can only update tasks assigned to them
+      if (!isAssignedTechnician && !isRequester) {
+        return NextResponse.json(
+          { error: 'You can only update tasks assigned to you' },
+          { status: 403 }
+        );
+      }
+
+      // Requesters cannot change status of pending requests
+      if (isRequester && isPendingApproval && status !== undefined && status !== 'PENDING_APPROVAL') {
+        return NextResponse.json(
+          { error: 'Regular users cannot change the status of a pending request' },
+          { status: 403 }
+        );
+      }
     }
 
     // Build the update data object
@@ -190,19 +265,36 @@ export async function PUT(
     if (notes !== undefined) updateData.notes = notes;
     if (scheduledDate !== undefined) updateData.scheduledDate = new Date(scheduledDate);
     if (managerId !== undefined) updateData.managerId = managerId || null; // Allow unsetting manager with empty string
+    if (actualHours !== undefined) updateData.actualHours = actualHours;
+    if (checklistItems !== undefined) updateData.checklistItems = checklistItems;
+    if (assignedToId !== undefined) updateData.assignedToId = assignedToId;
+
+    // Work documentation fields
+    if (workPerformed !== undefined) updateData.workPerformed = workPerformed;
+    if (partsUsed !== undefined) updateData.partsUsed = partsUsed;
+    if (laborHours !== undefined) updateData.laborHours = laborHours;
+    if (partsCost !== undefined) updateData.partsCost = partsCost;
+    if (laborCost !== undefined) updateData.laborCost = laborCost;
+    if (totalCost !== undefined) updateData.totalCost = totalCost;
+    if (workStartedAt !== undefined) updateData.workStartedAt = workStartedAt ? new Date(workStartedAt) : null;
+    if (workCompletedAt !== undefined) updateData.workCompletedAt = workCompletedAt ? new Date(workCompletedAt) : null;
+    if (technicianNotes !== undefined) updateData.technicianNotes = technicianNotes;
+    if (managerReviewNotes !== undefined) updateData.managerReviewNotes = managerReviewNotes;
+    if (finalApprovedAt !== undefined) updateData.finalApprovedAt = finalApprovedAt ? new Date(finalApprovedAt) : null;
+    if (finalApprovedBy !== undefined) updateData.finalApprovedBy = finalApprovedBy;
 
     // Handle status changes
     if (status !== undefined) {
       updateData.status = status;
 
-      // Set completedAt when status changes to COMPLETED
-      if (status === 'COMPLETED') {
-        updateData.completedAt = new Date();
+      // Set completedAt when status changes to COMPLETED or if explicitly provided
+      if (status === 'COMPLETED' || completedAt !== undefined) {
+        updateData.completedAt = completedAt ? new Date(completedAt) : new Date();
       }
     }
 
     const maintenanceRequest = await prisma.maintenance.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         asset: {
@@ -242,8 +334,8 @@ export async function PUT(
       });
     }
 
-    // Send notification to manager if requested
-    if (notifyManager && maintenanceRequest.manager && previousStatus) {
+    // Send notifications to manager for workflow updates
+    if (notifyManager && status) {
       try {
         // Import the sendNotification function
         const { sendNotification } = await import('@/lib/notifications');
@@ -256,36 +348,64 @@ export async function PUT(
             'REJECTED': 'Rejected',
             'SCHEDULED': 'Scheduled',
             'IN_PROGRESS': 'In Progress',
+            'PENDING_REVIEW': 'Pending Review',
             'COMPLETED': 'Completed',
             'CANCELLED': 'Cancelled'
           };
           return statusMap[status] || status;
         };
 
-        // Get user-friendly status names
-        const oldStatusName = getStatusName(previousStatus);
-        const newStatusName = getStatusName(status);
+        let message = '';
+        let notificationType = '';
+        let targetUserId = '';
 
-        // Create the notification message
-        const message = `Maintenance request for asset "${maintenanceRequest.asset.name}" has been updated from "${oldStatusName}" to "${newStatusName}" by ${maintenanceRequest.requester.name}.`;
+        // Determine notification based on status
+        if (status === 'IN_PROGRESS') {
+          // Technician started the task - notify manager
+          message = `🔧 Technician has started working on maintenance task for "${maintenanceRequest.asset.name}" (${maintenanceRequest.asset.serialNumber})`;
+          notificationType = 'maintenance_started';
+          targetUserId = maintenanceRequest.manager?.id || '';
+        } else if (status === 'PENDING_REVIEW') {
+          // Technician completed task - notify manager for review
+          message = `✅ Maintenance task for "${maintenanceRequest.asset.name}" has been completed by technician and requires your review and approval`;
+          notificationType = 'maintenance_review_required';
+          targetUserId = maintenanceRequest.manager?.id || '';
+        } else if (previousStatus === 'IN_PROGRESS' && status === 'IN_PROGRESS') {
+          // Progress update - notify manager
+          message = `📊 Progress update on maintenance task for "${maintenanceRequest.asset.name}" - technician has saved progress`;
+          notificationType = 'maintenance_progress_update';
+          targetUserId = maintenanceRequest.manager?.id || '';
+        } else if (status === 'COMPLETED') {
+          // Manager approved the task - notify technician
+          message = `✅ Your completed maintenance task for "${maintenanceRequest.asset.name}" has been approved by the manager`;
+          notificationType = 'maintenance_approved';
+          targetUserId = maintenanceRequest.assignedToId || '';
+        } else if (status === 'REJECTED') {
+          // Manager rejected the task - notify technician
+          message = `❌ Your maintenance task for "${maintenanceRequest.asset.name}" has been rejected by the manager. Please review and resubmit.`;
+          notificationType = 'maintenance_rejected';
+          targetUserId = maintenanceRequest.assignedToId || '';
+        }
 
-        // Send the notification to the manager
-        await sendNotification({
-          userId: maintenanceRequest.manager.id,
-          message,
-          type: 'maintenance_status_changed',
-          meta: {
-            assetId: maintenanceRequest.assetId,
-            maintenanceId: maintenanceRequest.id,
-            previousStatus,
-            newStatus: status,
-            updatedBy: maintenanceRequest.requester.id
-          },
-        });
+        // Send notification if we have a target user
+        if (targetUserId && message) {
+          await sendNotification({
+            userId: targetUserId,
+            message,
+            type: notificationType,
+            meta: {
+              assetId: maintenanceRequest.assetId,
+              maintenanceId: maintenanceRequest.id,
+              status: status,
+              assetName: maintenanceRequest.asset.name,
+              assetSerialNumber: maintenanceRequest.asset.serialNumber
+            },
+          });
 
-        console.log(`Sent status change notification to manager ${maintenanceRequest.manager.id}`);
+          console.log(`Sent ${notificationType} notification to user ${targetUserId}`);
+        }
       } catch (notificationError) {
-        console.error('Error sending notification to manager:', notificationError);
+        console.error('Error sending notification:', notificationError);
         // Continue even if notification fails
       }
     }

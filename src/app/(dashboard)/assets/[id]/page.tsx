@@ -501,15 +501,15 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderLinkingTab();
       case 'capital_improvment':
         return <CapitalImprovementsTab assetId={resolvedParams.id} />;
-      case 'maint':
-        return (
-          <AssetMaintenanceTab
-            assetId={resolvedParams.id}
-            assetName={asset?.name || 'Asset'}
-            lastMaintenance={asset?.lastMaintenance}
-            nextMaintenance={asset?.nextMaintenance}
-          />
-        );
+      // case 'maint':
+      //   return (
+      //     <AssetMaintenanceTab
+      //       assetId={resolvedParams.id}
+      //       assetName={asset?.name || 'Asset'}
+      //       lastMaintenance={asset?.lastMaintenance}
+      //       nextMaintenance={asset?.nextMaintenance}
+      //     />
+      //   );
       case 'docs':
         return (
           <DocumentsTab
