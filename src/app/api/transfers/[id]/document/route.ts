@@ -56,25 +56,22 @@ export async function GET(
     // Log the search parameters for debugging
     console.log(`Searching for document with assetId: ${transfer.assetId}, type: ${transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'}, transferId: ${id}`);
 
-    // First, get all documents for this asset with the right type
+    // Always search for both approval and rejection documents for this transfer
     const documents = await (prisma as unknown as { document: PrismaDocumentClient }).document.findMany({
       where: {
         assetId: transfer.assetId,
-        type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION',
+        // Find both approval and rejection documents for this transfer
+        type: { in: ['TRANSFER_APPROVAL', 'TRANSFER_REJECTION'] },
       }
     });
-
-    console.log(`Found ${documents.length} documents matching asset and type`);
 
     // Then filter for the specific transfer
     let document = null;
     for (const doc of documents) {
-      console.log(`Checking document: ${doc.id}, meta:`, doc.meta);
       if (doc.meta && typeof doc.meta === 'object') {
         const meta = doc.meta as DocumentMeta;
         if (meta.transferId === id) {
           document = doc;
-          console.log(`Found matching document: ${doc.id}`);
           break;
         }
       }
@@ -265,7 +262,6 @@ export async function POST(
         filePath,
         mimeType: 'application/pdf',
         updatedAt: new Date(),
-        // Make sure the meta field is updated with the correct transfer ID
         meta: {
           transferId: id,
           status: transfer.status,

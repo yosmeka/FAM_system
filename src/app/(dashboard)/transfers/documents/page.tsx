@@ -34,6 +34,7 @@ export default function TransferDocumentsPage() {
 
   useEffect(() => {
     fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDocuments = async () => {
@@ -44,50 +45,34 @@ export default function TransferDocumentsPage() {
       if (!transfersResponse.ok) throw new Error('Failed to fetch transfers');
       const transfersData = await transfersResponse.json();
 
-      // Filter only approved or rejected transfers that belong to the current user
+      // Filter only approved, rejected, or completed transfers that belong to the current user
       const relevantTransfers = transfersData.filter(
-        (transfer: any) =>
-          (transfer.status === 'APPROVED' || transfer.status === 'REJECTED') &&
-          transfer.requester?.id === session?.user?.id
+        (transfer: Record<string, unknown>) =>
+          (transfer.status === 'APPROVED' || transfer.status === 'REJECTED' || transfer.status === 'COMPLETED') &&
+          ((transfer.requester && (transfer.requester as { id?: string }).id === session?.user?.id) || transfer.requesterId === session?.user?.id)
       );
 
       // For each relevant transfer, check if it has a document
-      const documentsPromises = relevantTransfers.map(async (transfer: any) => {
+      const documentsPromises = relevantTransfers.map(async (transfer: Record<string, unknown>) => {
         try {
-          console.log(`Fetching document for transfer ${transfer.id}`);
           const docResponse = await fetch(`/api/transfers/${transfer.id}/document`);
-
           if (!docResponse.ok) {
-            console.log(`No document found for transfer ${transfer.id}, status: ${docResponse.status}`);
-            // Try to get the error message
-            try {
-              const errorData = await docResponse.json();
-              console.log(`Error details:`, errorData);
-            } catch (e) {
-              console.log(`Could not parse error response`);
-            }
             return null;
           }
-
           const docData = await docResponse.json();
-          console.log(`Document data for transfer ${transfer.id}:`, docData);
-
           if (!docData.documentUrl) {
-            console.log(`No document URL found for transfer ${transfer.id}`);
             return null;
           }
-
           return {
             id: `${transfer.id}-doc`,
-            transferId: transfer.id,
-            assetName: transfer.asset?.name || 'Unknown Asset',
-            status: transfer.status,
+            transferId: transfer.id as string,
+            assetName: transfer.asset && (transfer.asset as { name?: string }).name || 'Unknown Asset',
+            status: transfer.status === 'COMPLETED' ? 'APPROVED' : transfer.status,
             url: docData.documentUrl,
-            createdAt: transfer.updatedAt || transfer.createdAt,
-            type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'
+            createdAt: (transfer.updatedAt || transfer.createdAt) as string,
+            type: transfer.status === 'APPROVED' || transfer.status === 'COMPLETED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'
           };
-        } catch (error) {
-          console.error('Error fetching document for transfer:', transfer.id, error);
+        } catch {
           return null;
         }
       });
