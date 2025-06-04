@@ -8,33 +8,61 @@ import { toast } from 'react-hot-toast';
 
 import { useSession } from 'next-auth/react';
 
+// Add types for Asset and Manager
+interface Asset {
+  id: string;
+  name: string;
+  serialNumber: string;
+  location: string;
+  status: string;
+  currentValue?: number;
+}
+interface Manager {
+  id: string;
+  name?: string;
+  email: string;
+}
+
 export default function NewTransferPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
   const [assetsLoading, setAssetsLoading] = useState(true);
   const [assetsError, setAssetsError] = useState<string | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedManager, setSelectedManager] = useState<string>('');
 
   useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        const response = await fetch('/api/users/managers');
+        if (!response.ok) throw new Error('Failed to fetch managers');
+        const data: Manager[] = await response.json();
+        setManagers(data);
+      } catch {
+        // Optionally handle error
+      }
+    };
     const fetchAssets = async () => {
       setAssetsLoading(true);
       setAssetsError(null);
       try {
         const response = await fetch('/api/assets');
         if (!response.ok) throw new Error('Failed to fetch assets');
-        const data = await response.json();
-        const activeAssets = data.filter((asset: any) => asset.status !== 'DISPOSED');
+        const data: Asset[] = await response.json();
+        const activeAssets = data.filter((asset) => asset.status !== 'DISPOSED');
         setAssets(activeAssets);
-      } catch (err: any) {
-        setAssetsError(err.message || 'Failed to fetch assets');
+      } catch (err) {
+        setAssetsError((err as Error).message || 'Failed to fetch assets');
       } finally {
         setAssetsLoading(false);
       }
     };
     fetchAssets();
+    fetchManagers();
   }, []);
 
   if (status === 'loading') return null;
@@ -55,6 +83,10 @@ export default function NewTransferPage() {
       toast.error('Please select an asset.');
       return;
     }
+    if (!selectedManager) {
+      toast.error('Please select a manager.');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -63,6 +95,7 @@ export default function NewTransferPage() {
         fromLocation: selectedAsset?.location || '', // Use selected asset's location
         toLocation: formData.get('toLocation'),
         reason: formData.get('reason'),
+        managerId: selectedManager,
       };
 
       const response = await fetch('/api/transfers', {
@@ -167,6 +200,27 @@ export default function NewTransferPage() {
                 className="mt-1 block w-full rounded-md border border-gray-300 p-2"
                 required
               />
+            </div>
+
+            <div>
+              <label htmlFor="managerId" className="block text-sm font-medium">
+                Assign to Manager
+              </label>
+              <select
+                id="managerId"
+                name="managerId"
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                required
+                value={selectedManager}
+                onChange={e => setSelectedManager(e.target.value)}
+              >
+                <option value="">Select Manager</option>
+                {managers.map((manager) => (
+                  <option key={manager.id} value={manager.id}>
+                    {manager.name || manager.email}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

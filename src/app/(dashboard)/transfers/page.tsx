@@ -197,6 +197,27 @@ export default function TransfersPage() {
                 </RoleBasedButton>
               </>
             )}
+            {/* Only requester can complete approved transfers */}
+            {item.status === 'APPROVED' && isRequester && (
+              <RoleBasedButton
+                onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  try {
+                    const response = await fetch(`/api/transfers/${transferId}/complete`, { method: 'POST' });
+                    if (!response.ok) throw new Error('Failed to complete transfer');
+                    toast.success('Transfer marked as completed.');
+                    fetchTransfers();
+                  } catch {
+                    toast.error('Failed to complete transfer');
+                  }
+                }}
+                variant="success"
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Complete Transfer
+              </RoleBasedButton>
+            )}
           </div>
         );
       },

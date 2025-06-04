@@ -39,16 +39,23 @@ export async function GET(
             id: true,
           },
         },
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
-    // If transfer is approved or rejected, check for document
+    // If transfer is approved, rejected, or completed, check for document
     let document = null;
-    if (transfer && (transfer.status === 'APPROVED' || transfer.status === 'REJECTED')) {
+    if (transfer && (transfer.status === 'APPROVED' || transfer.status === 'REJECTED' || transfer.status === 'COMPLETED')) {
       document = await (prisma as unknown as { document: PrismaDocumentClient }).document.findFirst({
         where: {
           assetId: transfer.assetId,
-          type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION',
+          type: transfer.status === 'REJECTED' ? 'TRANSFER_REJECTION' : 'TRANSFER_APPROVAL',
         },
         select: {
           id: true,
@@ -89,6 +96,8 @@ export async function GET(
       fromLocation: transfer.fromDepartment,
       toLocation: transfer.toDepartment,
       document: document,
+      manager: transfer.manager,
+      managerId: transfer.managerId,
     };
     return NextResponse.json(result);
   } catch (error) {

@@ -41,6 +41,7 @@ model User {
   assignedSchedules   MaintenanceSchedule[] @relation("ScheduleAssignedTo")
   createdTemplates    MaintenanceTemplate[] @relation("TemplateCreatedBy")
   transferRequests    Transfer[]    @relation("TransferRequestedBy")
+  managedTransfers    Transfer[]    @relation("TransferManagedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
 
@@ -116,8 +117,12 @@ model Transfer {
   toDepartment   String
   status         TransferStatus @default(PENDING)
   managerReason  String?        // Reason provided by manager for rejection
+  managerId      String?        // Assigned manager for this transfer (optional for migration)
   asset          Asset          @relation(fields: [assetId], references: [id], onDelete: Cascade)
   requester      User           @relation("TransferRequestedBy", fields: [requesterId], references: [id])
+  manager        User?          @relation("TransferManagedBy", fields: [managerId], references: [id])
+
+  @@index([managerId])
 }
 
 model Maintenance {

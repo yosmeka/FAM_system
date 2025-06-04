@@ -146,80 +146,92 @@ export default function TransferDetailsPage({ params }: { params: any }) {
     }
   }
 
+  // Complete transfer handler
+  async function handleCompleteTransfer() {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/transfers/${id}/complete`, { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to complete transfer');
+      toast.success('Transfer marked as completed.');
+      fetchTransferDetails();
+    } catch (error) {
+      toast.error('Failed to complete transfer');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="container mx-auto p-6">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold">Transfer Details</h1>
-          <RoleBasedBadge label={transfer.status} />
+        <div className="flex justify-between items-center mb-8 border-b pb-4">
+          <h1 className="text-3xl font-bold text-gray-800">Transfer Details</h1>
+          <RoleBasedBadge label={transfer.status} className="text-lg" />
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-medium">Asset Information</h2>
-            <div className="text-gray-600 space-y-1">
+        <div className="bg-white shadow-xl rounded-2xl p-8 space-y-8 border border-gray-200">
+          <section>
+            <h2 className="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Asset Information</h2>
+            <div className="grid grid-cols-2 gap-4 text-gray-600">
               <div><b>Name:</b> {transfer.asset?.name}</div>
               <div><b>Serial Number:</b> {transfer.asset?.serialNumber}</div>
               {transfer.asset?.status && <div><b>Status:</b> {transfer.asset.status}</div>}
               {transfer.asset?.location && <div><b>Location:</b> {transfer.asset.location}</div>}
               {transfer.asset?.currentValue !== undefined && <div><b>Value:</b> ${transfer.asset.currentValue?.toLocaleString?.() ?? transfer.asset.currentValue}</div>}
             </div>
-          </div>
+          </section>
 
-          <div>
-            <h2 className="text-lg font-medium">Requester Information</h2>
-            <div className="text-gray-600 space-y-1">
+          <section>
+            <h2 className="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Requester Information</h2>
+            <div className="grid grid-cols-2 gap-4 text-gray-600">
               <div><b>Name:</b> {transfer.requester?.name || 'Unknown'}</div>
               <div><b>Email:</b> {transfer.requester?.email || 'Unknown'}</div>
             </div>
-          </div>
+          </section>
 
-          <div className="grid grid-cols-2 gap-4">
+          <section className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-medium">From Location</h3>
+              <h3 className="font-medium text-gray-700">From Location</h3>
               <p className="text-gray-600">{transfer.fromLocation}</p>
             </div>
             <div>
-              <h3 className="font-medium">To Location</h3>
+              <h3 className="font-medium text-gray-700">To Location</h3>
               <p className="text-gray-600">{transfer.toLocation}</p>
             </div>
-          </div>
+          </section>
 
-          <div>
-            <h3 className="font-medium">Request Reason</h3>
-            <p className="text-gray-600">{transfer.reason}</p>
-          </div>
+          <section>
+            <h3 className="font-medium text-gray-700">Request Reason</h3>
+            <p className="text-gray-600 italic">{transfer.reason}</p>
+          </section>
 
           {transfer.managerReason && (
-            <div>
-              <h3 className="font-medium">
+            <section>
+              <h3 className="font-medium text-gray-700">
                 {transfer.status === 'APPROVED' ? 'Approval Reason' : 'Rejection Reason'}
               </h3>
-              <p className="text-gray-600">{transfer.managerReason}</p>
-            </div>
+              <p className="text-gray-600 italic">{transfer.managerReason}</p>
+            </section>
           )}
 
-          <div>
-            <h3 className="font-medium">Request Date</h3>
-            <p className="text-gray-600">
-              {new Date(transfer.createdAt).toLocaleDateString()}
-            </p>
-          </div>
-
-          {transfer.status !== 'PENDING' && (
+          <section className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-medium">Response Date</h3>
-              <p className="text-gray-600">
-                {new Date(transfer.updatedAt).toLocaleDateString()}
-              </p>
+              <h3 className="font-medium text-gray-700">Request Date</h3>
+              <p className="text-gray-600">{new Date(transfer.createdAt).toLocaleDateString()}</p>
             </div>
-          )}
+            {transfer.status !== 'PENDING' && (
+              <div>
+                <h3 className="font-medium text-gray-700">Response Date</h3>
+                <p className="text-gray-600">{new Date(transfer.updatedAt).toLocaleDateString()}</p>
+              </div>
+            )}
+          </section>
 
           {/* Only show document section to the requester */}
           {session?.user?.id === transfer.requester?.id && transfer.document && (
-            <div className="border-t pt-4 mt-4">
-              <h3 className="font-medium mb-2 text-lg">Official Transfer Document</h3>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <section className="border-t pt-6 mt-6">
+              <h3 className="font-semibold mb-2 text-lg text-gray-800">Official Transfer Document</h3>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col gap-2">
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="bg-red-100 p-2 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -245,7 +257,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                     href={transfer.document.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors"
+                    className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md flex items-center space-x-2 transition-colors shadow"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -254,24 +266,24 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                   </a>
                 </div>
               </div>
-            </div>
+            </section>
           )}
 
           {/* Only show document not available message to the requester */}
           {session?.user?.id === transfer.requester?.id &&
            (transfer.status === 'APPROVED' || transfer.status === 'REJECTED') &&
            !transfer.document && (
-            <div className="border-t pt-4 mt-4">
+            <section className="border-t pt-6 mt-6">
               <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                 <h3 className="font-medium text-yellow-800">Document Not Available</h3>
                 <p className="text-sm text-yellow-700 mt-1">
                   The transfer document is not available yet. Please check back later or contact your manager.
                 </p>
               </div>
-            </div>
+            </section>
           )}
 
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex justify-end space-x-4 pt-6">
             <RoleBasedButton
               variant="secondary"
               onClick={() => router.push('/transfers')}
@@ -291,6 +303,17 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                 <span>All My Documents</span>
               </RoleBasedButton>
             )}
+            {/* Show Complete Transfer button if approved and user is requester */}
+            {transfer.status === 'APPROVED' && session?.user?.id === transfer.requester?.id && (
+              <RoleBasedButton
+                variant="success"
+                onClick={handleCompleteTransfer}
+                loading={loading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Complete Transfer
+              </RoleBasedButton>
+            )}
             {/* Show Edit button only if transfer is pending and user is the requester */}
             {transfer.status === 'PENDING' &&
               session?.user?.id === transfer.requester?.id && (
@@ -303,7 +326,8 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                 </RoleBasedButton>
               )
             }
-            {transfer.status === 'PENDING' && (
+            {/* Only show Delete Transfer button if user is requester and status is PENDING */}
+            {transfer.status === 'PENDING' && session?.user?.id === transfer.requester?.id && (
               <RoleBasedButton
                 variant="danger"
                 onClick={handleDelete}

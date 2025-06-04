@@ -39,33 +39,17 @@ export async function POST(
       return NextResponse.json({ error: 'Transfer request missing destination location.' }, { status: 400 });
     }
 
-    // Update asset location and status using toDepartment as the new location
-    const updatedAsset = await prisma.asset.update({
+    // Update asset status only (do not change location)
+    await prisma.asset.update({
       where: { id: transfer.assetId },
       data: {
         status: 'TRANSFERRED',
-        location: transfer.toDepartment,
+        // location: transfer.toDepartment, // Do NOT update location here
       },
     });
 
-    // Track the change in asset history, but don't fail the main operation if this fails
-    try {
-      await prisma.assetHistory.create({
-        data: {
-          assetId: transfer.assetId,
-          field: 'location',
-          oldValue: transfer.asset.location || '',
-          newValue: transfer.toDepartment,
-          changedBy: (await getServerSession(authOptions))?.user?.email || 'system',
-        }
-      });
-    } catch (historyError) {
-      console.error('Asset history logging failed:', historyError);
-      // Continue without throwing
-    }
-
     // Generate approval document
-    let documentUrl = '';
+    const documentUrl = '';
     try {
       console.log(`Directly generating document for transfer ${id}`);
 
@@ -167,7 +151,7 @@ export async function POST(
       });
       console.log(`Sent approval notification to user ${transfer.requesterId}`);
     }
-    return NextResponse.json({ transfer, updatedAsset });
+    return NextResponse.json({ transfer });
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json(
@@ -214,34 +198,6 @@ export async function PUT(
         location: transfer.toDepartment, // Assuming location changes with department
       }
     });
-
-    // Track the changes in asset history
-    try {
-      // Create department history
-      await prisma.assetHistory.create({
-        data: {
-          assetId: transfer.assetId,
-          field: 'department',
-          oldValue: transfer.fromDepartment,
-          newValue: transfer.toDepartment,
-          changedBy: session.user?.email || 'system',
-        }
-      });
-
-      // Create location history
-      await prisma.assetHistory.create({
-        data: {
-          assetId: transfer.assetId,
-          field: 'location',
-          oldValue: transfer.fromDepartment, // Use fromDepartment as oldValue
-          newValue: transfer.toDepartment,   // Use toDepartment as newValue
-          changedBy: session.user?.email || 'system',
-        }
-      });
-    } catch (historyError) {
-      console.error('Asset history logging failed:', historyError);
-      // Continue without throwing
-    }
 
     // Generate approval document
     let documentUrl = '';
