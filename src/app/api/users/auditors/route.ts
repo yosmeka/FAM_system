@@ -4,19 +4,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
-// GET /api/users/auditors - Get users who can perform audits (USER role)
+// GET /api/users/auditors - Get users who can perform audits (AUDITOR role)
 // This endpoint is specifically for audit assignment creation and doesn't require user management permissions
-export const GET = withRole(['MANAGER', 'ADMIN'], async function GET() {
+export const GET = withRole(['MANAGER'], async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all users with USER role (potential auditors)
+    // Fetch all users with AUDITOR role (potential auditors)
     const auditors = await prisma.user.findMany({
       where: {
-        role: 'USER',
+        role: 'AUDITOR',
       },
       select: {
         id: true,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 // Fallback: hardcode roles if Prisma enum import fails
-const roles = ['ADMIN', 'MANAGER', 'USER'];
+const roles = ['ADMIN', 'MANAGER', 'USER', 'AUDITOR']; // Added AUDITOR
 
 // GET /api/role-permissions?role=ADMIN
 export async function GET(req: NextRequest) {

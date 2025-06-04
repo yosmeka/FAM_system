@@ -6,7 +6,7 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // POST /api/audits/workflow - Create audit from assignment or request
-export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -63,9 +63,14 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
         return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
       }
 
-      // Verify user is assigned to this audit
-      if (session.user.role === 'USER' && assignment.assignedToId !== session.user.id) {
+      // Only AUDITOR can perform assigned audit
+      if (session.user.role === 'AUDITOR' && assignment.assignedToId !== session.user.id) {
         return NextResponse.json({ error: 'Not assigned to this audit' }, { status: 403 });
+      }
+
+      // Prevent USER from performing audits
+      if (session.user.role === 'USER') {
+        return NextResponse.json({ error: 'Only auditors can perform audits' }, { status: 403 });
       }
     }
 
@@ -91,9 +96,14 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
         );
       }
 
-      // Verify user is the requester or has permission
-      if (session.user.role === 'USER' && auditRequest.requesterId !== session.user.id) {
+      // Only AUDITOR can perform audits from requests
+      if (session.user.role === 'AUDITOR' && auditRequest.requesterId !== session.user.id) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+
+      // Prevent USER from performing audits
+      if (session.user.role === 'USER') {
+        return NextResponse.json({ error: 'Only auditors can perform audits' }, { status: 403 });
       }
     }
 
@@ -177,7 +187,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
 
     // Send notification to manager if audit is submitted for review
     if (audit.workflowStatus === 'PENDING_REVIEW') {
-      const managerId = assignment?.assignedBy?.id || request?.manager?.id;
+      const managerId = assignment?.assignedBy?.id || audit.request?.manager?.id;
       if (managerId) {
         await AuditNotificationService.notifyAuditCompleted({
           id: audit.id,
@@ -205,7 +215,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
 });
 
 // PUT /api/audits/workflow - Submit audit for review
-export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(request: Request) {
+export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -247,8 +257,8 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(req
 
     let updateFields: any = {};
 
-    if (action === 'submit_for_review' && userRole === 'USER') {
-      // User submits audit for manager review
+    if (action === 'submit_for_review' && userRole === 'AUDITOR') {
+      // Auditor submits audit for manager review
       if (currentAudit.auditorId !== userId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }

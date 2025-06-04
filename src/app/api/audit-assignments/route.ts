@@ -6,7 +6,7 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-assignments - Get audit assignments
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(request: Request) {
+export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -20,7 +20,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(req
     let whereClause: any = {};
 
     // Filter based on user role
-    if (role === 'USER') {
+    if (role === 'AUDITOR') {
       // Users see only assignments assigned to them
       whereClause.assignedToId = userId;
     } else if (role === 'MANAGER') {
@@ -88,7 +88,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(req
 });
 
 // POST /api/audit-assignments - Create new audit assignment (Manager/Admin only)
-export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole([ 'MANAGER'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -127,7 +127,7 @@ export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: 
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    // Verify assigned user exists and is a USER role
+    // Verify assigned user exists and is a AUDITOR user with the correct role
     const assignedUser = await prisma.user.findUnique({
       where: { id: assignedToId },
       select: { id: true, name: true, role: true },
@@ -137,7 +137,7 @@ export const POST = withRole(['ADMIN', 'MANAGER'], async function POST(request: 
       return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 });
     }
 
-    if (assignedUser.role !== 'USER') {
+    if (assignedUser.role !== 'AUDITOR') {
       return NextResponse.json(
         { error: 'Can only assign audits to users with USER role' },
         { status: 400 }

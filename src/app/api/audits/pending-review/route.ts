@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 // GET /api/audits/pending-review - Get audits pending manager review
-export const GET = withRole(['MANAGER', 'ADMIN'], async function GET() {
+export const GET = withRole(['MANAGER'], async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

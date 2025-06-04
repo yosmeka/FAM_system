@@ -6,7 +6,7 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-requests - Get audit requests
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(request: Request) {
+export const GET = withRole(['MANAGER', 'AUDITOR'], async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -20,8 +20,8 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(req
     let whereClause: any = {};
 
     // Filter based on user role
-    if (role === 'USER') {
-      // Users see only requests they created
+    if (role === 'AUDITOR') {
+      // auditors see only requests they created
       whereClause.requesterId = userId;
     } else if (role === 'MANAGER') {
       // Managers see requests assigned to them for review
@@ -88,7 +88,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(req
 });
 
 // POST /api/audit-requests - Create new audit request (User role)
-export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -137,7 +137,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
         return NextResponse.json({ error: 'Manager not found' }, { status: 404 });
       }
 
-      if (manager.role !== 'MANAGER' && manager.role !== 'ADMIN') {
+      if (manager.role !== 'MANAGER' ) {
         return NextResponse.json(
           { error: 'Selected user is not a manager' },
           { status: 400 }
@@ -149,7 +149,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(r
     const auditRequest = await prisma.auditRequest.create({
       data: {
         assetId,
-        requesterId: session.user.id,
+        requesterId: session.user.id, // Now can be AUDITOR
         managerId,
         title,
         reason,

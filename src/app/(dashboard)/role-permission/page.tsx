@@ -41,7 +41,7 @@ export default function RolePermissionPage() {
         console.error('Error fetching roles:', error);
         toast.error('Failed to load roles. Using default roles.');
         // Fallback to default roles, but only allow MANAGER and USER
-        setRoles(['MANAGER', 'USER']);
+        setRoles(['MANAGER', 'USER', 'AUDITOR']);
       });
 
     // Fetch permissions
@@ -76,7 +76,7 @@ export default function RolePermissionPage() {
 
   // TEMP: Hardcode roles for testing
   // Comment out the next line if API works
-  // setRoles(['ADMIN', 'MANAGER', 'USER']);
+  // setRoles(['ADMIN', 'MANAGER', 'AUDITOR']);
 
   useEffect(() => {
     if (status === 'loading' || !session?.user || session.user.role !== 'ADMIN') {
@@ -223,7 +223,7 @@ export default function RolePermissionPage() {
             className="rp-rolebar__select"
           >
             {roles
-              .filter(role => role === 'MANAGER' || role === 'USER')
+              .filter(role => role === 'MANAGER' || role === 'USER'|| role === 'AUDITOR')
               .map(role => (
                 <option key={role} value={role}>{role}</option>
               ))}

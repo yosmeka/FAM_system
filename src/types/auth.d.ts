@@ -1,7 +1,8 @@
 export enum Role {
   ADMIN = "ADMIN",
   USER = "USER",
-  MANAGER = "MANAGER"
+  MANAGER = "MANAGER",
+  AUDITOR = "AUDITOR"
 }
 
 declare module "next-auth" {

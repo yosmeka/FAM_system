@@ -21,7 +21,7 @@ const navigation = [
 	{
 		name: "Assets",
 		href: "/assets",
-		roles: ["MANAGER", "USER"],
+		roles: ["MANAGER", "USER","AUDITOR"],
 	},
 	{
 		name: "Transfers",
@@ -36,7 +36,7 @@ const navigation = [
 	{
 		name: "Audits",
 		href: "/audits/workflow",
-		roles: ["MANAGER", "USER"],
+		roles: ["MANAGER",  "AUDITOR"],
 	},
 	{
 		name: "Audit Review",
@@ -51,7 +51,7 @@ const navigation = [
 	{
 		name: "Reports",
 		href: "/reports",
-		roles: ["MANAGER", "USER"],
+		roles: ["MANAGER", "USER", "AUDITOR"],
 	},
 	{ name: "Users", href: "/users", roles: ["ADMIN"] },
 	{

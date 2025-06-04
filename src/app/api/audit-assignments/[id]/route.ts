@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 // GET /api/audit-assignments/[id] - Get specific audit assignment
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
+export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -69,7 +69,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     const userRole = session.user.role;
     const userId = session.user.id;
 
-    if (userRole === 'USER' && assignment.assignedToId !== userId) {
+    if (userRole === 'AUDITOR' && assignment.assignedToId !== userId) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -90,7 +90,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 });
 
 // PUT /api/audit-assignments/[id] - Update audit assignment
-export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
+export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -125,17 +125,17 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
     // Handle different actions based on user role
     let updateFields: any = {};
 
-    if (action === 'accept' && userRole === 'USER' && currentAssignment.assignedToId === userId) {
+    if (action === 'accept' && userRole === 'AUDITOR' && currentAssignment.assignedToId === userId) {
       updateFields = {
         status: 'ACCEPTED',
         acceptedAt: new Date(),
       };
-    } else if (action === 'start' && userRole === 'USER' && currentAssignment.assignedToId === userId) {
+    } else if (action === 'start' && userRole === 'AUDITOR' && currentAssignment.assignedToId === userId) {
       updateFields = {
         status: 'IN_PROGRESS',
         startedAt: new Date(),
       };
-    } else if (action === 'complete' && userRole === 'USER' && currentAssignment.assignedToId === userId) {
+    } else if (action === 'complete' && userRole === 'AUDITOR' && currentAssignment.assignedToId === userId) {
       updateFields = {
         status: 'COMPLETED',
         completedAt: new Date(),
@@ -224,7 +224,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER', 'USER'], async function PUT(
 });
 
 // DELETE /api/audit-assignments/[id] - Delete audit assignment (Manager/Admin only)
-export const DELETE = withRole(['ADMIN', 'MANAGER'], async function DELETE(
+export const DELETE = withRole([ 'MANAGER'], async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {

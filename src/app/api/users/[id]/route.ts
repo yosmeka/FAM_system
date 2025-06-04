@@ -13,7 +13,7 @@ export async function hasPermission(user: { id: string, role: string }, permissi
     }
     return false;
   }
-  const permission = await prisma.oryy.findUnique({ where: { name: permissionName } });
+  const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
   if (!permission) return false;
 
   // Check for user-specific override first

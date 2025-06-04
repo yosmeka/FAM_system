@@ -221,7 +221,7 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
     const userId = session.user.id;
 
     // Users can act on assignments assigned to them
-    if (userRole === 'USER' && assignment.assignedTo.id === userId) {
+    if (userRole === 'AUDITOR' && assignment.assignedTo.id === userId) {
       return true;
     }
 
@@ -240,7 +240,7 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
     const userId = session.user.id;
     const actions = [];
 
-    if (userRole === 'USER' && assignment.assignedTo.id === userId) {
+    if (userRole === 'AUDITOR' && assignment.assignedTo.id === userId) {
       switch (assignment.status) {
         case 'PENDING':
           actions.push({ action: 'accept', label: 'Accept Assignment', color: 'bg-green-600' });

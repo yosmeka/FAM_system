@@ -17,12 +17,15 @@ export function useRole() {
   const isAdmin = () => hasRole('ADMIN');
   const isManager = () => hasRole('MANAGER');
   const isUser = () => hasRole('USER');
+  const isAuditor = () => hasRole('AUDITOR');
+
 
   return {
     hasRole,
     isAdmin,
     isManager,
     isUser,
+    isAuditor,
     currentRole: user?.role,
   };
 } 

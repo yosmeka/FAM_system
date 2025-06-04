@@ -281,7 +281,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
     const userId = session.user.id;
     const actions = [];
 
-    if (userRole === 'USER' && request.requester.id === userId && request.status === 'PENDING_APPROVAL') {
+    if (userRole === 'AUDITOR' && request.requester.id === userId && request.status === 'PENDING_APPROVAL') {
       actions.push({ action: 'delete', label: 'Delete Request', color: 'bg-red-600' });
     }
 
