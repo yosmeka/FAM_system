@@ -86,8 +86,9 @@ interface AuditRequest {
 }
 
 export default function AuditWorkflowPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<'assignments' | 'requests'>('assignments');
   const [assignments, setAssignments] = useState<AuditAssignment[]>([]);
   const [requests, setRequests] = useState<AuditRequest[]>([]);
@@ -96,6 +97,21 @@ export default function AuditWorkflowPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showCreateAssignmentModal, setShowCreateAssignmentModal] = useState(false);
   const [showCreateRequestModal, setShowCreateRequestModal] = useState(false);
+
+  // Show nothing until session is loaded
+  if (status === 'loading') return null;
+
+  // If not allowed, show access denied
+  if (session?.user?.role === 'USER') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchData();
@@ -214,7 +230,7 @@ export default function AuditWorkflowPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 mb-6" style={{ backgroundColor: '#2A2D3E' }} className="p-1 rounded-lg">
+      <div className="flex space-x-1 mb-6 p-1 rounded-lg" style={{ backgroundColor: '#2A2D3E' }}>
         <button
           onClick={() => setActiveTab('assignments')}
           className={`px-4 py-2 rounded-md font-medium transition-colors ${
