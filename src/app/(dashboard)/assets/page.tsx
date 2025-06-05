@@ -242,7 +242,7 @@ export default function AssetsPage() {
             ))}
           </select>
         </div>
-        <div>
+        {/* <div>
           <select
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             value={departmentFilter}
@@ -255,7 +255,7 @@ export default function AssetsPage() {
               </option>
             ))}
           </select>
-        </div>
+        </div> */}
       </div>
 
       {isLoading ? (

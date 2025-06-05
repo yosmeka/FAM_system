@@ -7,18 +7,16 @@ export async function GET() {
     const now = new Date();
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
     // Fetch all required data in parallel
     const [
       currentMonthDisposals,
       lastMonthDisposals,
-      currentMonthRecovery,
-      lastMonthRecovery,
       methodDistributionData,
-      monthlyData,
-      categoryData,
+      disposedAssets,
+      pendingCount,
+      approvedCount,
+      rejectedCount,
     ] = await Promise.all([
       // Current month's disposals
       prisma.disposal.count({
@@ -26,6 +24,9 @@ export async function GET() {
           createdAt: {
             gte: new Date(now.getFullYear(), now.getMonth(), 1),
           },
+          status: {
+            in: ['APPROVED', 'REJECTED']
+          }
         },
       }),
 
@@ -36,33 +37,9 @@ export async function GET() {
             gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1),
             lt: new Date(now.getFullYear(), now.getMonth(), 1),
           },
-        },
-      }),
-
-      // Current month's recovery value
-      prisma.disposal.aggregate({
-        where: {
-          createdAt: {
-            gte: new Date(now.getFullYear(), now.getMonth(), 1),
-          },
-          status: 'COMPLETED',
-        },
-        _sum: {
-          actualValue: true,
-        },
-      }),
-
-      // Last month's recovery value
-      prisma.disposal.aggregate({
-        where: {
-          createdAt: {
-            gte: new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1),
-            lt: new Date(now.getFullYear(), now.getMonth(), 1),
-          },
-          status: 'COMPLETED',
-        },
-        _sum: {
-          actualValue: true,
+          status: {
+            in: ['APPROVED', 'REJECTED']
+          }
         },
       }),
 
@@ -73,41 +50,54 @@ export async function GET() {
           id: true,
         },
         where: {
-          status: 'COMPLETED',
-        },
+          status: {
+            in: ['APPROVED', 'REJECTED']
+          }
+        }
       }),
 
-      // Monthly trends for the past year
+      // Fetch disposed assets with details
       prisma.disposal.findMany({
         where: {
-          createdAt: {
-            gte: oneYearAgo,
-          },
+          status: {
+            in: ['APPROVED', 'REJECTED']
+          }
         },
-        select: {
-          createdAt: true,
-          status: true,
-          actualValue: true,
-        },
-      }),
-
-      // Category-wise disposal data
-      prisma.disposal.findMany({
-        where: {
-          status: 'COMPLETED',
-          asset: {}, // Only include disposals with a related asset
-
-        },
-        select: {
-          method: true,
-          actualValue: true,
+        include: {
           asset: {
             select: {
+              name: true,
+              serialNumber: true,
               category: true,
               purchasePrice: true,
-            },
+              purchaseDate: true,
+            }
           },
+          requester: {
+            select: {
+              name: true,
+              email: true,
+            }
+          }
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      }),
+
+      // Count pending disposals
+      prisma.disposal.count({
+        where: { status: 'PENDING' }
+      }),
+
+      // Count approved disposals
+      prisma.disposal.count({
+        where: { status: 'APPROVED' }
+      }),
+
+      // Count rejected disposals
+      prisma.disposal.count({
+        where: { status: 'REJECTED' }
       }),
     ]);
 
@@ -117,109 +107,54 @@ export async function GET() {
         ? ((currentMonthDisposals - lastMonthDisposals) / lastMonthDisposals) * 100
         : 0;
 
-    // Calculate recovery growth
-    const currentRecovery = currentMonthRecovery._sum.proceeds || 0;
-    const lastRecovery = lastMonthRecovery._sum.proceeds || 0;
-    const recoveryGrowth =
-      lastRecovery > 0 ? ((currentRecovery - lastRecovery) / lastRecovery) * 100 : 0;
-
     // Process method distribution
     const methodDistribution = methodDistributionData.map((method: any) => ({
-      method: method.method.replace('_', ' '),
+      method: method.method,
       count: method._count.id,
     }));
 
-    // Process monthly trends
-    const monthlyTrends = new Map();
-    monthlyData.forEach((disposal: any) => {
-      const monthKey = disposal.createdAt.toISOString().slice(0, 7);
-      const existing = monthlyTrends.get(monthKey) || {
-        count: 0,
-        valueRecovered: 0,
-      };
-      existing.count++;
-      if (disposal.status === 'COMPLETED' && disposal.proceeds) {
-        existing.valueRecovered += disposal.proceeds;
+    // Ensure we have at least one method
+    if (methodDistribution.length === 0) {
+      methodDistribution.push({ method: 'No disposals', count: 0 });
+    }
+
+    // Calculate status distribution
+    const statusDistribution = [
+      {
+        status: 'APPROVED',
+        count: approvedCount
+      },
+      {
+        status: 'REJECTED',
+        count: rejectedCount
       }
-      monthlyTrends.set(monthKey, existing);
-    });
-
-    // Process category-wise value recovery
-    const categoryStats = new Map();
-    categoryData.forEach((disposal: any) => {
-      if (!disposal.asset?.category) return;
-
-      const category = disposal.asset.category;
-      const stats = categoryStats.get(category) || {
-        disposalCount: 0,
-        originalValue: 0,
-        recoveredValue: 0,
-        methods: new Map(),
-      };
-
-      stats.disposalCount++;
-      stats.originalValue += disposal.asset.purchasePrice || 0;
-      stats.recoveredValue += disposal.proceeds || 0;
-
-      // Track disposal methods
-      const methodCount = stats.methods.get(disposal.method) || 0;
-      stats.methods.set(disposal.method, methodCount + 1);
-
-      categoryStats.set(category, stats);
-    });
-
-    const valueRecovery = Array.from(categoryStats.entries()).map(
-      ([category, stats]: [string, any]) => {
-        // Find the most common disposal method
-        let primaryMethod = '';
-        let maxCount = 0;
-        stats.methods.forEach((count: number, method: string) => {
-          if (count > maxCount) {
-            maxCount = count;
-            primaryMethod = method;
-          }
-        });
-
-        return {
-          category,
-          disposalCount: stats.disposalCount,
-          originalValue: stats.originalValue,
-          recoveredValue: stats.recoveredValue,
-          recoveryRate: (stats.recoveredValue / stats.originalValue) * 100,
-          primaryMethod,
-        };
-      }
-    );
-
-    // Calculate overall recovery rate
-    const totalOriginalValue = valueRecovery.reduce(
-      (sum, item) => sum + item.originalValue,
-      0
-    );
-    const totalRecoveredValue = valueRecovery.reduce(
-      (sum, item) => sum + item.recoveredValue,
-      0
-    );
-    const recoveryRate =
-      totalOriginalValue > 0 ? (totalRecoveredValue / totalOriginalValue) * 100 : 0;
+    ];
 
     return NextResponse.json({
       stats: {
-        totalDisposals: currentMonthDisposals,
-        pendingDisposals: await prisma.disposal.count({
-          where: { status: 'PENDING' },
-        }),
-        totalRecovered: totalRecoveredValue,
-        recoveryRate: Math.round(recoveryRate * 10) / 10,
+        totalDisposals: disposedAssets.length,
+        pendingDisposals: pendingCount,
+        approvedDisposals: approvedCount,
+        rejectedDisposals: rejectedCount,
         disposalGrowth: Math.round(disposalGrowth * 10) / 10,
-        recoveryGrowth: Math.round(recoveryGrowth * 10) / 10,
       },
       methodDistribution,
-      monthlyTrends: Array.from(monthlyTrends.entries()).map(([month, data]) => ({
-        month,
-        ...data,
+      statusDistribution,
+      disposedAssets: disposedAssets.map((disposal: any) => ({
+        id: disposal.id,
+        assetName: disposal.asset.name,
+        serialNumber: disposal.asset.serialNumber,
+        category: disposal.asset.category,
+        purchasePrice: disposal.asset.purchasePrice,
+        purchaseDate: disposal.asset.purchaseDate,
+        disposalDate: disposal.createdAt,
+        method: disposal.method,
+        status: disposal.status,
+        actualValue: disposal.actualValue,
+        expectedValue: disposal.expectedValue,
+        requesterName: disposal.requester.name,
+        requesterEmail: disposal.requester.email,
       })),
-      valueRecovery: valueRecovery.sort((a, b) => b.originalValue - a.originalValue),
     });
   } catch (error) {
     console.error('Error:', error);

@@ -34,11 +34,9 @@ export default function AssetReportsPage() {
   const [loading, setLoading] = useState(true);
   const [assetStats, setAssetStats] = useState<AssetStats | null>(null);
   const [assetsByCategory, setAssetsByCategory] = useState<AssetCategoryData[]>([]);
-  const [assetsByDepartment, setAssetsByDepartment] = useState<AssetCategoryData[]>([]);
   const [depreciationData, setDepreciationData] = useState<AssetValueData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<AssetStatusData[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [filterType, setFilterType] = useState<'category' | 'department'>('category');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -53,7 +51,6 @@ export default function AssetReportsPage() {
       
       setAssetStats(data.stats);
       setAssetsByCategory(data.byCategory);
-      setAssetsByDepartment(data.byDepartment);
       setDepreciationData(data.depreciation);
       setStatusDistribution(data.statusDistribution);
     } catch (error) {
@@ -64,23 +61,18 @@ export default function AssetReportsPage() {
   };
 
   const getFilterOptions = () => {
-    if (filterType === 'category') {
-      // Remove duplicates for unique keys
-      return Array.from(new Set(assetsByCategory.map(item => item.category)));
-    }
-    return Array.from(new Set(assetsByDepartment.map(item => item.category)));
-
+    return Array.from(new Set(assetsByCategory.map(item => item.category)));
   };
 
   const getFilteredData = () => {
-    let filteredData = filterType === 'category' ? assetsByCategory : assetsByDepartment;
+    let filteredData = assetsByCategory;
     
     // First apply status filter if needed
     if (statusFilter !== 'all') {
       filteredData = filteredData.filter(item => item.status === statusFilter);
     }
 
-    // Then apply category/department filter
+    // Then apply category filter
     if (selectedFilter !== 'all') {
       filteredData = filteredData.filter(item => item.category === selectedFilter);
     }
@@ -123,26 +115,14 @@ export default function AssetReportsPage() {
       {/* Filter Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div>
+          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 sr-only">Filter by Category</label>
           <select
-            value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value as 'category' | 'department');
-              setSelectedFilter('all');
-            }}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
-          >
-            <option value="category">Category</option>
-            <option value="department">Department</option>
-          </select>
-        </div>
-        
-        <div>
-          <select
+            id="categoryFilter"
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
           >
-            <option value="all">All {filterType}s</option>
+            <option value="all">All Categories</option>
             {getFilterOptions().map((option, idx) => (
               <option key={option + '-' + idx} value={option}>
                 {option}
@@ -152,7 +132,9 @@ export default function AssetReportsPage() {
         </div>
 
         <div>
+          <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 sr-only">Filter by Status</label>
           <select
+            id="statusFilter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -217,21 +199,21 @@ export default function AssetReportsPage() {
 
       {/* Asset Distribution Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Assets by Category/Department */}
+        {/* Assets by Category Chart */}
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">
               {selectedFilter === 'all' 
-                ? `Assets by ${filterType === 'category' ? 'Category' : 'Department'}`
+                ? `Assets by Category`
                 : `Assets in ${selectedFilter}`}
               {statusFilter !== 'all' && ` (${statusFilter})`}
             </h2>
             {getFilteredData().length > 0 && (
               <button
                 onClick={() => generatePdf({
-                  title: `Assets by ${filterType === 'category' ? 'Category' : 'Department'} Report`,
+                  title: `Assets by Category Report`,
                   data: getFilteredData(),
-                  type: filterType
+                  type: 'category'
                 })}
                 className="flex items-center gap-2 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
               >
@@ -309,15 +291,15 @@ export default function AssetReportsPage() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">
               {selectedFilter === 'all'
-                ? `Asset Value Details by ${filterType === 'category' ? 'Category' : 'Department'}`
+                ? `Asset Value Details by Category`
                 : `Asset Value Details for ${selectedFilter}`}
               {statusFilter !== 'all' && ` (${statusFilter})`}
             </h2>
             <button
               onClick={() => generatePdf({
-                title: `Asset Value Details by ${filterType === 'category' ? 'Category' : 'Department'}`,
+                title: `Asset Value Details by Category`,
                 data: getFilteredData(),
-                type: filterType
+                type: 'category'
               })}
               className="flex items-center gap-2 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
             >
@@ -330,30 +312,31 @@ export default function AssetReportsPage() {
               data={getFilteredData()}
               columns={[
                 {
-                  header: filterType === 'category' ? 'Category' : 'Department',
-                  accessorKey: 'category',
+                  header: 'Category',
+                  key: 'category',
+                  render: (value, item) => item.category,
                 },
                 {
                   header: 'Status',
-                  accessorKey: 'status',
+                  key: 'status',
+                  render: (value, item) => item.status,
                 },
                 {
                   header: 'Total Assets',
-                  accessorKey: 'count',
+                  key: 'count',
+                  render: (value, item) => item.count,
                 },
                 {
                   header: 'Total Value',
-                  accessorKey: 'value',
-                  cell: ({ row }: { row: { original: AssetCategoryData } }) => 
-                    `$${row.original.value.toFixed(2)}`,
+                  key: 'totalValue',
+                  render: (value, item) => `$${Number(item.value).toFixed(2)}`,
                 },
                 {
                   header: 'Average Value',
-                  accessorKey: 'value',
-                  cell: ({ row }: { row: { original: AssetCategoryData } }) => 
-                    `$${(row.original.value / row.original.count).toFixed(2)}`,
+                  key: 'averageValue',
+                  render: (value, item) => `$${(Number(item.value) / Number(item.count)).toFixed(2)}`,
                 },
-              ].map((col) => ({ ...col, key: col.accessorKey })) as Column<AssetCategoryData>[]}
+              ]}
             />
           ) : (
             <div className="text-center text-gray-500">No data available</div>

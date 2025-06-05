@@ -10,7 +10,6 @@ import { useSession } from 'next-auth/react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
-import { AssetMaintenanceTab } from '@/components/AssetMaintenanceTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -501,15 +500,6 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         return renderLinkingTab();
       case 'capital_improvment':
         return <CapitalImprovementsTab assetId={resolvedParams.id} />;
-      // case 'maint':
-      //   return (
-      //     <AssetMaintenanceTab
-      //       assetId={resolvedParams.id}
-      //       assetName={asset?.name || 'Asset'}
-      //       lastMaintenance={asset?.lastMaintenance}
-      //       nextMaintenance={asset?.nextMaintenance}
-      //     />
-      //   );
       case 'docs':
         return (
           <DocumentsTab
@@ -518,6 +508,21 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
           />
         );
       case 'depreciation':
+        if (asset?.category === 'Land') {
+          return (
+            <div className="p-8 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 text-gray-600 mb-4">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">Non-Depreciable Asset</h3>
+              <p className="mt-2 text-sm text-gray-500">
+                This asset is a land asset and is not subject to depreciation. Land assets are considered non-depreciable as they typically appreciate in value over time rather than depreciate.
+              </p>
+            </div>
+          );
+        }
         return (
           <div ref={targetRef}>
             <div className="flex justify-between items-center mb-4">
@@ -669,6 +674,20 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
         );
+      case 'photos':
+        return (
+          <div className="p-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Photos Tab</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              The photos feature is currently under development and will be available soon.
+            </p>
+          </div>
+        );
       default:
         return (
           <div className="p-8 text-center">
@@ -794,7 +813,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        {['details', 'events', 'photos', 'docs', 'depreciation', 'warranty', 'linking', 'maint', 'contracts', 'capital_improvment', 'audit', 'history'].map((tab) => {
+        {['photos', 'docs', 'depreciation', 'linking', 'capital_improvment', 'history'].map((tab) => {
           const isAllowedForDisposed = ['photos', 'docs', 'history'].includes(tab);
           const isDisabled = isAssetDisposed(asset) && !isAllowedForDisposed;
           
@@ -804,7 +823,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               className={`py-1.5 px-2 mx-0.5 text-sm ${
                 activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
               } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => !isDisabled && setActiveTab(tab)}
+              onClick={() => {
+                if (!isDisabled) {
+                  setActiveTab(tab);
+                }
+              }}
               disabled={isDisabled}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}

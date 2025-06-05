@@ -168,12 +168,10 @@ export interface DepartmentTransferData {
 // Disposal Reports
 export interface DisposalStats {
   totalDisposals: number;
-  totalRecovered: number;
-  recoveryRate: number;
   pendingDisposals: number;
+  approvedDisposals: number;
+  rejectedDisposals: number;
   disposalGrowth: number;
-  recoveryGrowth: number;
-  pendingGrowth: number;
 }
 
 export interface DisposalMethodData {
@@ -183,7 +181,8 @@ export interface DisposalMethodData {
 
 export interface DisposalTrendData {
   month: string;
-  count: number;
+  approved: number;
+  rejected: number;
 }
 
 export interface ValueRecoveryData {

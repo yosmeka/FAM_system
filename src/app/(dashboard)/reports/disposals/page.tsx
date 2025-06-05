@@ -5,7 +5,7 @@ import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { usePDF } from 'react-to-pdf';
-import { Download } from 'lucide-react';
+import { Download, Settings } from 'lucide-react';
 import type {
   DisposalStats,
   DisposalMethodData,
@@ -19,17 +19,41 @@ import type {
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 
+interface DisposedAsset {
+  id: string;
+  assetName: string;
+  serialNumber: string;
+  category: string;
+  purchasePrice: number;
+  purchaseDate: string;
+  disposalDate: string;
+  method: string;
+  status: 'APPROVED' | 'REJECTED';
+  actualValue: number | null;
+  expectedValue: number;
+  requesterName: string;
+  requesterEmail: string;
+}
+
 export default function DisposalReportsPage() {
   const { data: session, status } = useSession();
   const { toPDF, targetRef } = usePDF({
     filename: `disposal-report-${new Date().toISOString().split('T')[0]}.pdf`,
   });
+  const { toPDF: toPDFTable, targetRef: tableTargetRef } = usePDF({
+    filename: `disposal-assets-table-${new Date().toISOString().split('T')[0]}.pdf`,
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
   const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);
   const [monthlyTrends, setMonthlyTrends] = useState<DisposalTrendData[]>([]);
   const [valueRecovery, setValueRecovery] = useState<ValueRecoveryData[]>([]);
+  const [disposedAssets, setDisposedAssets] = useState<DisposedAsset[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [methodFilter, setMethodFilter] = useState<string>('ALL');
+  const [statusDistribution, setStatusDistribution] = useState<{ status: string; count: number }[]>([]);
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -51,22 +75,32 @@ export default function DisposalReportsPage() {
       } else {
         setLoading(true);
       }
+      setError(null);
 
       const response = await fetch('/api/reports/disposals');
-      if (!response.ok) throw new Error('Failed to fetch disposal reports');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch disposal reports');
+      }
       const data = await response.json();
+      
+      if (!data || !data.stats || !data.methodDistribution || !data.statusDistribution) {
+        throw new Error('Invalid data format received from server');
+      }
       
       setDisposalStats(data.stats);
       setMethodDistribution(data.methodDistribution);
-      setMonthlyTrends(data.monthlyTrends);
-      setValueRecovery(data.valueRecovery);
+      setStatusDistribution(data.statusDistribution);
+      setDisposedAssets(data.disposedAssets || []);
 
       if (isRefresh) {
         toast.success('Report data refreshed');
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Failed to fetch disposal reports');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch disposal reports';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,6 +125,113 @@ export default function DisposalReportsPage() {
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Reports</h2>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => fetchDisposalReports()}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const filteredDisposedAssets = disposedAssets.filter(asset => 
+    (statusFilter === 'ALL' || asset.status === statusFilter) &&
+    (methodFilter === 'ALL' || asset.method === methodFilter)
+  );
+
+  // Calculate charts data from filtered assets
+  const filteredStatusDistribution = [
+    {
+      status: 'APPROVED',
+      count: filteredDisposedAssets.filter(asset => asset.status === 'APPROVED').length
+    },
+    {
+      status: 'REJECTED',
+      count: filteredDisposedAssets.filter(asset => asset.status === 'REJECTED').length
+    }
+  ];
+
+  // Calculate method distribution
+  const methodCounts = filteredDisposedAssets.reduce((acc: Record<string, number>, asset) => {
+    acc[asset.method] = (acc[asset.method] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Convert to array format for the chart with category labels
+  const filteredMethodDistribution = Object.entries(methodCounts).map(([method, count]) => ({
+    category: method,
+    count: count
+  }));
+
+  // Ensure SCRAP is in the method distribution if it exists in the data
+  if (filteredDisposedAssets.some(asset => asset.method === 'SCRAP')) {
+    const scrapExists = filteredMethodDistribution.some(item => item.category === 'SCRAP');
+    if (!scrapExists) {
+      filteredMethodDistribution.push({ category: 'SCRAP', count: 0 });
+    }
+  }
+
+  console.log('Filtered Method Distribution Data:', filteredMethodDistribution);
+
+  const disposedAssetsColumns: Column<DisposedAsset>[] = [
+    {
+      key: 'assetName',
+      header: 'Asset Name',
+    },
+    {
+      key: 'serialNumber',
+      header: 'Serial Number',
+    },
+    {
+      key: 'category',
+      header: 'Category',
+    },
+    {
+      key: 'purchasePrice',
+      header: 'Purchase Price',
+      render: (value) => `$${Number(value).toFixed(2)}`,
+    },
+    {
+      key: 'disposalDate',
+      header: 'Disposal Date',
+      render: (value: string | number | null) => {
+        if (!value) return '-';
+        return new Date(value).toLocaleDateString();
+      },
+    },
+    {
+      key: 'method',
+      header: 'Method',
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (value) => (
+        <span
+          className={`px-2 py-1 rounded-full text-sm ${
+            value === 'APPROVED'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-red-100 text-red-800'
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      key: 'requesterName',
+      header: 'Requested By',
+    },
+  ];
 
   return (
     <div className="container mx-auto p-6" ref={targetRef}>
@@ -117,111 +258,99 @@ export default function DisposalReportsPage() {
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <RoleBasedStats
-          name="Total Disposals"
+          name="Total Disposal Requests"
           value={disposalStats?.totalDisposals || 0}
-          trend={disposalStats?.disposalGrowth || 0}
-          trendLabel="vs last month"
           variant="default"
         />
         <RoleBasedStats
-          name="Value Recovered"
-          value={`$${disposalStats?.totalRecovered || 0}`}
-          trend={disposalStats?.recoveryGrowth || 0}
-          trendLabel="vs last month"
+          name="Approved"
+          value={disposalStats?.approvedDisposals || 0}
           variant="success"
         />
         <RoleBasedStats
-          name="Recovery Rate"
-          value={`${disposalStats?.recoveryRate || 0}%`}
-          description="Of original value"
-          variant="default"
+          name="Rejected"
+          value={disposalStats?.rejectedDisposals || 0}
+          variant="danger"
         />
         <RoleBasedStats
-          name="Pending Approvals"
+          name="Pending Approval"
           value={disposalStats?.pendingDisposals || 0}
-          trend={disposalStats?.pendingGrowth || 0}
-          trendLabel="vs last month"
           variant="warning"
         />
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Filter Disposals</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Settings size={16} className="text-gray-500" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'APPROVED' | 'REJECTED')}
+                className="border rounded-md px-3 py-1.5 text-sm"
+              >
+                <option value="ALL">All Status</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+              <select
+                value={methodFilter}
+                onChange={(e) => setMethodFilter(e.target.value)}
+                className="border rounded-md px-3 py-1.5 text-sm"
+              >
+                <option value="ALL">All Methods</option>
+                {methodDistribution.map((method) => (
+                  <option key={method.method} value={method.method}>
+                    {method.method}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Disposal Methods Distribution</h2>
+          <h2 className="text-lg font-semibold mb-4">Approval Status Distribution</h2>
           <RoleBasedChart
             type="pie"
-            data={{
-              labels: methodDistribution.map((item) => item.method),
-              datasets: [{
-                data: methodDistribution.map((item) => item.count),
-                backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#9ca3af']
-              }]
+            data={filteredStatusDistribution}
+            options={{
+              customColors: ['#22c55e', '#ef4444']
             }}
           />
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Monthly Disposal Trends</h2>
+          <h2 className="text-lg font-semibold mb-4">Disposal Methods Distribution</h2>
           <RoleBasedChart
-            type="line"
-            data={monthlyTrends}
+            type="pie"
+            data={filteredMethodDistribution}
             options={{
-              xAxis: monthlyTrends.map((item) => item.month),
-              series: [
-                {
-                  name: 'Disposals',
-                  data: monthlyTrends.map((item) => item.count)
-                }
-              ]
+              customColors: ['#22c55e', '#f59e0b', '#ef4444', '#9ca3af', '#3b82f6']
             }}
           />
         </div>
       </div>
 
-      {/* Value Recovery Table */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Value Recovery Analysis</h2>
+      {/* Disposed Assets Table */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8" ref={tableTargetRef}>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Asset Disposal Table</h2>
+          <button
+            onClick={() => toPDFTable()}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+          >
+            <Download size={16} />
+            Export Table PDF
+          </button>
+        </div>
         <RoleBasedTable
-          data={valueRecovery}
-          columns={[
-            {
-              key: 'month',
-              header: 'Month',
-              render: (value) => String(value),
-            },
-            {
-              key: 'expected',
-              header: 'Expected Value',
-              render: (value) => `$${Number(value).toFixed(2)}`,
-            },
-            {
-              key: 'actual',
-              header: 'Actual Value',
-              render: (value) => `$${Number(value).toFixed(2)}`,
-            },
-            {
-              key: 'rate',
-              header: 'Recovery Rate',
-              render: (value, item) => {
-                const actual = typeof item.actual === 'number' ? item.actual : Number(item.actual) || 0;
-                const expected = typeof item.expected === 'number' && item.expected !== 0 ? item.expected : Number(item.expected) || 1;
-                const rate = (expected !== 0 ? (actual / expected) * 100 : 0);
-                return (
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm ${
-                      rate >= 90
-                        ? 'bg-green-100 text-green-800'
-                        : rate >= 70
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {rate.toFixed(1)}%
-                  </span>
-                );
-              },
-            },
-          ]}
+          data={filteredDisposedAssets}
+          columns={disposedAssetsColumns}
         />
       </div>
 
