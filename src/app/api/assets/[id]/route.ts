@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET(
+export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
   request: Request,
   context: { params: { id: string } }
 ) {
@@ -117,7 +117,7 @@ export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET(
   }
 });
 
-export const PUT = withRole(['MANAGER'], async function PUT(
+export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -154,50 +154,47 @@ export const PUT = withRole(['MANAGER'], async function PUT(
       serialNumber: body.serialNumber,
       status: body.status,
       location: body.location,
-      department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
+      department: "Zemen Bank",
       category: body.category,
-      type: body.type,
-      supplier: body.supplier,
+      type: body.category === 'LAND' ? null : body.type,
+      supplier: body.category === 'LAND' ? null : body.supplier,
       description: body.description,
     };
 
-    // Handle number fields, converting to float and checking for NaN
+    // Handle number fields
     const numberFields = ['purchasePrice', 'currentValue', 'depreciableCost', 'salvageValue', 'usefulLifeMonths'];
     numberFields.forEach(field => {
       const value = parseFloat(body[field]);
       if (!isNaN(value)) {
         updateData[field] = value;
-      } else if (field === 'purchasePrice') {
-        // purchasePrice is required, throw error if invalid
-        console.error(`Invalid number format for required field: ${field}`, body[field]);
+      } else if (field === 'purchasePrice' || field === 'currentValue') {
         throw new Error(`Invalid number format for ${field}`);
+      } else if (body.category === 'LAND' && ['depreciableCost', 'salvageValue', 'usefulLifeMonths'].includes(field)) {
+        updateData[field] = null;
       } else {
-        // For optional fields, set to null if invalid
         updateData[field] = null;
       }
     });
 
-    // Handle date fields, converting to Date and checking for Invalid Date
+    // Handle date fields
     const dateFields = ['purchaseDate', 'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciationStartDate'];
     dateFields.forEach(field => {
       if (body[field]) {
         const date = new Date(body[field]);
         if (!isNaN(date.getTime())) {
           updateData[field] = date;
-        } else if (field === 'purchaseDate') {
-          // purchaseDate is required, throw error if invalid
-          console.error(`Invalid date format for required field: ${field}`, body[field]);
+        } else if (field === 'purchaseDate' || field === 'warrantyExpiry') {
           throw new Error(`Invalid date format for ${field}`);
+        } else if (body.category === 'LAND' && ['lastMaintenance', 'nextMaintenance'].includes(field)) {
+          updateData[field] = null;
         } else {
-          // For optional fields, set to null if invalid
           updateData[field] = null;
         }
-      } else if (field === 'purchaseDate') {
-        // purchaseDate is required, throw error if missing
-        console.error(`Missing required date field: ${field}`);
+      } else if (field === 'purchaseDate' || field === 'warrantyExpiry') {
         throw new Error(`Missing required date field: ${field}`);
+      } else if (body.category === 'LAND' && ['lastMaintenance', 'nextMaintenance'].includes(field)) {
+        updateData[field] = null;
       } else {
-        // For optional fields, set to null if missing
         updateData[field] = null;
       }
     });
@@ -296,7 +293,7 @@ export const PUT = withRole(['MANAGER'], async function PUT(
   }
 });
 
-export const DELETE = withRole(['MANAGER'], async function DELETE(
+export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
