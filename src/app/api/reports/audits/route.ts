@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 // GET /api/reports/audits
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET() {
+export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET() {
   try {
     console.log("Audit reports API called");
     const now = new Date();

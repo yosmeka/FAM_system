@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 // GET /api/reports/assets
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole([ 'MANAGER', 'USER'], async function GET(req) {
+export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(req) {
   try {
     const now = new Date();
     const twelveMonthsAgo = new Date();

@@ -35,6 +35,30 @@ export default function NewTransferPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');
 
+
+
+
+
+// Show nothing until session is loaded
+  if (status === 'loading') return null;
+
+  // If not allowed, show access denied
+  if (session?.user?.role === 'AUDITOR') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+
+
+
+
+
   useEffect(() => {
     const fetchManagers = async () => {
       try {

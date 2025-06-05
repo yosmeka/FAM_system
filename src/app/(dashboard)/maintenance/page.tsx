@@ -17,7 +17,7 @@ export default function MaintenancePage() {
       icon: Plus,
       href: '/maintenance/scheduled',
       color: 'bg-blue-600',
-      roles: ['MANAGER', 'ADMIN']
+      roles: ['MANAGER']
     },
     {
       title: 'Report Issues',
@@ -33,7 +33,7 @@ export default function MaintenancePage() {
       icon: CheckCircle,
       href: '/maintenance/requests',
       color: 'bg-green-600',
-      roles: ['MANAGER', 'ADMIN']
+      roles: ['MANAGER']
     },
     {
       title: 'Review Completed Work',
@@ -41,7 +41,7 @@ export default function MaintenancePage() {
       icon: CheckCircle,
       href: '/maintenance/work-review',
       color: 'bg-orange-600',
-      roles: ['MANAGER', 'ADMIN']
+      roles: ['MANAGER']
     },
     {
       title: 'My Tasks',
@@ -57,9 +57,32 @@ export default function MaintenancePage() {
       icon: Settings,
       href: '/maintenance/templates',
       color: 'bg-gray-600',
-      roles: ['MANAGER', 'ADMIN']
+      roles: ['MANAGER',]
     }
   ];
+
+
+
+
+// Show nothing until session is loaded
+  if (status === 'loading') return null;
+
+  // If not allowed, show access denied
+  if (session?.user?.role === 'AUDITOR') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+
+
+
+
 
   const userRole = session?.user?.role;
   const filteredOptions = maintenanceOptions.filter(option =>
@@ -135,3 +158,7 @@ export default function MaintenancePage() {
     </div>
   );
 }
+
+
+
+
