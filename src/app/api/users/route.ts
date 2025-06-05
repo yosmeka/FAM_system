@@ -6,14 +6,15 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { hash } from 'bcryptjs'; // Import hash function
 
 import { hasPermission } from './[id]/route';
+import { sendUserCreationEmail } from '@/lib/server/email';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
   // Allow managers to view users for assignment purposes, and admins for user management
   const canViewUsers = session?.user?.role === 'ADMIN' ||
-                      session?.user?.role === 'MANAGER' ||
-                      (session?.user && await hasPermission(session.user, 'User view (list and detail)'));
+    session?.user?.role === 'MANAGER' ||
+    (session?.user && await hasPermission(session.user, 'User view (list and detail)'));
 
   if (!session?.user || !canViewUsers) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -74,6 +75,19 @@ export async function POST(request: NextRequest) {
         role,
       },
     });
+
+    // Send welcome email with credentials
+    try {
+      await sendUserCreationEmail({
+        email,
+        name: name || email,
+        password,
+        role,
+      });
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Don't fail the user creation if email fails
+    }
 
     // Return user object without the password
     const { password: _password, ...userWithoutPassword } = user; // _password signals intentional omission

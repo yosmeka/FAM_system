@@ -812,30 +812,6 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               Active
                             </div>
                           </SelectItem>
-                          <SelectItem value="INACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
-                              Inactive
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="UNDER_MAINTENANCE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
-                              In Maintenance
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="DISPOSED" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                              Disposed
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="LOST" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
-                              Lost
-                            </div>
-                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
