@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
-export const GET = withRole(['MANAGER', 'USER'], async function GET(
+export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET(
   request: Request,
   context: { params: { id: string } }
 ) {

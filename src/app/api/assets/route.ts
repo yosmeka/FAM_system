@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 import { withPermission } from '@/middleware/permission';
 
-export const GET = withRole(['MANAGER', 'USER'], async function GET() {
+export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET() {
   try {
     const assets = await prisma.asset.findMany({
       orderBy: {

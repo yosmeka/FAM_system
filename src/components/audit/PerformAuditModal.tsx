@@ -269,7 +269,7 @@ export default function PerformAuditModal({
 
           {/* Location Verification */}
           <div>
-            <div className="flex items-center gap-3 mb-3">
+            {/* <div className="flex items-center gap-3 mb-3">
               <input
                 type="checkbox"
                 id="locationVerified"
@@ -281,7 +281,7 @@ export default function PerformAuditModal({
                 <MapPin className="h-4 w-4" />
                 Asset found at recorded location
               </label>
-            </div>
+            </div> */}
             
             {!formData.locationVerified && (
               <div>
@@ -344,7 +344,7 @@ export default function PerformAuditModal({
           </div>
 
           {/* Photo Upload Placeholder */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Photos (Optional)
             </label>
@@ -353,7 +353,7 @@ export default function PerformAuditModal({
               <p className="text-gray-400">Photo upload functionality coming soon</p>
               <p className="text-xs text-gray-500">For now, please include photo descriptions in notes</p>
             </div>
-          </div>
+          </div> */}
 
           {/* Submit Actions */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-600">
