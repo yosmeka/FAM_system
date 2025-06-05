@@ -87,14 +87,14 @@ const assetFormSchema = z.object({
     message: "Please select a valid date.",
   }),
   purchasePrice: z.coerce.number().min(0, { message: "Purchase price must be a positive number." }),
-  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }),
+  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }).optional(),
   depreciableCost: z.coerce.number().min(0, { message: "Depreciable cost must be a positive number." }).optional(),
 
   // Classification
   status: z.string().default("ACTIVE"),
-  location: z.string().min(1, { message: "Location is required." }),
+  location: z.string().optional(),
   department: z.string().default("Zemen Bank"), // This is now used as Company Name
-  category: z.string().min(1, { message: "Category is required." }),
+  category: z.string().optional(),
   supplier: z.string().optional(),
 
   // Maintenance & Warranty
@@ -603,7 +603,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Asset Name *</FormLabel>
+                      <FormLabel>Asset Name</FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter asset name"
@@ -622,7 +622,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="serialNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Asset Tag ID *</FormLabel>
+                      <FormLabel>Asset Tag ID</FormLabel>
                       <div className="relative">
                         <FormControl>
                           <Input
@@ -720,15 +720,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                           </div>
-                          <FormControl>
-                            <Input
+                        <FormControl>
+                          <Input
                               type="date"
-                              {...field}
+                            {...field}
                               value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
                               onChange={(e) => field.onChange(new Date(e.target.value))}
                               className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            />
-                          </FormControl>
+                          />
+                        </FormControl>
                         </div>
                         <FormDescription>The date when the asset was purchased</FormDescription>
                         <FormMessage />
@@ -741,7 +741,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="purchasePrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Purchase Price *</FormLabel>
+                        <FormLabel>Purchase Price</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
@@ -812,7 +812,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               Active
                             </div>
                           </SelectItem>
-                          {/* <SelectItem value="INACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                          <SelectItem value="INACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-gray-500 mr-2"></div>
                               Inactive
@@ -835,7 +835,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
                               Lost
                             </div>
-                          </SelectItem> */}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -849,7 +849,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="location"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location *</FormLabel>
+                        <FormLabel>Location</FormLabel>
                         <FormControl>
                           <Input
                             placeholder="Asset location"
@@ -904,13 +904,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category *</FormLabel>
+                        <FormLabel>Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ""}>
-                          <FormControl>
+                        <FormControl>
                             <SelectTrigger className="border-purple-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
-                          </FormControl>
+                        </FormControl>
                           <SelectContent className="border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-white rounded-lg p-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-purple-50 hover:scrollbar-thumb-purple-400">
                             {ASSET_CATEGORIES.map((category) => (
                               <SelectItem 
