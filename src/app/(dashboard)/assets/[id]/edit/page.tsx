@@ -98,7 +98,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
     }));
   };
 
-  if (!checkPermission('Asset create')) {
+  if (!checkPermission('Asset edit')) {
     return (
       <div className="p-4">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>

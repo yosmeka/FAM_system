@@ -87,8 +87,8 @@ export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(request:
   }
 });
 
-// POST /api/audit-assignments - Create new audit assignment (Manager/Admin only)
-export const POST = withRole([ 'MANAGER'], async function POST(request: Request) {
+// POST /api/audit-assignments - Create new audit assignment (Manager/only)
+export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

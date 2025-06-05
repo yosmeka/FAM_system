@@ -117,7 +117,7 @@ export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET(
   }
 });
 
-export const PUT = withRole(['MANAGER'], async function PUT(
+export const PUT = withRole(['MANAGER', 'USER','AUDITOR'], async function PUT(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -296,7 +296,7 @@ export const PUT = withRole(['MANAGER'], async function PUT(
   }
 });
 
-export const DELETE = withRole(['MANAGER'], async function DELETE(
+export const DELETE = withRole(['MANAGER','USER','AUDITOR'], async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {

@@ -36,6 +36,7 @@ export default function MaintenanceReportsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [debug, setDebug] = useState<any>(null);
 
+
   useEffect(() => {
     fetchMaintenanceReports();
     setGeneratedOn(new Date().toLocaleDateString());
@@ -111,6 +112,9 @@ export default function MaintenanceReportsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+
+
+
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -138,6 +142,12 @@ export default function MaintenanceReportsPage() {
       </div>
     );
   }
+
+
+
+
+
+
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
