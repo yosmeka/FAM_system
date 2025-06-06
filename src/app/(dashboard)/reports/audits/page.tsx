@@ -18,15 +18,15 @@ import {
   Line
 } from 'recharts';
 import {
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  XCircle,
-  TrendingUp,
-  Calendar,
-  FileText,
-  AlertCircle
-} from 'lucide-react';
+  CheckCircleIcon,
+  ClockIcon,
+  ExclamationTriangleIcon,
+  XCircleIcon,
+  ChartBarIcon,
+  CalendarIcon,
+  DocumentTextIcon,
+  ExclamationCircleIcon
+} from '@heroicons/react/24/outline';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import type {
@@ -38,6 +38,7 @@ import type {
   AuditAssetData,
   AuditDiscrepancyData
 } from '@/types/reports';
+import { BackButton } from '@/components/ui/BackButton';
 
 interface AuditReportsData {
   stats: AuditStats;
@@ -83,15 +84,15 @@ export default function AuditReportsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'COMPLETED':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
       case 'PENDING':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
       case 'FAILED':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircleIcon className="h-4 w-4 text-red-500" />;
       case 'NEEDS_REVIEW':
-        return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+        return <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />;
       default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
+        return <DocumentTextIcon className="h-4 w-4 text-gray-500" />;
     }
   };
 
@@ -116,84 +117,87 @@ export default function AuditReportsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
       </div>
     );
   }
 
   if (!auditData) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-gray-900">
         <div className="text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-white mb-2">Failed to Load Audit Reports</h2>
-          <p className="text-gray-400">Please try refreshing the page.</p>
+          <ExclamationCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Failed to Load Audit Reports</h2>
+          <p className="text-gray-600 dark:text-gray-400">Please try refreshing the page.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 min-h-screen" style={{ backgroundColor: '#212332' }}>
+    <div className="container mx-auto p-6 min-h-screen bg-white dark:bg-gray-900">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Audit Reports Dashboard</h1>
-        <p className="text-gray-400">
+        <div className="flex items-center gap-4 mb-2">
+          <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Audit Reports Dashboard</h1>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400">
           Comprehensive audit analytics and compliance tracking
         </p>
       </div>
 
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow" style={{ backgroundColor: '#2A2D3E' }}>
+        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Total Audits</p>
-              <p className="text-2xl font-bold text-white">{auditData.stats.totalAudits}</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Audits</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{auditData.stats.totalAudits}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {auditData.stats.auditGrowth >= 0 ? '+' : ''}{auditData.stats.auditGrowth}% vs last month
               </p>
             </div>
-            <FileText className="h-8 w-8 text-blue-500" />
+            <DocumentTextIcon className="h-8 w-8 text-blue-500" />
           </div>
         </div>
 
-        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow" style={{ backgroundColor: '#2A2D3E' }}>
+        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Compliance Rate</p>
-              <p className="text-2xl font-bold text-white">{auditData.stats.complianceRate}%</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Compliance Rate</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{auditData.stats.complianceRate}%</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 {auditData.stats.completedAudits} of {auditData.stats.totalAudits} completed
               </p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <CheckCircleIcon className="h-8 w-8 text-green-500" />
           </div>
         </div>
 
-        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow" style={{ backgroundColor: '#2A2D3E' }}>
+        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Overdue Audits</p>
-              <p className="text-2xl font-bold text-white">{auditData.stats.overdueAudits}</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Overdue Audits</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{auditData.stats.overdueAudits}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 Require immediate attention
               </p>
             </div>
-            <AlertTriangle className="h-8 w-8 text-red-500" />
+            <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
           </div>
         </div>
 
-        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow" style={{ backgroundColor: '#2A2D3E' }}>
+        <div className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-400">Unresolved Issues</p>
-              <p className="text-2xl font-bold text-white">{auditData.stats.unresolvedDiscrepancies}</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Unresolved Issues</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{auditData.stats.unresolvedDiscrepancies}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                 Avg resolution: {auditData.stats.avgResolutionTime} days
               </p>
             </div>
-            <AlertCircle className="h-8 w-8 text-orange-500" />
+            <ExclamationCircleIcon className="h-8 w-8 text-orange-500" />
           </div>
         </div>
       </div>
@@ -201,8 +205,8 @@ export default function AuditReportsPage() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Audit Status Distribution */}
-        <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-          <h3 className="text-lg font-semibold text-white mb-4">Audit Status Distribution</h3>
+        <div className="p-6 rounded-lg shadow-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Audit Status Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -225,19 +229,19 @@ export default function AuditReportsPage() {
         </div>
 
         {/* Asset Condition Distribution */}
-        <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-          <h3 className="text-lg font-semibold text-white mb-4">Asset Condition Distribution</h3>
+        <div className="p-6 rounded-lg shadow-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Asset Condition Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={auditData.conditionDistribution}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="condition" stroke="#9CA3AF" />
-              <YAxis stroke="#9CA3AF" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB dark:stroke-gray-700" />
+              <XAxis dataKey="condition" stroke="#6B7280 dark:stroke-gray-400" />
+              <YAxis stroke="#6B7280 dark:stroke-gray-400" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#374151',
+                  backgroundColor: '#FFFFFF dark:bg-gray-800',
                   border: 'none',
                   borderRadius: '8px',
-                  color: '#F9FAFB'
+                  color: '#1F2937 dark:text-white'
                 }}
               />
               <Bar dataKey="count" fill="#3B82F6" />
@@ -247,19 +251,19 @@ export default function AuditReportsPage() {
       </div>
 
       {/* Monthly Trends */}
-      <div className="p-6 rounded-lg shadow-lg mb-8" style={{ backgroundColor: '#2A2D3E' }}>
-        <h3 className="text-lg font-semibold text-white mb-4">Monthly Audit Trends</h3>
+      <div className="p-6 rounded-lg shadow-lg mb-8 bg-white dark:bg-gray-800">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Monthly Audit Trends</h3>
         <ResponsiveContainer width="100%" height={400}>
           <LineChart data={auditData.monthlyTrends}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="month" stroke="#9CA3AF" />
-            <YAxis stroke="#9CA3AF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB dark:stroke-gray-700" />
+            <XAxis dataKey="month" stroke="#6B7280 dark:stroke-gray-400" />
+            <YAxis stroke="#6B7280 dark:stroke-gray-400" />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#374151',
+                backgroundColor: '#FFFFFF dark:bg-gray-800',
                 border: 'none',
                 borderRadius: '8px',
-                color: '#F9FAFB'
+                color: '#1F2937 dark:text-white'
               }}
             />
             <Legend />
@@ -289,19 +293,19 @@ export default function AuditReportsPage() {
       </div>
 
       {/* Department Performance */}
-      <div className="p-6 rounded-lg shadow-lg mb-8" style={{ backgroundColor: '#2A2D3E' }}>
-        <h3 className="text-lg font-semibold text-white mb-4">Department Audit Performance</h3>
+      <div className="p-6 rounded-lg shadow-lg mb-8 bg-white dark:bg-gray-800">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Department Audit Performance</h3>
         <ResponsiveContainer width="100%" height={400}>
           <BarChart data={auditData.departmentDistribution}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="department" stroke="#9CA3AF" />
-            <YAxis stroke="#9CA3AF" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB dark:stroke-gray-700" />
+            <XAxis dataKey="department" stroke="#6B7280 dark:stroke-gray-400" />
+            <YAxis stroke="#6B7280 dark:stroke-gray-400" />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#374151',
+                backgroundColor: '#FFFFFF dark:bg-gray-800',
                 border: 'none',
                 borderRadius: '8px',
-                color: '#F9FAFB'
+                color: '#1F2937 dark:text-white'
               }}
             />
             <Legend />
@@ -315,34 +319,34 @@ export default function AuditReportsPage() {
       {/* Data Tables Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Top Assets by Audit Frequency */}
-        <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-          <h3 className="text-lg font-semibold text-white mb-4">Most Audited Assets</h3>
+        <div className="p-6 rounded-lg shadow-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Audited Assets</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Asset</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Audits</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Condition</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Issues</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Asset</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Audits</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Condition</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Issues</th>
                 </tr>
               </thead>
               <tbody>
                 {auditData.topAssets.slice(0, 8).map((asset, index) => (
-                  <tr key={asset.assetId} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
+                  <tr key={asset.assetId} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="py-2 px-3">
                       <div>
-                        <p className="text-sm font-medium text-white">{asset.assetName}</p>
-                        <p className="text-xs text-gray-400">{asset.serialNumber}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{asset.assetName}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{asset.serialNumber}</p>
                       </div>
                     </td>
-                    <td className="py-2 px-3 text-sm text-white">{asset.totalAudits}</td>
+                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white">{asset.totalAudits}</td>
                     <td className="py-2 px-3">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getConditionColor(asset.condition)}`}>
                         {asset.condition}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-sm text-white">{asset.discrepancies}</td>
+                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white">{asset.discrepancies}</td>
                   </tr>
                 ))}
               </tbody>
@@ -351,33 +355,33 @@ export default function AuditReportsPage() {
         </div>
 
         {/* Overdue Audits */}
-        <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-          <h3 className="text-lg font-semibold text-white mb-4">Overdue Audits</h3>
+        <div className="p-6 rounded-lg shadow-lg bg-white dark:bg-gray-800">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Overdue Audits</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-gray-600">
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Asset</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Department</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Due Date</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-400">Status</th>
+                <tr className="border-b border-gray-200 dark:border-gray-700">
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Asset</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Department</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Due Date</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-600 dark:text-gray-400">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {auditData.overdueAssets.slice(0, 8).map((asset, index) => (
-                  <tr key={asset.assetId} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
+                  <tr key={asset.assetId} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="py-2 px-3">
                       <div>
-                        <p className="text-sm font-medium text-white">{asset.assetName}</p>
-                        <p className="text-xs text-gray-400">{asset.serialNumber}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{asset.assetName}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{asset.serialNumber}</p>
                       </div>
                     </td>
-                    <td className="py-2 px-3 text-sm text-white">{asset.department}</td>
-                    <td className="py-2 px-3 text-sm text-white">
+                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white">{asset.department}</td>
+                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white">
                       {asset.nextAuditDate ? formatDate(asset.nextAuditDate) : 'Not set'}
                     </td>
                     <td className="py-2 px-3">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-600">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200">
                         OVERDUE
                       </span>
                     </td>
@@ -390,33 +394,33 @@ export default function AuditReportsPage() {
       </div>
 
       {/* Recent Unresolved Discrepancies */}
-      <div className="p-6 rounded-lg shadow-lg mb-8" style={{ backgroundColor: '#2A2D3E' }}>
-        <h3 className="text-lg font-semibold text-white mb-4">Recent Unresolved Discrepancies</h3>
+      <div className="p-6 rounded-lg shadow-lg mb-8 bg-white dark:bg-gray-800">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Unresolved Discrepancies</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-gray-600">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Asset</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Audit Date</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Discrepancy</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Days Pending</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Priority</th>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Asset</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Audit Date</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Discrepancy</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Days Pending</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Priority</th>
               </tr>
             </thead>
             <tbody>
               {auditData.recentDiscrepancies.map((discrepancy, index) => (
-                <tr key={discrepancy.id} className="border-b border-gray-700 hover:bg-gray-700 transition-colors">
-                  <td className="py-3 px-4 text-sm font-medium text-white">{discrepancy.assetName}</td>
-                  <td className="py-3 px-4 text-sm text-white">{formatDate(discrepancy.auditDate)}</td>
-                  <td className="py-3 px-4 text-sm text-white max-w-xs truncate" title={discrepancy.discrepancy}>
+                <tr key={discrepancy.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{discrepancy.assetName}</td>
+                  <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{formatDate(discrepancy.auditDate)}</td>
+                  <td className="py-3 px-4 text-sm text-gray-900 dark:text-white max-w-xs truncate" title={discrepancy.discrepancy}>
                     {discrepancy.discrepancy}
                   </td>
-                  <td className="py-3 px-4 text-sm text-white">{discrepancy.daysPending}</td>
+                  <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{discrepancy.daysPending}</td>
                   <td className="py-3 px-4">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      discrepancy.daysPending > 30 ? 'bg-red-100 text-red-600' :
-                      discrepancy.daysPending > 14 ? 'bg-yellow-100 text-yellow-600' :
-                      'bg-blue-100 text-blue-600'
+                      discrepancy.daysPending > 30 ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-200' :
+                      discrepancy.daysPending > 14 ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-200' :
+                      'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-200'
                     }`}>
                       {discrepancy.daysPending > 30 ? 'HIGH' :
                        discrepancy.daysPending > 14 ? 'MEDIUM' : 'LOW'}

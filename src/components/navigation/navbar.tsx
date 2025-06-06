@@ -7,6 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 // import AccountInfoModal from "./AccountInfoModal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -161,9 +162,11 @@ export default function Navbar() {
 							</div>
 							<div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
 								{/* Theme Switcher */}
+								<ThemeToggle />
 
-								{/* Notification Bell (right of navigation, left of profile) */}
+								{/* Notification Bell */}
 								<NotificationBell notifications={notifications} setNotifications={setNotifications} />
+								
 								{/* Profile Dropdown */}
 								<Menu as="div" className="relative ml-4">
 									<div>
@@ -175,17 +178,17 @@ export default function Navbar() {
 											</div>
 										</Menu.Button>
 									</div>
-									<Menu.Items className="absolute right-0 z-20 mt-2.5 w-64 origin-top-right rounded-lg bg-white py-1.5 shadow-2xl ring-1 ring-black ring-opacity-10 focus:outline-none">
-										<div className="px-4 py-3 border-b border-gray-100">
-											<div className="font-semibold text-gray-900 text-base">{session.user?.name}</div>
-											<div className="text-xs text-gray-500">{session.user?.email}</div>
+									<Menu.Items className="absolute right-0 z-20 mt-2.5 w-64 origin-top-right rounded-lg bg-white dark:bg-gray-800 py-1.5 shadow-2xl ring-1 ring-black dark:ring-gray-700 ring-opacity-10 focus:outline-none">
+										<div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+											<div className="font-semibold text-gray-900 dark:text-gray-100 text-base">{session.user?.name}</div>
+											<div className="text-xs text-gray-500 dark:text-gray-400">{session.user?.email}</div>
 										</div>
 										<Menu.Item>
 											{({ active }: { active: boolean }) => (
 												<button
 													className={classNames(
-														active ? "bg-gray-100" : "",
-														"block w-full px-4 py-2 text-left text-sm text-gray-700"
+														active ? "bg-gray-100 dark:bg-gray-700" : "",
+														"block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200"
 													)}
 													onClick={() => alert("Account information feature is coming soon!")}
 												>
@@ -198,22 +201,21 @@ export default function Navbar() {
 												<Link
 													href="/account-settings"
 													className={classNames(
-														active ? "bg-gray-100" : "",
-														"block w-full px-4 py-2 text-left text-sm text-gray-700"
+														active ? "bg-gray-100 dark:bg-gray-700" : "",
+														"block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200"
 													)}
 												>
 													Account Settings
 												</Link>
 											)}
 										</Menu.Item>
-										<div className="border-t border-gray-100 my-1" />
 										<Menu.Item>
 											{({ active }: { active: boolean }) => (
 												<button
 													onClick={() => signOut()}
 													className={classNames(
-														active ? "bg-gray-100" : "",
-														"block w-full px-4 py-2 text-left text-sm text-red-600 font-semibold"
+														active ? "bg-gray-100 dark:bg-gray-700" : "",
+														"block w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400"
 													)}
 												>
 													Sign out

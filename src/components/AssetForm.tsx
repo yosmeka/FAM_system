@@ -76,7 +76,7 @@ const ASSET_CATEGORIES = [
 const assetFormSchema = z.object({
   // Basic Information
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   serialNumber: z.string().min(1, { message: "Serial number is required." }),
 
   // Financial Information
@@ -92,37 +92,37 @@ const assetFormSchema = z.object({
 
   // Classification
   status: z.string().default("ACTIVE"),
-  location: z.string().optional(),
+  location: z.string().optional().nullable(),
   department: z.string().default("Zemen Bank"), // This is now used as Company Name
-  category: z.string().optional(),
-  supplier: z.string().optional(),
+  category: z.string().optional().nullable(),
+  supplier: z.string().optional().nullable(),
 
   // Maintenance & Warranty
   warrantyExpiry: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
   lastMaintenance: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
   nextMaintenance: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
 
   // Depreciation
-  depreciationMethod: z.string().optional(),
-  usefulLifeMonths: z.coerce.number().min(1, { message: "Useful life must be at least 1 month." }).optional(),
+  depreciationMethod: z.string().optional().nullable(),
+  usefulLifeMonths: z.coerce.number().min(1, { message: "Useful life must be at least 1 month." }).optional().nullable(),
   depreciationStartDate: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
-  salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional(),
+  salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional().nullable(),
 })
 
 type AssetFormValues = z.infer<typeof assetFormSchema>
@@ -724,8 +724,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <Input
                               type="date"
                             {...field}
-                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
+                              value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? new Date(value) : null);
+                              }}
+                              min={format(new Date(), 'yyyy-MM-dd')}
                               className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </FormControl>
@@ -977,8 +981,11 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
                             min={format(new Date(), 'yyyy-MM-dd')}
                             className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
@@ -1004,8 +1011,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
+                            min={format(new Date(), 'yyyy-MM-dd')}
                             className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
                         </FormControl>
@@ -1030,8 +1041,11 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
                             min={format(new Date(), 'yyyy-MM-dd')}
                             className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                           />
@@ -1174,8 +1188,11 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             <Input
                               type="date"
                               {...field}
-                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
+                              value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? new Date(value) : null);
+                              }}
                               min={format(new Date(), 'yyyy-MM-dd')}
                               className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             />

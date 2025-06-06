@@ -153,49 +153,53 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       name: body.name,
       serialNumber: body.serialNumber,
       status: body.status,
-      location: body.location,
       department: "Zemen Bank",
-      category: body.category,
-      type: body.category === 'LAND' ? null : body.type,
-      supplier: body.category === 'LAND' ? null : body.supplier,
-      description: body.description,
     };
 
+    // Handle optional string fields
+    const optionalStringFields = ['location', 'category', 'supplier', 'description'];
+    optionalStringFields.forEach(field => {
+      updateData[field] = body[field] || null;
+    });
+
+    // Handle type field based on category
+    updateData.type = body.category === 'LAND' ? null : body.type;
+
+    // Handle string fields
+    const stringFields = ['name', 'description', 'serialNumber', 'status', 'location', 'department', 'category', 'supplier'];
+    stringFields.forEach(field => {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field] || null;
+      }
+    });
+
     // Handle number fields
-    const numberFields = ['purchasePrice', 'currentValue', 'depreciableCost', 'salvageValue', 'usefulLifeMonths'];
+    const numberFields = ['purchasePrice', 'currentValue', 'depreciableCost', 'usefulLifeMonths', 'salvageValue'];
     numberFields.forEach(field => {
-      const value = parseFloat(body[field]);
-      if (!isNaN(value)) {
-        updateData[field] = value;
-      } else if (field === 'purchasePrice' || field === 'currentValue') {
-        throw new Error(`Invalid number format for ${field}`);
-      } else if (body.category === 'LAND' && ['depreciableCost', 'salvageValue', 'usefulLifeMonths'].includes(field)) {
-        updateData[field] = null;
-      } else {
-        updateData[field] = null;
+      if (body[field] !== undefined) {
+        const value = parseFloat(body[field]);
+        if (!isNaN(value)) {
+          updateData[field] = value;
+        } else {
+          updateData[field] = null;
+        }
       }
     });
 
     // Handle date fields
     const dateFields = ['purchaseDate', 'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciationStartDate'];
     dateFields.forEach(field => {
-      if (body[field]) {
-        const date = new Date(body[field]);
-        if (!isNaN(date.getTime())) {
-          updateData[field] = date;
-        } else if (field === 'purchaseDate' || field === 'warrantyExpiry') {
-          throw new Error(`Invalid date format for ${field}`);
-        } else if (body.category === 'LAND' && ['lastMaintenance', 'nextMaintenance'].includes(field)) {
-          updateData[field] = null;
+      if (body[field] !== undefined) {
+        if (body[field]) {
+          const date = new Date(body[field]);
+          if (!isNaN(date.getTime())) {
+            updateData[field] = date;
+          } else {
+            updateData[field] = null;
+          }
         } else {
           updateData[field] = null;
         }
-      } else if (field === 'purchaseDate' || field === 'warrantyExpiry') {
-        throw new Error(`Missing required date field: ${field}`);
-      } else if (body.category === 'LAND' && ['lastMaintenance', 'nextMaintenance'].includes(field)) {
-        updateData[field] = null;
-      } else {
-        updateData[field] = null;
       }
     });
 

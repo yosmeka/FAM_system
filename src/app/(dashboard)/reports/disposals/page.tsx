@@ -6,6 +6,7 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { usePDF } from 'react-to-pdf';
 import { Download, Settings } from 'lucide-react';
+import { BackButton } from '@/components/ui/BackButton';
 import type {
   DisposalStats,
   DisposalMethodData,
@@ -55,13 +56,7 @@ export default function DisposalReportsPage() {
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [statusDistribution, setStatusDistribution] = useState<{ status: string; count: number }[]>([]);
 
-
-
-
-
-
-
-// Show nothing until session is loaded
+  // Show nothing until session is loaded
   if (status === 'loading') return null;
 
   // If not allowed, show access denied
@@ -75,11 +70,6 @@ export default function DisposalReportsPage() {
       </div>
     );
   }
-
-
-
-
-
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
@@ -133,7 +123,6 @@ export default function DisposalReportsPage() {
     }
   };
 
-  if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
     return (
@@ -262,7 +251,10 @@ export default function DisposalReportsPage() {
   return (
     <div className="container mx-auto p-6" ref={targetRef}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Disposal Reports</h1>
+        <div className="flex items-center gap-4">
+          <BackButton href="/reports" className='text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300' />
+          <h1 className="text-2xl font-semibold">Disposal Reports</h1>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => fetchDisposalReports(true)}
@@ -306,7 +298,7 @@ export default function DisposalReportsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8">
+      <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Filter Disposals</h2>
           <div className="flex items-center gap-4">
@@ -315,7 +307,7 @@ export default function DisposalReportsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'APPROVED' | 'REJECTED')}
-                className="border rounded-md px-3 py-1.5 text-sm"
+                className="border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
               >
                 <option value="ALL">All Status</option>
                 <option value="APPROVED">Approved</option>
@@ -324,7 +316,7 @@ export default function DisposalReportsPage() {
               <select
                 value={methodFilter}
                 onChange={(e) => setMethodFilter(e.target.value)}
-                className="border rounded-md px-3 py-1.5 text-sm"
+                className="border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
               >
                 <option value="ALL">All Methods</option>
                 {methodDistribution.map((method) => (
@@ -339,9 +331,9 @@ export default function DisposalReportsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Approval Status Distribution</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 dark:bg-gray-900">
+        <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
+          <h2 className="text-lg font-semibold mb-4 ">Approval Status Distribution</h2>
           <RoleBasedChart
             type="pie"
             data={filteredStatusDistribution}
@@ -350,7 +342,7 @@ export default function DisposalReportsPage() {
             }}
           />
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
           <h2 className="text-lg font-semibold mb-4">Disposal Methods Distribution</h2>
           <RoleBasedChart
             type="pie"
@@ -363,8 +355,8 @@ export default function DisposalReportsPage() {
       </div>
 
       {/* Disposed Assets Table */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8" ref={tableTargetRef}>
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900" ref={tableTargetRef}>
+        <div className="flex justify-between items-center mb-4 dark:bg-gray-900">
           <h2 className="text-lg font-semibold">Asset Disposal Table</h2>
           <button
             onClick={() => toPDFTable()}
