@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, CheckCircle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { BackButton } from "@/components/ui/BackButton";
 
 export default function MaintenanceReportsPage() {
   useSession(); // Only call for auth, don't destructure unused vars
@@ -150,12 +151,13 @@ export default function MaintenanceReportsPage() {
 
 
   return (
-    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+    <div className="container mx-auto p-6 bg-gray-50 min-h-screen dark:bg-gray-900">
       {/* Header Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6 dark:bg-gray-900">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Maintenance Reports</h1>
+          <div className="flex items-center gap-4 mb-2">
+          <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-400 mb-2">Maintenance Reports</h1>
             <p className="text-gray-600">Comprehensive overview of maintenance activities and performance</p>
           </div>
           <div className="flex items-center space-x-4 mt-4 md:mt-0">
@@ -171,7 +173,7 @@ export default function MaintenanceReportsPage() {
                 <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            {/* <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger className="w-40">
                 <span className="inline-block h-4 w-4 mr-2">⏷</span>
                 <SelectValue placeholder="Department" />
@@ -184,7 +186,7 @@ export default function MaintenanceReportsPage() {
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
             <Button onClick={handleExportReport} variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -274,9 +276,9 @@ export default function MaintenanceReportsPage() {
       {/* Enhanced Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Status Distribution */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm dark:bg-gray-900">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Request Status Distribution</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Request Status Distribution</h2>
             <CheckCircle className="h-5 w-5 text-green-600" />
           </div>
           {statusDistribution && statusDistribution.length > 0 ? (
@@ -297,9 +299,9 @@ export default function MaintenanceReportsPage() {
         </div>
 
         {/* Priority Distribution */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm dark:bg-gray-900">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Priority Distribution</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h2>
             <span className="inline-block h-5 w-5 text-orange-600">⚠️</span>
           </div>
           {priorityDistribution && priorityDistribution.length > 0 ? (
@@ -321,11 +323,11 @@ export default function MaintenanceReportsPage() {
       </div>
 
       {/* Monthly Trends and Department Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 dark:bg-gray-900">
         {/* Monthly Trends - Takes 2 columns */}
         <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Monthly Maintenance Trends</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Monthly Maintenance Trends</h2>
             <span className="inline-block h-5 w-5 text-blue-600">📈</span>
           </div>
           {monthlyTrends && monthlyTrends.length > 0 ? (
@@ -359,7 +361,7 @@ export default function MaintenanceReportsPage() {
           )}
         </div>
 
-        {/* Department Distribution */}
+        {/* Department Distribution
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">By Department</h2>
@@ -380,16 +382,16 @@ export default function MaintenanceReportsPage() {
               <p>No department data available</p>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* Enhanced Tables Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 dark:bg-gray-900">
         {/* Top Assets Requiring Maintenance - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm">
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm dark:bg-gray-900">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Top Assets Requiring Maintenance</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Top Assets Requiring Maintenance</h2>
               <span className="inline-block h-5 w-5 text-red-600">⚠️</span>
             </div>
             {topAssets && topAssets.length > 0 ? (
@@ -479,16 +481,16 @@ export default function MaintenanceReportsPage() {
         </div>
 
         {/* Recent Activity Feed */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-6">
+        <div className="bg-white rounded-lg shadow-sm dark:bg-gray-900">
+          <div className="p-6 dark:bg-gray-900">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h2>
               <span className="inline-block h-5 w-5 text-blue-600">🕒</span>
             </div>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto dark:bg-gray-900">
               {recentActivity && recentActivity.length > 0 ? (
                 recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50">
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
                     <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
                       activity.status === 'COMPLETED' ? 'bg-green-500' :
                       activity.status === 'IN_PROGRESS' ? 'bg-blue-500' :
@@ -496,7 +498,7 @@ export default function MaintenanceReportsPage() {
                       activity.priority === 'HIGH' ? 'bg-orange-500' : 'bg-gray-400'
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-900 truncate dark:text-white">
                         {activity.asset?.name || 'Unknown Asset'}
                       </p>
                       <p className="text-xs text-gray-600 truncate">
@@ -539,7 +541,7 @@ export default function MaintenanceReportsPage() {
       </div>
 
       {/* Footer */}
-      <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+      <div className="bg-white rounded-lg shadow-sm p-6 text-center dark:bg-gray-900">
         <p className="text-gray-600 text-sm">
           Report generated on {generatedOn} at {generatedTime}
         </p>
@@ -549,7 +551,7 @@ export default function MaintenanceReportsPage() {
 
         {/* Debug Information */}
         {debug && (
-          <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left">
+          <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left dark:bg-gray-900">
             <p className="text-sm font-semibold mb-2">Debug Information:</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
               <div>Status Distribution: {debug.statusDistributionLength}</div>

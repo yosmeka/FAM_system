@@ -31,21 +31,21 @@ export function RoleBasedTable<T>({
 
   if (filteredColumns.length === 0 || data.length === 0) {
     return (
-      <div className="text-center py-4 text-gray-500">No data available</div>
+      <div className="text-center py-4 text-gray-500 dark:text-gray-400">No data available</div>
     );
   }
 
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
           <tr>
             {filteredColumns.map((column) => (
               <th
                 key={String(column.key)}
                 scope="col"
                 className={cn(
-                  "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider",
+                  "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider",
                   column.className
                 )}
               >
@@ -54,13 +54,13 @@ export function RoleBasedTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
           {data.map((item, index) => (
             <tr
               key={index}
               onClick={() => onRowClick?.(item)}
               className={cn(
-                "hover:bg-gray-50",
+                "hover:bg-gray-50 dark:hover:bg-gray-800",
                 onRowClick && "cursor-pointer"
               )}
             >
@@ -68,7 +68,7 @@ export function RoleBasedTable<T>({
                 <td
                   key={`${String(column.key)}-${index}`}
                   className={cn(
-                    "px-6 py-4 whitespace-nowrap text-sm text-gray-500",
+                    "px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400",
                     column.className
                   )}
                 >

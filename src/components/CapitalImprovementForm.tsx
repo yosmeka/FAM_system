@@ -219,49 +219,49 @@ export function CapitalImprovementForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Description *
         </label>
         <input
           id="description"
           type="text"
           {...register('description')}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-red-500 focus:ring-red-500"
           placeholder="e.g., New luxury lighting system"
         />
         {errors.description && (
-          <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
         )}
       </div>
 
       <div>
-        <label htmlFor="improvementDate" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="improvementDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Improvement Date *
         </label>
         <input
           id="improvementDate"
           type="date"
           {...register('improvementDate')}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-red-500 focus:ring-red-500"
         />
         {errors.improvementDate && (
-          <p className="mt-1 text-sm text-red-600">{errors.improvementDate.message}</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.improvementDate.message}</p>
         )}
       </div>
 
       {/* Current Depreciated Cost Section */}
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <div>
         <div className="flex justify-between items-center mb-2">
-          <label htmlFor="currentAssetValue" className="block text-sm font-medium text-gray-700">
+          <label htmlFor="currentAssetValue" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Current Depreciated Cost (Before Improvement)
           </label>
           <button
             type="button"
             onClick={calculateCurrentValue}
             disabled={isCalculating || !asset}
-            className="inline-flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+            className="inline-flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
           >
             <Plus size={16} className="mr-1" />
             {isCalculating ? 'Calculating...' : 'Calculate'}
@@ -269,74 +269,74 @@ export function CapitalImprovementForm({
         </div>
         <div className="relative mt-1 rounded-md shadow-sm">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <span className="text-gray-500 sm:text-sm">$</span>
+            <span className="text-gray-500 dark:text-gray-400 sm:text-sm">$</span>
           </div>
           <input
             id="currentAssetValue"
             type="text"
             {...register('currentAssetValue')}
             readOnly
-            className="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 bg-gray-100"
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 pl-7 pr-12 focus:border-red-500 focus:ring-red-500 bg-gray-100 dark:bg-gray-800"
             placeholder="Click 'Calculate' to determine current depreciated cost"
           />
         </div>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           This is the calculated depreciated cost of the asset based on depreciation up to the improvement date.
           The improvement cost will be added to this value to update the depreciable cost.
         </p>
       </div>
 
       <div>
-        <label htmlFor="cost" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Improvement Cost *
         </label>
         <div className="relative mt-1 rounded-md shadow-sm">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <span className="text-gray-500 sm:text-sm">$</span>
+            <span className="text-gray-500 dark:text-gray-400 sm:text-sm">$</span>
           </div>
           <input
             id="cost"
             type="number"
             step="0.01"
             {...register('cost')}
-            className="block w-full rounded-md border-gray-300 pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500"
+            className="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 pl-7 pr-12 focus:border-red-500 focus:ring-red-500"
             placeholder="0.00"
           />
         </div>
         {errors.cost && (
-          <p className="mt-1 text-sm text-red-600">{errors.cost.message}</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.cost.message}</p>
         )}
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           This cost will be added to the current depreciated cost to update the depreciable cost of the asset.
         </p>
       </div>
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Notes
         </label>
         <textarea
           id="notes"
           {...register('notes')}
           rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-red-500 focus:ring-red-500"
           placeholder="Additional details about the improvement"
         />
         {errors.notes && (
-          <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.notes.message}</p>
         )}
       </div>
 
-      <div className="flex justify-between pt-4 border-t border-gray-200">
-        <div className="text-sm text-gray-500">
+      <div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
           {asset && (
             <p>
-              Asset: <span className="font-medium">{asset.name || assetId}</span>
+              Asset: <span className="font-medium text-gray-900 dark:text-gray-100">{asset.name || assetId}</span>
               {asset.purchaseDate && (
-                <> • Purchased: <span className="font-medium">{new Date(asset.purchaseDate).toLocaleDateString()}</span></>
+                <> • Purchased: <span className="font-medium text-gray-900 dark:text-gray-100">{new Date(asset.purchaseDate).toLocaleDateString()}</span></>
               )}
               {asset.depreciableCost && (
-                <> • Current Depreciable Cost: <span className="font-medium">{formatCurrency(asset.depreciableCost)}</span></>
+                <> • Current Depreciable Cost: <span className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(asset.depreciableCost)}</span></>
               )}
             </p>
           )}
@@ -344,7 +344,7 @@ export function CapitalImprovementForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+          className="inline-flex justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
         >
           {isSubmitting ? 'Saving...' : isEditing ? 'Update Improvement' : 'Add Improvement'}
         </button>

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { X } from 'lucide-react';
 
 interface LinkAssetModalProps {
   open: boolean;
@@ -76,63 +77,69 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-white rounded-lg shadow-lg">
-        <DialogHeader className="border-b pb-4 mb-4">
-          <DialogTitle className="text-xl font-bold text-gray-900">Link Child Asset</DialogTitle>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-medium">Link Asset</DialogTitle>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="search" className="text-sm font-medium text-gray-700">Search Assets</Label>
+            <Label htmlFor="search">Search Assets</Label>
             <Input
               id="search"
-              placeholder="Search by name or serial number..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Search by asset tag ID or description..."
             />
           </div>
 
-          <div className="border rounded-md shadow-sm">
-            <ScrollArea className="h-[400px] p-4">
-              <div className="space-y-4">
-                {isAssetsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                    <p className="text-gray-500">Loading available assets...</p>
-                  </div>
-                ) : filteredAssets.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No assets found</p>
-                ) : (
-                  filteredAssets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className="flex items-center justify-between rounded-lg border p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div>
-                        <h3 className="font-medium text-gray-900">{asset.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          Serial: {asset.serialNumber} {asset.type && `| Type: ${asset.type}`}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Value: {asset.purchasePrice.toLocaleString('en-US', {
-                            style: 'currency',
-                            currency: 'ETB',
-                          })}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => handleLinkAsset(asset.id)}
-                        disabled={isLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md"
-                      >
-                        {isLoading ? 'Linking...' : 'Link'}
-                      </Button>
-                    </div>
-                  ))
-                )}
+          <ScrollArea className="h-[300px] rounded-md border">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
               </div>
-            </ScrollArea>
+            ) : filteredAssets.length > 0 ? (
+              <div className="space-y-2 p-2">
+                {filteredAssets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent"
+                  >
+                    <div>
+                      <p className="font-medium">{asset.serialNumber}</p>
+                      <p className="text-sm text-muted-foreground">{asset.name}</p>
+                    </div>
+                    <Button
+                      onClick={() => handleLinkAsset(asset.id)}
+                      variant="destructive"
+                    >
+                      Link
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No assets found
+              </div>
+            )}
+          </ScrollArea>
+
+          <div className="flex justify-end">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="mr-2"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       </DialogContent>

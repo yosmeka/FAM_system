@@ -181,8 +181,8 @@ export function PdfExportButton({ reportData }: PdfExportButtonProps) {
       className={`
         flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-all duration-300 transform
         ${isGenerating
-          ? 'bg-gray-400 cursor-not-allowed'
-          : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-md hover:scale-105 active:scale-95'
+          ? 'bg-red-400 cursor-not-allowed'
+          : 'bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-indigo-700 hover:shadow-md hover:scale-105 active:scale-95'
         }
       `}
       disabled={!reportData || isGenerating}
