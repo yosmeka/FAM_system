@@ -54,10 +54,12 @@ export async function POST(
       return NextResponse.json({ error: 'Maintenance task not found' }, { status: 404 });
     }
 
-    // Check if task is in PENDING_REVIEW status
-    if (maintenanceTask.status !== 'PENDING_REVIEW') {
+    // Check if task is in a reviewable status
+    // PENDING_REVIEW: for corrective maintenance
+    // WORK_COMPLETED: for preventive maintenance
+    if (!['PENDING_REVIEW', 'WORK_COMPLETED'].includes(maintenanceTask.status)) {
       return NextResponse.json({
-        error: 'Task is not in pending review status'
+        error: `Task is not in a reviewable status. Current status: ${maintenanceTask.status}`
       }, { status: 400 });
     }
 
@@ -67,16 +69,24 @@ export async function POST(
       status: newStatus,
     };
 
-    // Add review notes to the notes field if provided
+    // Add review notes to the appropriate field
     if (reviewNotes) {
-      const existingNotes = maintenanceTask.notes || '';
-      const reviewNote = `\n\n--- Manager Review (${new Date().toLocaleString()}) ---\n${reviewNotes}`;
-      updateData.notes = existingNotes + reviewNote;
+      // For preventive maintenance (WORK_COMPLETED), use managerReviewNotes
+      // For corrective maintenance (PENDING_REVIEW), use notes field
+      if (maintenanceTask.status === 'WORK_COMPLETED') {
+        updateData.managerReviewNotes = reviewNotes;
+      } else {
+        const existingNotes = maintenanceTask.notes || '';
+        const reviewNote = `\n\n--- Manager Review (${new Date().toLocaleString()}) ---\n${reviewNotes}`;
+        updateData.notes = existingNotes + reviewNote;
+      }
     }
 
-    // If approved, set final completion date
+    // If approved, set final completion date and approval info
     if (action === 'approve') {
-      updateData.completedAt = maintenanceTask.completedAt || new Date();
+      updateData.completedAt = maintenanceTask.completedAt || maintenanceTask.workCompletedAt || new Date();
+      updateData.finalApprovedAt = new Date();
+      updateData.finalApprovedBy = session.user?.id;
     }
 
     const updatedTask = await prisma.maintenance.update({

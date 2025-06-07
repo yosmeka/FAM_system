@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, AlertCircle, Settings, Play, FileText, Clock, DollarSign } from 'lucide-react';
-import WorkDocumentationModal from '@/components/maintenance/WorkDocumentationModal';
+import TemplateChecklistModal from '@/components/maintenance/TemplateChecklistModal';
 
 interface MaintenanceTask {
   id: string;
@@ -50,7 +50,7 @@ export default function MyTasksPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
-  const [showWorkModal, setShowWorkModal] = useState(false);
+  const [showChecklistModal, setShowChecklistModal] = useState(false);
 
 
 
@@ -110,15 +110,15 @@ export default function MyTasksPage() {
     }
   };
 
-  const handleDocumentWork = (task: MaintenanceTask) => {
+  const handleWorkOnTemplate = (task: MaintenanceTask) => {
     setSelectedTask(task);
-    setShowWorkModal(true);
+    setShowChecklistModal(true);
   };
 
-  const handleWorkCompleted = () => {
+  const handleTaskCompleted = () => {
     fetchMyTasks(); // Refresh tasks
     setSelectedTask(null);
-    setShowWorkModal(false);
+    setShowChecklistModal(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -197,7 +197,7 @@ export default function MyTasksPage() {
 
       {/* Filter Tabs */}
       <div className="flex gap-4 mb-6 flex-wrap">
-        {['all', 'APPROVED', 'IN_PROGRESS', 'WORK_COMPLETED', 'COMPLETED'].map((status) => (
+        {['all', 'SCHEDULED', 'IN_PROGRESS', 'WORK_COMPLETED', 'COMPLETED'].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -211,7 +211,10 @@ export default function MyTasksPage() {
             }}
           >
             {status === 'all' ? 'All Tasks' :
-             status === 'WORK_COMPLETED' ? 'Work Completed' :
+             status === 'SCHEDULED' ? 'Scheduled' :
+             status === 'IN_PROGRESS' ? 'In Progress' :
+             status === 'WORK_COMPLETED' ? 'Awaiting Review' :
+             status === 'COMPLETED' ? 'Completed' :
              status.charAt(0) + status.slice(1).toLowerCase()}
           </button>
         ))}
@@ -326,7 +329,7 @@ export default function MyTasksPage() {
             {/* Action Buttons */}
             <div className="flex gap-2 mb-4">
               {/* Start Work Button */}
-              {(task.status === 'APPROVED' || task.status === 'SCHEDULED') && (
+              {(task.status === 'SCHEDULED') && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -339,17 +342,17 @@ export default function MyTasksPage() {
                 </button>
               )}
 
-              {/* Document Work Button */}
+              {/* Work on Template Button */}
               {task.status === 'IN_PROGRESS' && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDocumentWork(task);
+                    handleWorkOnTemplate(task);
                   }}
                   className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                 >
-                  <FileText className="w-4 h-4" />
-                  Complete Work
+                  <CheckCircle className="w-4 h-4" />
+                  Work on Task
                 </button>
               )}
 
@@ -401,12 +404,12 @@ export default function MyTasksPage() {
         </div>
       )}
 
-      {/* Work Documentation Modal */}
-      <WorkDocumentationModal
-        open={showWorkModal}
-        onClose={() => setShowWorkModal(false)}
+      {/* Template Checklist Modal */}
+      <TemplateChecklistModal
+        open={showChecklistModal}
+        onClose={() => setShowChecklistModal(false)}
         task={selectedTask}
-        onWorkCompleted={handleWorkCompleted}
+        onTaskCompleted={handleTaskCompleted}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { seedMaintenanceData } from './seeds/maintenance-seed';
 
 const prisma = new PrismaClient();
 
@@ -173,6 +174,13 @@ async function main() {
 
 
   console.log('Default role permissions assigned.');
+
+  // Seed maintenance data
+  try {
+    await seedMaintenanceData();
+  } catch (error) {
+    console.log('⚠️ Maintenance seeding skipped (likely missing users/assets):', error);
+  }
 }
 
 main()

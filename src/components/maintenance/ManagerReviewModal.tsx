@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface ChecklistItem {
@@ -83,20 +83,20 @@ export default function ManagerReviewModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden" style={{ backgroundColor: '#2A2D3E' }}>
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex justify-between items-center p-6 border-b border-gray-600">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-white">
               Review Maintenance Task
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               {task.asset?.name} ({task.asset?.serialNumber})
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-gray-400 hover:text-white transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -106,30 +106,33 @@ export default function ManagerReviewModal({
           {/* Task Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Task Details</h3>
-              <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Technician:</span> {task.assignedTo?.name}</p>
-                <p><span className="font-medium">Priority:</span> {task.priority}</p>
-                <p><span className="font-medium">Scheduled:</span> {new Date(task.scheduledDate).toLocaleDateString()}</p>
-                <p><span className="font-medium">Completed:</span> {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</p>
+              <h3 className="text-lg font-medium text-white mb-3">Task Details</h3>
+              <div className="space-y-2 text-sm text-gray-300">
+                <p><span className="font-medium text-white">Technician:</span> {task.assignedTo?.name}</p>
+                <p><span className="font-medium text-white">Priority:</span> {task.priority}</p>
+                <p><span className="font-medium text-white">Scheduled:</span> {new Date(task.scheduledDate).toLocaleDateString()}</p>
+                <p><span className="font-medium text-white">Completed:</span> {task.workCompletedAt ? new Date(task.workCompletedAt).toLocaleDateString() : 'N/A'}</p>
                 {task.actualHours && (
-                  <p><span className="font-medium">Actual Hours:</span> {task.actualHours}h</p>
+                  <p><span className="font-medium text-white">Actual Hours:</span> {task.actualHours}h</p>
                 )}
               </div>
             </div>
 
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Progress Summary</h3>
+              <h3 className="text-lg font-medium text-white mb-3">Progress Summary</h3>
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span>Checklist Progress</span>
                     <span>{completedItems}/{checklist.length} items</span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
-                      className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progressPercentage}%` }}
+                      className="h-2 rounded-full transition-all duration-300"
+                      style={{
+                        backgroundColor: '#2697FF',
+                        width: `${progressPercentage}%`
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -140,12 +143,12 @@ export default function ManagerReviewModal({
           {/* Checklist Review */}
           {checklist.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+              <h3 className="text-lg font-medium text-white mb-3">
                 Completed Checklist ({completedItems}/{checklist.length} completed)
               </h3>
               <div className="space-y-2">
                 {checklist.map((item, index) => (
-                  <div key={item.id || index} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div key={item.id || index} className="flex items-start gap-3 p-3 bg-gray-700 rounded-lg">
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
                       item.completed
                         ? 'bg-green-500 border-green-500'
@@ -156,18 +159,18 @@ export default function ManagerReviewModal({
                     <div className="flex-1">
                       <p className={`text-sm ${
                         item.completed
-                          ? 'text-gray-900 dark:text-white'
-                          : 'text-gray-500 dark:text-gray-400'
+                          ? 'text-white'
+                          : 'text-gray-400'
                       }`}>
                         {item.task}
                       </p>
                       {item.completed && item.completedAt && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-green-400 mt-1">
                           Completed: {new Date(item.completedAt).toLocaleString()}
                         </p>
                       )}
                       {item.notes && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 mt-1">
                           Note: {item.notes}
                         </p>
                       )}
@@ -181,9 +184,9 @@ export default function ManagerReviewModal({
           {/* Technician Notes */}
           {task.notes && (
             <div className="mb-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Technician Notes</h3>
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-sm text-blue-900 dark:text-blue-100 whitespace-pre-wrap">
+              <h3 className="text-lg font-medium text-white mb-3">Technician Notes</h3>
+              <div className="p-4 bg-blue-900/20 border border-blue-600/30 rounded-lg">
+                <p className="text-sm text-blue-100 whitespace-pre-wrap">
                   {task.notes}
                 </p>
               </div>
@@ -192,14 +195,14 @@ export default function ManagerReviewModal({
 
           {/* Review Notes */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-white mb-2">
               Review Notes (Required for rejection)
             </label>
             <textarea
               value={reviewNotes}
               onChange={(e) => setReviewNotes(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               placeholder="Add your review comments..."
             />
           </div>
@@ -211,7 +214,7 @@ export default function ManagerReviewModal({
               disabled={submitting}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
-              <XCircle className="w-4 h-4" />
+              <X className="w-4 h-4" />
               {submitting ? 'Rejecting...' : 'Reject Task'}
             </button>
 

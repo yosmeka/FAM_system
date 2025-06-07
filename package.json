@@ -14,7 +14,7 @@
     "db:setup": "ts-node scripts/setup-db.ts",
     "db:seed": "ts-node scripts/seed.ts",
     "db:test": "ts-node scripts/test-db.ts",
-    "seed:maintenance": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed-maintenance.ts"
+    "seed:maintenance": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} scripts/seed-maintenance.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",
