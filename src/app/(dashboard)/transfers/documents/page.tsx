@@ -109,11 +109,11 @@ export default function TransferDocumentsPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
         </div>
       ) : documents.length === 0 ? (
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-8 text-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h2 className="text-xl font-medium text-gray-600 mb-2">No Documents Found</h2>
+          <h2 className="text-xl font-medium text-gray-600 dark:text-gray-500 mb-2">No Documents Found</h2>
           <p className="text-gray-500 mb-4">
             You don't have any transfer documents yet. Documents are automatically generated when your transfer requests are approved or rejected by a manager.
           </p>
@@ -127,9 +127,9 @@ export default function TransferDocumentsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {documents.map((doc) => (
-            <div key={doc.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className={`p-4 ${doc.status === 'APPROVED' ? 'bg-green-50' : 'bg-red-50'}`}>
-                <div className="flex items-center space-x-3">
+            <div key={doc.id} className="bg-white rounded-lg shadow-md dark:bg-gray-900 overflow-hidden">
+              <div className={`p-4 ${doc.status === 'APPROVED' ? 'bg-green-50 dark:bg-gray-900' : 'bg-red-50 dark:bg-gray-900'}`}>
+                <div className="flex items-center space-x-3 dark:bg-gray-900">
                   <div className={`p-2 rounded-full ${doc.status === 'APPROVED' ? 'bg-green-100' : 'bg-red-100'}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${doc.status === 'APPROVED' ? 'text-green-500' : 'text-red-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />

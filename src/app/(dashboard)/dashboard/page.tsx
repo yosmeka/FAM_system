@@ -163,7 +163,7 @@ export default function DashboardPage() {
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-200 via-red-100 to-yellow-100 py-8 px-2 dark:bg-gray-950">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-200 via-red-100 to-yellow-100 py-8 px-2 dark:bg-gray-900 dark:from-indigo-900 dark:via-red-900 dark:to-yellow-900">
         <Toaster position="top-right" />
 
         {/* Welcome Banner */}
@@ -171,26 +171,26 @@ export default function DashboardPage() {
           {session?.user?.image && (
             <img src={session.user.image} alt="avatar" className="w-20 h-20 rounded-full shadow-lg mb-2 border-4 border-indigo-400" />
           )}
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-red-500 to-yellow-500 mb-1 drop-shadow-lg">Welcome, {session?.user?.name}</h1>
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-red-500 to-yellow-500 mb-1 dark:from-indigo-400 dark:via-red-400 dark:to-yellow-400 drop-shadow-lg">Welcome, {session?.user?.name}</h1>
           <span className="text-lg text-gray-600 dark:text-gray-300 font-medium">System Administration Dashboard</span>
         </div>
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl mb-10">
-          <div className="bg-gradient-to-br from-indigo-500 via-indigo-300 to-white dark:from-indigo-900 dark:via-indigo-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-indigo-100 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-indigo-500 via-indigo-300 to-white dark:from-indigo-900 dark:via-indigo-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-indigo-100 dark:border-indigo-800 hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">👥</span>
             <span className="text-5xl font-extrabold text-indigo-900 dark:text-indigo-100">
               {adminLoading ? '...' : <CountUp end={adminStats?.users ?? 0} />}
             </span>
             <span className="text-lg text-indigo-700 dark:text-indigo-300 mt-2 font-semibold tracking-wide">Total Users</span>
           </div>
-          <div className="bg-gradient-to-br from-pink-400 via-red-300 to-white dark:from-pink-900 dark:via-red-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-red-100 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-pink-400 via-red-300 to-white dark:from-pink-900 dark:via-red-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-red-100 dark:border-red-800 hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">🛡️</span>
             <span className="text-5xl font-extrabold text-red-900 dark:text-red-100">
               {adminLoading ? '...' : <CountUp end={adminStats?.roles ?? 0} />}
             </span>
             <span className="text-lg text-red-700 dark:text-red-300 mt-2 font-semibold tracking-wide">Roles</span>
           </div>
-          <div className="bg-gradient-to-br from-yellow-300 via-yellow-100 to-white dark:from-yellow-900 dark:via-yellow-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-yellow-100 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-yellow-300 via-yellow-100 to-white dark:from-yellow-900 dark:via-yellow-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-yellow-100 dark:border-yellow-800 hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">🔑</span>
             <span className="text-5xl font-extrabold text-yellow-700 dark:text-yellow-200">
               {adminLoading ? '...' : <CountUp end={adminStats?.permissions ?? 0} />}
@@ -200,10 +200,10 @@ export default function DashboardPage() {
         </div>
         {/* Quick Actions */}
         <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-3 drop-shadow">Quick Actions</h2>
+          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-3 drop-shadow">Quick Actions</h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/users" className="bg-indigo-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-indigo-700 transition font-semibold text-lg">Manage Users</a>
-            <a href="/role-permission" className="bg-red-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-red-700 transition font-semibold text-lg">Manage Roles & Permissions</a>
+            <a href="/users" className="bg-indigo-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800 transition font-semibold text-lg">Manage Users</a>
+            <a href="/role-permission" className="bg-red-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition font-semibold text-lg">Manage Roles & Permissions</a>
           </div>
         </div>
         {/* Charts */}
@@ -270,25 +270,32 @@ export default function DashboardPage() {
     ],
   };
 
+  // Sort monthly depreciation data by month
+  const sortedDepreciation = dashboardData?.monthlyDepreciation?.sort((a, b) => {
+    const dateA = new Date(a.month);
+    const dateB = new Date(b.month);
+    return dateA.getTime() - dateB.getTime();
+  }) || [];
+
   const monthlyDepreciationData = {
-    labels: dashboardData?.monthlyDepreciation.map((item) => {
+    labels: sortedDepreciation.map((item) => {
       const date = new Date(item.month);
       return date.toLocaleString('default', { month: 'short' });
-    }) || [],
+    }),
     datasets: [
       {
         label: 'Monthly Depreciation',
-        data: dashboardData?.monthlyDepreciation.map((item) => item.depreciation) || [],
+        data: sortedDepreciation.map((item) => item.depreciation),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
       },
     ],
   };
 
   return (
-    <div>
+    <div className="dark:bg-gray-900 dark:text-gray-100">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Welcome back, <span className="font-bold text-red-600">{session?.user?.name}</span>
         </p>
       </div>
@@ -297,7 +304,7 @@ export default function DashboardPage() {
         {stats.map((item) => (
           <div
             key={item.name}
-            className="relative overflow-hidden rounded-lg bg-white px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6"
+            className="relative overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6"
           >
             <dt>
               <div className="absolute rounded-md bg-indigo-500 p-3">
@@ -315,12 +322,12 @@ export default function DashboardPage() {
                   />
                 </svg>
               </div>
-              <p className="ml-16 truncate text-sm font-medium text-gray-500">
+              <p className="ml-16 truncate text-sm font-medium text-gray-500 dark:text-gray-400">
                 {item.name}
               </p>
             </dt>
             <dd className="ml-16 flex items-baseline pb-6 sm:pb-7">
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                 {item.value}
               </p>
             </dd>
@@ -329,8 +336,8 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             Asset Status Distribution
           </h2>
           <div className="h-80">
@@ -338,8 +345,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
+        <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             Monthly Depreciation
           </h2>
           <div className="h-80">

@@ -56,7 +56,7 @@ export default function NewDisposalPage() {
 
 
   useEffect(() => {
-    if (status === 'loading') return;
+    //if (status === 'loading') return;
     if (!session) {
       router.replace('/dashboard');
       toast.error('Access denied: Please log in to create disposal requests.');
@@ -115,7 +115,7 @@ export default function NewDisposalPage() {
     }
   };
 
-  if (status === 'loading') return null;
+ // if (status === 'loading') return null;
   if (!session) return null;
 
   return (
@@ -132,7 +132,7 @@ export default function NewDisposalPage() {
               <select
                 id="assetId"
                 name="assetId"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
               >
                 <option value="">Select Asset</option>
@@ -151,7 +151,7 @@ export default function NewDisposalPage() {
               <select
                 id="method"
                 name="method"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
               >
                 <option value="">Select Method</option>
@@ -171,7 +171,7 @@ export default function NewDisposalPage() {
                 id="reason"
                 name="reason"
                 rows={3}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 placeholder="Explain why this asset needs to be disposed..."
                 required
               />
@@ -187,7 +187,7 @@ export default function NewDisposalPage() {
                 name="expectedValue"
                 step="0.01"
                 min="0"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 placeholder="Enter expected value if selling or trading in"
               />
             </div>

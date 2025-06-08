@@ -354,14 +354,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const renderHistoryTab = () => {
     if (isHistoryLoading) {
       return (
-        <div className="p-4">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </div>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
         </div>
       );
     }
@@ -537,12 +531,12 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Depreciation Settings */}
-            <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+            <div className="mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Depreciation Settings</h2>
+                <h2 className="text-lg font-semibold dark:text-gray-500">Depreciation Settings</h2>
                 <button
                   onClick={() => setIsManagingDepreciation(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
                 >
                   <Settings size={16} />
                   Manage
@@ -558,11 +552,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             />
 
             {/* Depreciation Details */}
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Depreciation Details</h2>
+            <div className="mb-6 dark:bg-gray-800">
+              <h2 className="text-lg font-semibold mb-2 dark:text-gray-500">Depreciation Details</h2>
               <div className="overflow-x-auto text-sm">
                 <table className="w-full border text-left">
-                  <thead className="bg-gray-100">
+                  <thead className="bg-gray-100 dark:bg-gray-800">
                     <tr>
                       <th className="p-2 border">Date Acquired</th>
                       <th className="p-2 border">Depreciable Cost</th>
@@ -607,9 +601,9 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Depreciation Chart */}
-            <div className="mb-6">
-              <h3 className="text-md font-medium mb-2">Depreciation yearly stats…</h3>
-              <div className="h-48 bg-white rounded-lg border p-2 mb-4">
+            <div className="mb-6 dark:bg-gray-800">
+              <h3 className="text-md font-medium mb-2 dark:text-gray-500">Depreciation yearly stats…</h3>
+              <div className="h-48 bg-white rounded-lg border p-2 mb-4 dark:bg-gray-800">
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart
                     data={depreciationData}
@@ -649,10 +643,10 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Yearly Depreciation Table */}
-            <div className="overflow-x-auto text-sm mb-6">
-              <h3 className="text-md font-medium mb-2">Yearly Depreciation Schedule</h3>
+            <div className="overflow-x-auto text-sm mb-6 dark:bg-gray-800">
+              <h3 className="text-md font-medium mb-2 dark:text-gray-500">Yearly Depreciation Schedule</h3>
               <table className="w-full border text-left">
-                <thead className="bg-gray-100">
+                <thead className="bg-gray-100 dark:bg-gray-800">
                   <tr>
                     <th className="p-2 border font-semibold">Year</th>
                     <th className="p-2 border font-semibold">Depreciation Expense</th>
@@ -660,9 +654,9 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                     <th className="p-2 border font-semibold">Book Value</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="dark:bg-gray-800">
                   {depreciationResults.map((result, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
                       <td className="p-2 border">{result.year}</td>
                       <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
                       <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
@@ -707,14 +701,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
   if (isLoading) {
     return (
-      <div className="p-4">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-          </div>
-        </div>
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
       </div>
     );
   }
@@ -821,7 +809,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             <button
               key={tab}
               className={`py-1.5 px-2 mx-0.5 text-sm ${
-                activeTab.toLowerCase() === tab ? 'border-b-2 border-yellow-500 font-medium' : ''
+                activeTab.toLowerCase() === tab ? 'border-b-2 border-red-500 font-medium' : ''
               } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => {
                 if (!isDisabled) {

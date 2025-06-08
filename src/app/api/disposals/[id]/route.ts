@@ -47,6 +47,36 @@ export async function GET(
   }
 }
 
+// DELETE /api/disposals/[id]
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const disposal = await prisma.disposal.delete({
+      where: { id },
+    });
+
+    return NextResponse.json(disposal);
+  } catch (error) {
+    console.error('Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete disposal request' },
+      { status: 500 }
+    );
+  }
+}
+
 // PUT /api/disposals/[id]
 export async function PUT(
   request: Request,

@@ -92,8 +92,15 @@ export async function POST(request: NextRequest) {
     // Return user object without the password
     const { password: _password, ...userWithoutPassword } = user; // _password signals intentional omission
     return NextResponse.json(userWithoutPassword);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating user:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // Check if this is a Prisma unique constraint error
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Email already in use. Please use a different email address.' },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

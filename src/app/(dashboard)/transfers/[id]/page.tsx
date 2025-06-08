@@ -123,7 +123,11 @@ export default function TransferDetailsPage({ params }: { params: any }) {
   }
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
   }
 
   if (!transfer) {
@@ -165,14 +169,14 @@ export default function TransferDetailsPage({ params }: { params: any }) {
     <div className="container mx-auto p-6">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-8 border-b pb-4">
-          <h1 className="text-3xl font-bold text-gray-800">Transfer Details</h1>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-300">Transfer Details</h1>
           <RoleBasedBadge label={transfer.status} className="text-lg" />
         </div>
 
-        <div className="bg-white shadow-xl rounded-2xl p-8 space-y-8 border border-gray-200">
-          <section>
-            <h2 className="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Asset Information</h2>
-            <div className="grid grid-cols-2 gap-4 text-gray-600">
+        <div className="bg-white shadow-xl rounded-2xl p-8 space-y-8 border border-gray-200 dark:bg-gray-800">
+          <section className='dark:bg-gray-800'>
+            <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-400 border-b pb-1">Asset Information</h2>
+            <div className="grid grid-cols-2 gap-4 text-gray-600 dark:text-gray-400">
               <div><b>Name:</b> {transfer.asset?.name}</div>
               <div><b>Serial Number:</b> {transfer.asset?.serialNumber}</div>
               {transfer.asset?.status && <div><b>Status:</b> {transfer.asset.status}</div>}
@@ -182,8 +186,8 @@ export default function TransferDetailsPage({ params }: { params: any }) {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold mb-2 text-gray-700 border-b pb-1">Requester Information</h2>
-            <div className="grid grid-cols-2 gap-4 text-gray-600">
+            <h2 className="text-xl font-semibold mb-2 text-gray-700 dark:text-gray-400 border-b pb-1">Requester Information</h2>
+            <div className="grid grid-cols-2 gap-4 text-gray-600 dark:text-gray-400">
               <div><b>Name:</b> {transfer.requester?.name || 'Unknown'}</div>
               <div><b>Email:</b> {transfer.requester?.email || 'Unknown'}</div>
             </div>
@@ -191,47 +195,47 @@ export default function TransferDetailsPage({ params }: { params: any }) {
 
           <section className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-medium text-gray-700">From Location</h3>
-              <p className="text-gray-600">{transfer.fromLocation}</p>
+              <h3 className="font-medium text-gray-700 dark:text-gray-400">From Location</h3>
+              <p className="text-gray-600 dark:text-gray-400">{transfer.fromLocation}</p>
             </div>
             <div>
-              <h3 className="font-medium text-gray-700">To Location</h3>
-              <p className="text-gray-600">{transfer.toLocation}</p>
+              <h3 className="font-medium text-gray-700 dark:text-gray-400">To Location</h3>
+              <p className="text-gray-600 dark:text-gray-400">{transfer.toLocation}</p>
             </div>
           </section>
 
           <section>
-            <h3 className="font-medium text-gray-700">Request Reason</h3>
-            <p className="text-gray-600 italic">{transfer.reason}</p>
+            <h3 className="font-medium text-gray-700 dark:text-gray-400">Request Reason</h3>
+            <p className="text-gray-600 dark:text-gray-400 italic">{transfer.reason}</p>
           </section>
 
           {transfer.managerReason && (
             <section>
-              <h3 className="font-medium text-gray-700">
+              <h3 className="font-medium text-gray-700 dark:text-gray-400">
                 {transfer.status === 'APPROVED' ? 'Approval Reason' : 'Rejection Reason'}
               </h3>
-              <p className="text-gray-600 italic">{transfer.managerReason}</p>
+              <p className="text-gray-600 dark:text-gray-400 italic">{transfer.managerReason}</p>
             </section>
           )}
 
           <section className="grid grid-cols-2 gap-4">
             <div>
-              <h3 className="font-medium text-gray-700">Request Date</h3>
-              <p className="text-gray-600">{new Date(transfer.createdAt).toLocaleDateString()}</p>
+              <h3 className="font-medium text-gray-700 dark:text-gray-400">Request Date</h3>
+              <p className="text-gray-600 dark:text-gray-400">{new Date(transfer.createdAt).toLocaleDateString()}</p>
             </div>
             {transfer.status !== 'PENDING' && (
               <div>
-                <h3 className="font-medium text-gray-700">Response Date</h3>
-                <p className="text-gray-600">{new Date(transfer.updatedAt).toLocaleDateString()}</p>
+                <h3 className="font-medium text-gray-700 dark:text-gray-400">Response Date</h3>
+                <p className="text-gray-600 dark:text-gray-400">{new Date(transfer.updatedAt).toLocaleDateString()}</p>
               </div>
             )}
           </section>
 
           {/* Only show document section to the requester */}
           {session?.user?.id === transfer.requester?.id && transfer.document && (
-            <section className="border-t pt-6 mt-6">
-              <h3 className="font-semibold mb-2 text-lg text-gray-800">Official Transfer Document</h3>
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col gap-2">
+            <section className="border-t pt-6 mt-6 dark:bg-gray-800">
+              <h3 className="font-semibold mb-2 text-lg text-gray-800 dark:text-gray-400">Official Transfer Document</h3>
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 flex flex-col gap-2">
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="bg-red-100 p-2 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,13 +246,13 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                     <h4 className="font-semibold text-md">
                       {transfer.status === 'APPROVED' ? 'Transfer Approval Document' : 'Transfer Rejection Document'}
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       This document serves as official proof of the transfer {transfer.status.toLowerCase()}.
                     </p>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {transfer.status === 'APPROVED'
                       ? 'You can use this document as proof that your transfer request was approved.'
                       : 'This document contains the reason why your transfer request was rejected.'}

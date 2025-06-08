@@ -27,16 +27,16 @@ function DeleteConfirmationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-        <h3 className="text-lg font-semibold mb-4">Confirm Deletion</h3>
-        <p className="mb-4">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+        <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
+        <p className="mb-4 dark:text-white">
           Are you sure you want to delete the disposal request for asset "{assetName}"? 
           This action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-200 dark:hover:text-gray-200"
           >
             Cancel
           </button>
@@ -72,15 +72,15 @@ function RejectConfirmationModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-        <h3 className="text-lg font-semibold mb-4">Reject Disposal Request</h3>
-        <p className="mb-4">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+        <h3 className="text-lg font-semibold mb-4 dark:text-white">Reject Disposal Request</h3>
+        <p className="mb-4 dark:text-white">
           Please provide a reason for rejecting the disposal request for asset "{assetName}".
         </p>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          className="w-full p-2 border rounded mb-4"
+          className="w-full p-2 border rounded mb-4 dark:bg-gray-800"
           rows={3}
           placeholder="Enter rejection reason..."
           required
@@ -88,14 +88,14 @@ function RejectConfirmationModal({
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-200 dark:hover:text-gray-200"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={!reason.trim()}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 dark:hover:bg-red-700 disabled:opacity-50"
           >
             Reject
           </button>
@@ -129,17 +129,8 @@ export default function DisposalsPage() {
   });
   const [rejectReason, setRejectReason] = useState('');
 
-
-
-
-
-
-
-
-
-
  // Show nothing until session is loaded
-  if (status === 'loading') return null;
+  //if (status === 'loading') return null;
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
@@ -152,18 +143,6 @@ export default function DisposalsPage() {
       </div>
     );
   }
-
-
-
-
-
-
-
-
-
-
-
-
 
   useEffect(() => {
     fetchDisposals();
@@ -456,7 +435,7 @@ export default function DisposalsPage() {
       </div>
 
       {/* Search Section */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
+      <div className="mb-6 bg-white p-4 rounded-lg shadow dark:bg-gray-800">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <input
@@ -464,14 +443,14 @@ export default function DisposalsPage() {
               placeholder="Search disposals..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700"
             />
           </div>
           <div className="w-full md:w-48">
             <select
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
-              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-700"
             >
               <option value="assetName">Asset Name</option>
               <option value="method">Disposal Method</option>

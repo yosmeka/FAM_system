@@ -61,7 +61,13 @@ export default function EditDisposalPage() {
   }, [params.id]);
 
   if (redirecting) return <div>Redirecting...</div>;
-  if (status === 'loading' || loading) return <div>Loading...</div>;
+  if (status === 'loading' || loading){
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
   if (error) return <div className="text-red-600">{error}</div>;
   if (!disposal) return <div>Disposal not found</div>;
 
@@ -96,7 +102,7 @@ export default function EditDisposalPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium">Asset</label>
-            <div className="bg-gray-100 rounded p-2 mt-1">
+            <div className="bg-gray-100 dark:bg-gray-800 rounded p-2 mt-1">
               <div><b>Name:</b> {disposal.asset?.name}</div>
               <div><b>Serial Number:</b> {disposal.asset?.serialNumber}</div>
               {disposal.asset?.currentValue !== undefined && (
@@ -110,7 +116,7 @@ export default function EditDisposalPage() {
             <select
               id="method"
               name="method"
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
               required
               value={method}
               onChange={e => setMethod(e.target.value)}
@@ -131,7 +137,7 @@ export default function EditDisposalPage() {
               name="expectedValue"
               step="0.01"
               min="0"
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
               required
               value={expectedValue}
               onChange={e => setExpectedValue(e.target.value)}
@@ -144,7 +150,7 @@ export default function EditDisposalPage() {
               id="reason"
               name="reason"
               rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
               required
               value={reason}
               onChange={e => setReason(e.target.value)}

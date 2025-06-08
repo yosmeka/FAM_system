@@ -70,7 +70,11 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
   }
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
   }
 
   if (!disposal) {
@@ -135,10 +139,10 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
           <RoleBasedBadge label={disposal.status} />
         </div>
 
-        <div className="bg-white shadow rounded-lg p-6 space-y-4">
+        <div className="bg-white shadow rounded-lg p-6 space-y-4 dark:bg-gray-800">
           <div>
             <h2 className="text-lg font-medium">Asset Information</h2>
-            <div className="text-gray-600 space-y-1">
+            <div className="text-gray-600 dark:text-gray-400 space-y-1">
               <div><b>Name:</b> {disposal.asset?.name}</div>
               <div><b>Serial Number:</b> {disposal.asset?.serialNumber}</div>
               {disposal.asset?.status && <div><b>Status:</b> {disposal.asset.status}</div>}
@@ -148,7 +152,7 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
 
           <div>
             <h2 className="text-lg font-medium">Requester Information</h2>
-            <div className="text-gray-600 space-y-1">
+            <div className="text-gray-600 dark:text-gray-400 space-y-1">
               <div><b>Name:</b> {disposal.requester?.name || 'Unknown'}</div>
               <div><b>Email:</b> {disposal.requester?.email || 'Unknown'}</div>
             </div>
@@ -156,28 +160,28 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
 
           <div>
             <h3 className="font-medium">Disposal Method</h3>
-            <p className="text-gray-600 capitalize">{disposal.method.toLowerCase()}</p>
+            <p className="text-gray-600 dark:text-gray-400 capitalize">{disposal.method.toLowerCase()}</p>
           </div>
 
           <div>
             <h3 className="font-medium">Reason</h3>
-            <p className="text-gray-600">{disposal.reason}</p>
+            <p className="text-gray-600 dark:text-gray-400">{disposal.reason}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <h3 className="font-medium">Expected Value</h3>
-              <p className="text-gray-600">${disposal.expectedValue.toFixed(2)}</p>
+              <p className="text-gray-600 dark:text-gray-400">${disposal.expectedValue.toFixed(2)}</p>
             </div>
             <div>
               <h3 className="font-medium">Actual Value</h3>
-              <p className="text-gray-600">{disposal.actualValue ? `$${disposal.actualValue.toFixed(2)}` : 'N/A'}</p>
+              <p className="text-gray-600 dark:text-gray-400">{disposal.actualValue ? `$${disposal.actualValue.toFixed(2)}` : 'N/A'}</p>
             </div>
           </div>
 
           <div>
             <h3 className="font-medium">Request Date</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {new Date(disposal.createdAt).toLocaleDateString()}
             </p>
           </div>
