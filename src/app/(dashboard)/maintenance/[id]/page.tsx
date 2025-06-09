@@ -315,15 +315,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2" style={{ borderColor: '#2697FF' }}></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   if (!task) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">Task Not Found</h2>
           <p className="text-gray-400 mb-4">The maintenance task you're looking for doesn't exist.</p>
@@ -340,7 +340,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: '#212332' }}>
+    <div className="min-h-screen p-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button
@@ -350,7 +350,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold dark:text-white">
             {task.schedule?.title || task.description}
           </h1>
           <p className="text-gray-400">
@@ -363,7 +363,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Status and Actions */}
-          <div className="p-6 rounded-lg" style={{ backgroundColor: '#2A2D3E' }}>
+          <div className="p-6 rounded-lg">
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
                 <span className={getStatusColor(task.status)}>
@@ -393,7 +393,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 <button
                   onClick={() => setShowWorkflowModal(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#2697FF' }}
+                  style={{ backgroundColor: 'red' }}
                 >
                   {task.status === 'SCHEDULED' ? (
                     <>
@@ -415,7 +415,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <button
                     onClick={() => setShowWorkflowModal(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-                    style={{ backgroundColor: '#2697FF' }}
+                    style={{ backgroundColor: 'red' }}
                   >
                     <Settings className="w-4 h-4" />
                     View/Edit Task
@@ -433,7 +433,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               )}
 
-              {/* Debug button for testing */}
+              {/* Debug button for testing 
               {!canWorkOnTask() && !canManageTask() && session?.user?.role === 'USER' && (
                 <button
                   onClick={() => setShowWorkflowModal(true)}
@@ -442,7 +442,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <Settings className="w-4 h-4" />
                   Debug: Work on Task
                 </button>
-              )}
+              )}*/}
             </div>
 
             {/* Progress Bar */}
@@ -456,7 +456,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                   <div
                     className="h-2 rounded-full transition-all duration-300"
                     style={{
-                      backgroundColor: '#2697FF',
+                      backgroundColor: 'red',
                       width: `${calculateProgress()}%`
                     }}
                   ></div>
@@ -495,7 +495,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* Description */}
-          <div className="p-6 rounded-lg" style={{ backgroundColor: '#2A2D3E' }}>
+          <div className="p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-white mb-3">Description</h3>
             <p className="text-gray-300">{task.description}</p>
 
@@ -509,7 +509,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
 
           {/* Checklist */}
           {checklist.length > 0 && (
-            <div className="p-6 rounded-lg" style={{ backgroundColor: '#2A2D3E' }}>
+            <div className="p-6 rounded-lg">
               <h3 className="text-lg font-semibold text-white mb-4">Checklist</h3>
 
 

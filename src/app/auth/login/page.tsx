@@ -13,7 +13,7 @@ import "./login.css";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="name@zemenbank.com"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
+                className="w-full px-3 py-2 text-sm border dark:text-gray-800 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
               />
             </div>
             {errors.email && (
@@ -125,7 +125,7 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
+                className="w-full px-3 py-2 text-sm border dark:text-gray-800 border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 zemen-ring-red zemen-border-red zemen-focus-red"
               />
             </div>
             {errors.password && (

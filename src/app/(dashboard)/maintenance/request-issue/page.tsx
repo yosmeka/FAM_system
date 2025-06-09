@@ -164,24 +164,23 @@ export default function RequestIssuePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6" style={{ backgroundColor: '#212332' }}>
+    <div className="p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Report Maintenance Issues</h1>
+          <h1 className="text-2xl font-bold dark:text-white mb-2">Report Maintenance Issues</h1>
           <p className="text-gray-400">Submit corrective maintenance requests for asset issues</p>
         </div>
         <button
           onClick={() => setShowRequestForm(true)}
-          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: '#2697FF' }}
+          className="flex items-center bg-red-600 gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
         >
           <Plus className="w-4 h-4" />
           Report Issue
@@ -205,10 +204,10 @@ export default function RequestIssuePage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               filter === tab.key
                 ? 'text-white'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-400 dark:hover:text-white hover:text-red-600'
             }`}
             style={{
-              backgroundColor: filter === tab.key ? '#2697FF' : '#2A2D3E',
+              backgroundColor: filter === tab.key ? 'red' : '',
             }}
           >
             {tab.label}
@@ -225,7 +224,7 @@ export default function RequestIssuePage() {
       {requests.length === 0 ? (
         <div className="text-center py-12">
           <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Maintenance Requests</h3>
+          <h3 className="text-xl font-semibold dark:text-white mb-2">No Maintenance Requests</h3>
           <p className="text-gray-400 mb-6">
             {filter === 'ALL'
               ? "You haven't submitted any maintenance requests yet."
@@ -235,7 +234,7 @@ export default function RequestIssuePage() {
           <button
             onClick={() => setShowRequestForm(true)}
             className="px-6 py-3 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#2697FF' }}
+            style={{ backgroundColor: 'red' }}
           >
             Report Your First Issue
           </button>
@@ -246,12 +245,11 @@ export default function RequestIssuePage() {
             <div
               key={request.id}
               className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#2A2D3E' }}
             >
               {/* Header */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
+                  <h3 className="text-lg font-semibold dark:text-white mb-1">
                     {request.asset.name}
                   </h3>
                   <p className="text-sm text-gray-400">

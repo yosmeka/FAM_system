@@ -82,7 +82,13 @@ export default function TransfersPage() {
 
 
 // Show nothing until session is loaded
-  if (status === 'loading') return null;
+  if (loading){
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
+  } 
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
@@ -312,9 +318,9 @@ export default function TransfersPage() {
       />
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
+        <div className="flex justify-center items-center gap-2 py-4 dark:bg-gray-900 border-t">
           <button
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-gray-700"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
           >
