@@ -11,7 +11,7 @@ import { useSession } from 'next-auth/react';
 import { BackButton } from "@/components/ui/BackButton";
 
 export default function MaintenanceReportsPage() {
-  useSession(); // Only call for auth, don't destructure unused vars
+  const { data: session, status } = useSession(); // Destructure session and status from useSession
 
   // All hooks must be at the top, before any early returns!
   const [loading, setLoading] = useState(true);
@@ -115,11 +115,22 @@ export default function MaintenanceReportsPage() {
 
 
 
-
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
+
+  // If not allowed, show access denied
+  if (status === 'unauthenticated' || session?.user?.role === 'AUDITOR') {
+    return (
+      <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
+        <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600 dark:text-red-400">Access Denied</h1>
+          <p className="text-gray-700 dark:text-gray-300">You do not have permission to view this page.</p>
+        </div>
       </div>
     );
   }

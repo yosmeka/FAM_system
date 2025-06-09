@@ -16,7 +16,8 @@ import {
   Trash2,
   Play
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import PerformAuditModal from '@/components/audit/PerformAuditModal';
 
 interface AuditAssignment {
@@ -265,8 +266,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
@@ -284,20 +285,20 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="container mx-auto p-6 min-h-screen" style={{ backgroundColor: '#212332' }}>
+    <div className="container mx-auto p-6 min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.push('/audits/workflow')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-dark-600 dark:text-gray-400 hover:text-gray-500 dark:hover:text-gray-700 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
             Back to Workflow
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-white">{assignment.title}</h1>
-            <p className="text-gray-400">Assignment Details</p>
+            <h1 className="text-3xl font-bold text-gray-700 dark:text-white">{assignment.title}</h1>
+            <p className="text-gray-600 dark:text-gray-400">Assignment Details</p>
           </div>
         </div>
 
@@ -319,60 +320,60 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
         {/* Assignment Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Information */}
-          <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-            <h2 className="text-xl font-semibold text-white mb-4">Assignment Information</h2>
+          <div className="p-6 rounded-lg shadow-lg bg-gray-100 dark:bg-gray-800">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Assignment Information</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Asset</label>
-                <p className="text-white">{assignment.asset.name}</p>
-                <p className="text-sm text-gray-400">Serial: {assignment.asset.serialNumber}</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asset:</label>
+                <p className="text-gray-600 dark:text-gray-400">{assignment.asset.name}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-400">Serial: {assignment.asset.serialNumber}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Department</label>
-                <p className="text-white">{assignment.asset.department}</p>
-                <p className="text-sm text-gray-400">Category: {assignment.asset.category}</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department:</label>
+                <p className="text-gray-600 dark:text-gray-400">{assignment.asset.department}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">Category: {assignment.asset.category}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Assigned To</label>
-                <p className="text-white">{assignment.assignedTo.name}</p>
-                <p className="text-sm text-gray-400">{assignment.assignedTo.email}</p>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned To:</label>
+                <p className="text-gray-600 dark:text-gray-400">{assignment.assignedTo.name}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.assignedTo.email}</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Assigned By</label>
-                <p className="text-white">{assignment.assignedBy.name}</p>
-                <p className="text-sm text-gray-400">{assignment.assignedBy.email}</p>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Assigned By:</label>
+                <p className="text-gray-600 dark:text-gray-400">{assignment.assignedBy.name}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{assignment.assignedBy.email}</p>
               </div>
             </div>
 
             {assignment.description && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-400 mb-1">Description</label>
-                <p className="text-white">{assignment.description}</p>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Description</label>
+                <p className="text-gray-600 dark:text-gray-400">{assignment.description}</p>
               </div>
             )}
 
             {assignment.instructions && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-400 mb-1">Instructions</label>
-                <p className="text-white whitespace-pre-wrap">{assignment.instructions}</p>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Instructions</label>
+                <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{assignment.instructions}</p>
               </div>
             )}
           </div>
 
           {/* Timeline */}
-          <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-            <h2 className="text-xl font-semibold text-white mb-4">Timeline</h2>
+          <div className="p-6 rounded-lg shadow-lg bg-gray-100 dark:bg-gray-800">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">Timeline</h2>
 
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-blue-400" />
                 <div>
-                  <p className="text-white font-medium">Due Date</p>
-                  <p className="text-sm text-gray-400">{formatDate(assignment.dueDate)}</p>
+                  <p className="text-gray-600 dark:text-white font-medium">Due Date</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(assignment.dueDate)}</p>
                 </div>
               </div>
 
@@ -380,8 +381,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
                 <div className="flex items-center gap-3">
                   <Clock className="h-5 w-5 text-green-400" />
                   <div>
-                    <p className="text-white font-medium">Scheduled Date</p>
-                    <p className="text-sm text-gray-400">{formatDate(assignment.scheduledDate)}</p>
+                    <p className="text-gray-600 dark:text-white font-medium">Scheduled Date</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(assignment.scheduledDate)}</p>
                   </div>
                 </div>
               )}
@@ -390,8 +391,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-400" />
                   <div>
-                    <p className="text-white font-medium">Accepted</p>
-                    <p className="text-sm text-gray-400">{formatDate(assignment.acceptedAt)}</p>
+                    <p className="text-gray-600 dark:text-white font-medium">Accepted</p>
+                    <p className="text-sm  text-gray-500 dark:text-gray-400">{formatDate(assignment.acceptedAt)}</p>
                   </div>
                 </div>
               )}
@@ -400,8 +401,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
                 <div className="flex items-center gap-3">
                   <User className="h-5 w-5 text-blue-400" />
                   <div>
-                    <p className="text-white font-medium">Started</p>
-                    <p className="text-sm text-gray-400">{formatDate(assignment.startedAt)}</p>
+                    <p className="text-gray-600 dark:text-white font-medium">Started</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(assignment.startedAt)}</p>
                   </div>
                 </div>
               )}
@@ -410,8 +411,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-400" />
                   <div>
-                    <p className="text-white font-medium">Completed</p>
-                    <p className="text-sm text-gray-400">{formatDate(assignment.completedAt)}</p>
+                    <p className="text-gray-600 dark:text-white font-medium">Completed</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(assignment.completedAt)}</p>
                   </div>
                 </div>
               )}
@@ -423,8 +424,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
         <div className="space-y-6">
           {/* Actions */}
           {canUserTakeAction() && (
-            <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-              <h3 className="text-lg font-semibold text-white mb-4">Actions</h3>
+            <div className="p-6 rounded-lg shadow-lg bg-gray-100 dark:bg-gray-800">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Actions</h3>
 
               <div className="space-y-3">
                 {getAvailableActions().map((actionItem) => (
@@ -460,21 +461,21 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
           )}
 
           {/* Effort Tracking */}
-          <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-            <h3 className="text-lg font-semibold text-white mb-4">Effort Tracking</h3>
+          <div className="p-6 rounded-lg shadow-lg bg-gary-100 dark:bg-gray-800">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Effort Tracking</h3>
 
             <div className="space-y-3">
               {assignment.estimatedHours && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Estimated Hours</label>
-                  <p className="text-white">{assignment.estimatedHours} hours</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Estimated Hours</label>
+                  <p className="text-gray-600 dark:text-white">{assignment.estimatedHours} hours</p>
                 </div>
               )}
 
               {assignment.actualHours && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">Actual Hours</label>
-                  <p className="text-white">{assignment.actualHours} hours</p>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Actual Hours</label>
+                  <p className="text-gray-600 dark:text-white">{assignment.actualHours} hours</p>
                 </div>
               )}
             </div>
@@ -482,12 +483,12 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
 
           {/* Related Audits */}
           {assignment.audits && assignment.audits.length > 0 && (
-            <div className="p-6 rounded-lg shadow-lg" style={{ backgroundColor: '#2A2D3E' }}>
-              <h3 className="text-lg font-semibold text-white mb-4">Related Audits</h3>
+            <div className="p-6 rounded-lg shadow-lg bg-white dark:bg-gray-800">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Related Audits</h3>
 
               <div className="space-y-3">
                 {assignment.audits.map((audit) => (
-                  <div key={audit.id} className="p-3 bg-gray-700 rounded-md">
+                  <div key={audit.id} className="p-3 dark:bg-gray-700 bg-gray-100 rounded-md">
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(audit.status)}`}>
                         {audit.status}
@@ -496,8 +497,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
                         {formatDate(audit.auditDate)}
                       </span>
                     </div>
-                    <p className="text-sm text-white">Condition: {audit.condition}</p>
-                    <p className="text-xs text-gray-400">Workflow: {audit.workflowStatus}</p>
+                    <p className="text-sm text-gray-900 dark:text-white">Condition: {audit.condition}</p>
+                    <p className="text-xs text-gray-900 dark:text-gray-500">Workflow: {audit.workflowStatus}</p>
                   </div>
                 ))}
               </div>
@@ -518,6 +519,8 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ id:
           instructions={assignment.instructions}
         />
       )}
+      {/* Toast Notification Container */}
+      <ToastContainer />
     </div>
   );
 }

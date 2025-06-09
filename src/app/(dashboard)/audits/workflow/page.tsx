@@ -214,28 +214,28 @@ export default function AuditWorkflowPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 min-h-screen" style={{ backgroundColor: '#212332' }}>
+    <div className="container mx-auto p-6 min-h-screen">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Audit Workflow</h1>
-        <p className="text-gray-400">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Audit Workflow</h1>
+        <p className="text-gray-400 dark:text-gray-300">
           Manage audit assignments and requests with maker-checker workflow
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 mb-6 p-1 rounded-lg" style={{ backgroundColor: '#2A2D3E' }}>
+      <div className="flex space-x-1 mb-6 p-1 rounded-lg">
         <button
           onClick={() => setActiveTab('assignments')}
           className={`px-4 py-2 rounded-md font-medium transition-colors ${
             activeTab === 'assignments'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-red-600 text-white'
               : 'text-gray-400 hover:text-white hover:bg-gray-700'
           }`}
         >
@@ -245,7 +245,7 @@ export default function AuditWorkflowPage() {
           onClick={() => setActiveTab('requests')}
           className={`px-4 py-2 rounded-md font-medium transition-colors ${
             activeTab === 'requests'
-              ? 'bg-blue-600 text-white'
+              ? 'bg-red-600 text-white'
               : 'text-gray-400 hover:text-white hover:bg-gray-700'
           }`}
         >
@@ -263,7 +263,7 @@ export default function AuditWorkflowPage() {
               placeholder="Search audits..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -271,7 +271,7 @@ export default function AuditWorkflowPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 rounded-lg border border-gray-600 bg-gray-100 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Status</option>
             <option value="PENDING">Pending</option>
@@ -282,13 +282,13 @@ export default function AuditWorkflowPage() {
           {session?.user?.role === 'MANAGER' && activeTab === 'assignments' && (
             <button
               onClick={() => setShowCreateAssignmentModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-requestedDate-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               New Assignment
             </button>
           )}
-          {activeTab === 'requests' && (
+          {session?.user?.role === 'AUDITOR' && activeTab === 'requests' && (
             <button
               onClick={() => setShowCreateRequestModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -306,15 +306,14 @@ export default function AuditWorkflowPage() {
           {filteredAssignments.map((assignment) => (
             <div
               key={assignment.id}
-              className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-              style={{ backgroundColor: '#2A2D3E' }}
+              className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow dark:bg-gray-700 cursor-pointer"
               onClick={() => router.push(`/audits/assignments/${assignment.id}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">{assignment.title}</h3>
-                  <p className="text-gray-400 text-sm mb-2">{assignment.description}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{assignment.title}</h3>
+                  <p className="text-gray-400 dark:text-gray-300 text-sm mb-2">{assignment.description}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-400 dark:text-gray-300">
                     <span>Asset: {assignment.asset.name}</span>
                     <span>Serial: {assignment.asset.serialNumber}</span>
                     <span>Department: {assignment.asset.department}</span>
@@ -354,8 +353,8 @@ export default function AuditWorkflowPage() {
           {filteredAssignments.length === 0 && (
             <div className="text-center py-12">
               <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No audit assignments found</h3>
-              <p className="text-gray-400">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No audit assignments found</h3>
+              <p className="text-gray-400 dark:text-gray-300">
                 {assignments.length === 0
                   ? 'No audit assignments have been created yet.'
                   : 'No assignments match your current filters.'
@@ -369,14 +368,13 @@ export default function AuditWorkflowPage() {
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-              style={{ backgroundColor: '#2A2D3E' }}
+              className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow dark:bg-gray-700 cursor-pointer"
               onClick={() => router.push(`/audits/requests/${request.id}`)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">{request.title}</h3>
-                  <p className="text-gray-400 text-sm mb-2">{request.reason}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{request.title}</h3>
+                  <p className="text-gray-400 dark:text-gray-300 text-sm mb-2">{request.reason}</p>
                   <div className="flex items-center gap-4 text-sm text-gray-400">
                     <span>Asset: {request.asset.name}</span>
                     <span>Serial: {request.asset.serialNumber}</span>
@@ -419,8 +417,8 @@ export default function AuditWorkflowPage() {
           {filteredRequests.length === 0 && (
             <div className="text-center py-12">
               <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No audit requests found</h3>
-              <p className="text-gray-400">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No audit requests found</h3>
+              <p className="text-gray-400 dark:text-gray-300">
                 {requests.length === 0
                   ? 'No audit requests have been created yet.'
                   : 'No requests match your current filters.'

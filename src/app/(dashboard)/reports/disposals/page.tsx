@@ -62,10 +62,10 @@ export default function DisposalReportsPage() {
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
+      <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
+        <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600 dark:text-red-400">Access Denied</h1>
+          <p className="text-gray-700 dark:text-gray-300">You do not have permission to view this page.</p>
         </div>
       </div>
     );
@@ -126,9 +126,9 @@ export default function DisposalReportsPage() {
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
     return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
-        <p className="text-center">You do not have permission to view disposal reports.</p>
+      <div className="container mx-auto p-6 dark:bg-gray-900">
+        <h1 className="text-2xl font-semibold text-center text-red-600 dark:text-red-400">Access Denied</h1>
+        <p className="text-center text-gray-700 dark:text-gray-300">You do not have permission to view disposal reports.</p>
       </div>
     );
   }
@@ -136,17 +136,17 @@ export default function DisposalReportsPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Reports</h2>
-          <p className="text-red-600">{error}</p>
+      <div className="container mx-auto p-6 dark:bg-gray-900">
+        <div className="bg-red-50 dark:bg-red-800 border border-red-200 dark:border-red-400 rounded-lg p-4">
+          <h2 className="text-lg font-semibold text-red-800 dark:text-red-400 mb-2">Error Loading Reports</h2>
+          <p className="text-red-600 dark:text-red-400">{error}</p>
           <button
             onClick={() => fetchDisposalReports()}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
