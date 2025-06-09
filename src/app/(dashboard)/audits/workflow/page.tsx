@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import CreateAssignmentModal from '@/components/audit/CreateAssignmentModal';
 import CreateRequestModal from '@/components/audit/CreateRequestModal';
+import { ToastContainer } from 'react-toastify';
 
 interface AuditAssignment {
   id: string;
@@ -291,7 +292,7 @@ export default function AuditWorkflowPage() {
           {session?.user?.role === 'AUDITOR' && activeTab === 'requests' && (
             <button
               onClick={() => setShowCreateRequestModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
               New Request
@@ -441,6 +442,7 @@ export default function AuditWorkflowPage() {
         onClose={() => setShowCreateRequestModal(false)}
         onSuccess={fetchData}
       />
+    <ToastContainer />
     </div>
   );
 }

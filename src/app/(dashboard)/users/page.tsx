@@ -42,6 +42,7 @@ export default function UsersPage() {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       setPasswordError("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
+      toast.error("Invalid password format! Please meet all requirements.");
       return false;
     }
     setPasswordError("password");
@@ -64,7 +65,7 @@ export default function UsersPage() {
                 {passwordError && (
                   <p className="text-red-500 text-sm mt-1">{passwordError}</p>
                 )}
-                {passwordError && (
+                {passwordError === "password" && (
                   <p className="text-red-500 text-sm mt-1">{passwordError}</p>
                 )}
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -378,9 +379,17 @@ export default function UsersPage() {
               </button>
               <button
                 onClick={handleAddUser}
-                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Add User
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Adding...
+                  </>
+                ) : (
+                  "Add User"
+                )}
               </button>
             </div>
           </div>
