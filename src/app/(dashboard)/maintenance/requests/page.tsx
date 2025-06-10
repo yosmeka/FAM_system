@@ -78,7 +78,7 @@ export default function MaintenanceRequestsPage() {
   };
 
   return (
-    <div className="p-6" style={{ backgroundColor: '#212332' }}>
+    <div className="p-6">
       {/* Enhanced Manager Request Dashboard */}
       <ManagerRequestDashboard
         key={refreshTrigger}

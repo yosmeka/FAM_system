@@ -29,6 +29,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  //const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -36,16 +37,26 @@ export default function UsersPage() {
     role: "USER",
   });
   const [passwordError, setPasswordError] = useState("");
+  const [addingUser, setAddingUser] = useState(false);
 
   // Password validation regex
   const validatePassword = (password: string) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(password)) {
+    // First check if the password meets minimum requirements
+    const hasMinRequirements = 
+      /[a-z]/.test(password) &&    // at least one lowercase letter
+      /[A-Z]/.test(password) &&    // at least one uppercase letter
+      /\d/.test(password) &&       // at least one number
+      /[@$!%*?&]/.test(password) && // at least one special character
+      password.length >= 8;        // at least 8 characters
+
+    if (!hasMinRequirements) {
       setPasswordError("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
-      toast.error("Invalid password format! Please meet all requirements.");
+      //toast.error("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
       return false;
     }
-    setPasswordError("password");
+
+    // If it meets minimum requirements, allow any additional characters
+    setPasswordError("");
     return true;
   };
 
@@ -155,12 +166,17 @@ export default function UsersPage() {
   }
 
   if (status === "loading") {
-    return <div className="p-6 max-w-4xl mx-auto text-center">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
   }
 
   const handleAddUser = async () => {
     if (!validatePassword(form.password)) return;
 
+    setAddingUser(true);
     try {
       const res = await fetch("/api/users", {
         method: "POST",
@@ -186,6 +202,8 @@ export default function UsersPage() {
     } catch (err: any) {
       toast.error("An unexpected error occurred");
       console.error(err);
+    } finally {
+      setAddingUser(false);
     }
   };
 
@@ -352,13 +370,21 @@ export default function UsersPage() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full border px-3 py-2 rounded dark:bg-gray-800"
               />
-              <input
-                type="password"
-                placeholder="Password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border px-3 py-2 rounded dark:bg-gray-800"
-              />
+              <div className="space-y-1">
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={(e) => {
+                    setForm({ ...form, password: e.target.value });
+                    validatePassword(e.target.value);
+                  }}
+                  className="w-full border px-3 py-2 rounded dark:bg-gray-800"
+                />
+                {passwordError && (
+                  <p className="text-sm text-red-500 dark:text-red-400">{passwordError}</p>
+                )}
+              </div>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
@@ -379,13 +405,13 @@ export default function UsersPage() {
               </button>
               <button
                 onClick={handleAddUser}
-                disabled={loading}
+                disabled={addingUser}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {loading ? (
+                {addingUser ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Adding...
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Adding User...
                   </>
                 ) : (
                   "Add User"

@@ -11,14 +11,14 @@ export default function MaintenancePage() {
   const router = useRouter();
 
   const maintenanceOptions = [
-    {
-      title: 'Scheduled Maintenance',
-      description: 'Manage preventive maintenance schedules and tasks',
-      icon: Plus,
-      href: '/maintenance/scheduled',
-      color: 'bg-blue-600',
-      roles: ['MANAGER']
-    },
+    // {
+    //   title: 'Scheduled Maintenance',
+    //   description: 'Manage preventive maintenance schedules and tasks',
+    //   icon: Plus,
+    //   href: '/maintenance/scheduled',
+    //   color: 'bg-blue-600',
+    //   roles: ['MANAGER']
+    // },
     {
       title: 'Report Issues',
       description: 'Submit corrective maintenance requests for asset problems',
@@ -43,22 +43,22 @@ export default function MaintenancePage() {
       color: 'bg-orange-600',
       roles: ['MANAGER']
     },
-    {
-      title: 'My Tasks',
-      description: 'View and work on assigned maintenance tasks',
-      icon: Plus,
-      href: '/maintenance/tasks',
-      color: 'bg-purple-600',
-      roles: ['USER']
-    },
-    {
-      title: 'Templates',
-      description: 'Manage maintenance templates and procedures',
-      icon: Settings,
-      href: '/maintenance/templates',
-      color: 'bg-gray-600',
-      roles: ['MANAGER',]
-    }
+    // {
+    //   title: 'My Tasks',
+    //   description: 'View and work on assigned maintenance tasks',
+    //   icon: Plus,
+    //   href: '/maintenance/tasks',
+    //   color: 'bg-purple-600',
+    //   roles: ['USER']
+    // },
+    // {
+    //   title: 'Templates',
+    //   description: 'Manage maintenance templates and procedures',
+    //   icon: Settings,
+    //   href: '/maintenance/templates',
+    //   color: 'bg-gray-600',
+    //   roles: ['MANAGER',]
+    // }
   ];
 
 

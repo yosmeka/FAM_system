@@ -7,8 +7,12 @@ import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Download, CheckCircle } from 'lucide-react';
+import { generatePdf } from '@/lib/generatePdf';
 import { useSession } from 'next-auth/react';
 import { BackButton } from "@/components/ui/BackButton";
+import { toast } from 'react-hot-toast';
+import { ToastContainer } from "react-toastify";
+
 
 export default function MaintenanceReportsPage() {
   const { data: session, status } = useSession(); // Destructure session and status from useSession
@@ -79,41 +83,42 @@ export default function MaintenanceReportsPage() {
     }
   };
 
-  const handleExportReport = () => {
-    // Create CSV data
-    const csvData = [
-      ['Maintenance Reports Summary'],
-      ['Generated on:', new Date().toLocaleDateString()],
-      [''],
-      ['Statistics'],
-      ['Total Requests', maintenanceStats?.totalRequests || 0],
-      ['Pending Requests', maintenanceStats?.pendingRequests || 0],
-      ['Completion Rate', `${maintenanceStats?.completionRate || 0}%`],
-      ['Average Resolution Time', `${maintenanceStats?.avgResolutionDays || 0} days`],
-      ['Total Cost', `$${maintenanceStats?.totalCost || 0}`],
-      [''],
-      ['Top Assets Requiring Maintenance'],
-      ['Asset Name', 'Total Requests', 'Last Maintenance', 'Average Cost', 'Status'],
-      ...topAssets.map(asset => [
-        asset.name,
-        asset.totalRequests,
-        asset.lastMaintenance ? new Date(asset.lastMaintenance).toLocaleDateString() : 'Never',
-        asset.averageCost ? `$${asset.averageCost.toFixed(2)}` : 'N/A',
-        asset.status
-      ])
-    ];
+  const handleExportReport = async () => {
+    try {
+      // Generate PDF with maintenance data
+      await generatePdf({
+        title: 'Maintenance Report',
+        data: [
+          {
+            category: 'Total Maintenance Requests',
+            count: maintenanceStats?.totalRequests || 0,
+            value: 0
+          },
+          {
+            category: 'Completed Requests',
+            count: maintenanceStats?.completedRequests || 0,
+            value: 0
+          },
+          {
+            category: 'Pending Requests',
+            count: maintenanceStats?.pendingRequests || 0,
+            value: 0
+          },
+          {
+            category: 'Average Response Time',
+            count: 1,
+            value: maintenanceStats?.averageResponseTime || 0
+          }
+        ],
+        type: 'category'
+      });
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `maintenance-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+      toast.success('Report exported successfully!');
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      toast.error('Failed to export report');
+    }
   };
-
-
 
   if (loading) {
     return (
@@ -150,19 +155,13 @@ export default function MaintenanceReportsPage() {
     );
   }
 
-
-
-
-
-
-
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen dark:bg-gray-900">
       {/* Header Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6 dark:bg-gray-900">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4 mb-2">
-          <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
+            <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-400 mb-2">Maintenance Reports</h1>
             <p className="text-gray-600">Comprehensive overview of maintenance activities and performance</p>
           </div>
@@ -574,6 +573,7 @@ export default function MaintenanceReportsPage() {
           </div>
         )}
       </div>
+      <ToastContainer/>
     </div>
   );
 }

@@ -197,7 +197,7 @@ export default function WorkReviewPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm dark:text-gray-400">
                     {task.asset.name} ({task.asset.serialNumber})
                   </p>
                   {task.issueType && (
@@ -220,14 +220,14 @@ export default function WorkReviewPage() {
               <div className="space-y-3 mb-4">
                 <div className="flex items-center gap-2 text-sm">
                   <User className="w-4 h-4" />
-                  <span className="text-gray-300">
+                  <span className="dark:text-gray-300">
                     Technician: {task.assignedTo?.name}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4" />
-                  <span className="text-gray-300">
+                  <span className="dark:text-gray-300">
                     Completed: {task.workCompletedAt ? new Date(task.workCompletedAt).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
@@ -235,7 +235,7 @@ export default function WorkReviewPage() {
                 {task.laborHours && (
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4" />
-                    <span className="text-gray-300">
+                    <span className="dark:text-gray-300">
                       Labor: {task.laborHours}h
                     </span>
                   </div>
@@ -260,9 +260,9 @@ export default function WorkReviewPage() {
 
               {/* Work Summary */}
               {task.workPerformed && (
-                <div className="mb-4 p-3 bg-gray-700 rounded-lg">
-                  <p className="text-xs text-gray-400 mb-1">Work Performed:</p>
-                  <p className="text-sm text-gray-300 line-clamp-3">
+                <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <p className="text-xs dark:text-gray-400 mb-1">Work Performed:</p>
+                  <p className="text-sm dark:text-gray-300 line-clamp-3">
                     {task.workPerformed}
                   </p>
                 </div>
@@ -280,13 +280,13 @@ export default function WorkReviewPage() {
                   </button>
                 )}
 
-                <button
+                {/* <button
                   onClick={() => router.push(`/maintenance/${task.id}`)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
                 >
                   <FileText className="w-4 h-4" />
                   Details
-                </button>
+                </button> */}
               </div>
             </div>
           ))}
