@@ -330,7 +330,7 @@ export default function MaintenanceReportsPage() {
       {/* Monthly Trends and Department Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 dark:bg-gray-900">
         {/* Monthly Trends - Takes 2 columns */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Monthly Maintenance Trends</h2>
             <span className="inline-block h-5 w-5 text-blue-600">📈</span>
@@ -367,9 +367,9 @@ export default function MaintenanceReportsPage() {
         </div>
 
         {/* Department Distribution
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">By Department</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">By Department</h2>
             <span className="inline-block h-5 w-5 text-purple-600">⏷</span>
           </div>
           {departmentDistribution && departmentDistribution.length > 0 ? (

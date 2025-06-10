@@ -293,19 +293,19 @@ export default function RequestIssuePage() {
                 </div>
 
                 {request.manager && (
-                  <div className="text-sm text-gray-300">
+                  <div className="text-sm dark:text-gray-300 text-gray-700">
                     <span>Assigned to: {request.manager.name}</span>
                   </div>
                 )}
 
-                <div className="text-sm text-gray-400">
+                <div className="text-sm dark:text-gray-400 text-gray-700">
                   Submitted: {new Date(request.createdAt).toLocaleDateString()}
                 </div>
               </div>
 
               {/* Description */}
               <div className="mb-4">
-                <p className="text-sm text-gray-300 line-clamp-3">
+                <p className="text-sm dark:text-gray-300 text-gray-700 line-clamp-3">
                   {request.description}
                 </p>
               </div>
@@ -318,7 +318,7 @@ export default function RequestIssuePage() {
                     <span>Started: {new Date(request.workStartedAt).toLocaleDateString()}</span>
                   </div>
                   {request.assignedTo && (
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm dark:text-gray-300 text-gray-700">
                       Assigned to: {request.assignedTo.name}
                     </div>
                   )}
@@ -332,12 +332,12 @@ export default function RequestIssuePage() {
                     <span>Completed: {new Date(request.workCompletedAt).toLocaleDateString()}</span>
                   </div>
                   {request.laborHours && (
-                    <div className="text-sm text-gray-300 mb-1">
+                    <div className="text-sm dark:text-gray-300 text-gray-700 mb-1">
                       Labor Hours: {request.laborHours}h
                     </div>
                   )}
                   {request.totalCost && (
-                    <div className="flex items-center gap-2 text-sm text-green-400">
+                    <div className="flex items-center gap-2 text-sm dark:text-green-400 text-green-700">
                       <DollarSign className="w-4 h-4" />
                       <span>Total Cost: ${request.totalCost.toFixed(2)}</span>
                     </div>
@@ -388,37 +388,37 @@ export default function RequestIssuePage() {
               {/* Status Indicator */}
               <div className="flex items-center justify-center">
                 {request.status === 'PENDING_APPROVAL' && (
-                  <div className="flex items-center gap-2 text-yellow-400">
+                  <div className="flex items-center gap-2 dark:text-yellow-400 text-yellow-700">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager approval</span>
                   </div>
                 )}
                 {request.status === 'APPROVED' && (
-                  <div className="flex items-center gap-2 text-green-400">
+                  <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Ready to start work</span>
                   </div>
                 )}
                 {request.status === 'REJECTED' && (
-                  <div className="flex items-center gap-2 text-red-400">
+                  <div className="flex items-center gap-2 dark:text-red-400 text-red-700">
                     <XCircle className="w-4 h-4" />
                     <span className="text-sm">Request rejected</span>
                   </div>
                 )}
                 {request.status === 'IN_PROGRESS' && (
-                  <div className="flex items-center gap-2 text-blue-400">
+                  <div className="flex items-center gap-2 dark:text-blue-400 text-blue-700">
                     <Play className="w-4 h-4" />
                     <span className="text-sm">Work in progress</span>
                   </div>
                 )}
                 {request.status === 'WORK_COMPLETED' && (
-                  <div className="flex items-center gap-2 text-orange-400">
+                  <div className="flex items-center gap-2 dark:text-orange-400 text-orange-700">
                     <FileText className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager review</span>
                   </div>
                 )}
                 {request.status === 'COMPLETED' && (
-                  <div className="flex items-center gap-2 text-green-400">
+                  <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Work completed and approved</span>
                   </div>
