@@ -197,7 +197,7 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
               {...register('type')}
               className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="INVOICE">Invoice</option>
+
               <option value="WARRANTY">Warranty</option>
               <option value="MANUAL">Manual</option>
               <option value="MAINTENANCE_RECORD">Maintenance Record</option>
@@ -218,7 +218,7 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
               onClick={() => setUploadMethod('file')}
               className={`flex-1 py-2 text-sm font-medium ${
                 uploadMethod === 'file'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}
             >
@@ -229,7 +229,7 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
               onClick={() => setUploadMethod('url')}
               className={`flex-1 py-2 text-sm font-medium ${
                 uploadMethod === 'url'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-red-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}
             >
@@ -294,14 +294,14 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
             >
               {isSubmitting ? (
                 <>

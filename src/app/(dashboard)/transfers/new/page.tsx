@@ -40,7 +40,13 @@ export default function NewTransferPage() {
 
 
 // Show nothing until session is loaded
-  if (status === 'loading') return null;
+  if (status === 'loading'){
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
+  }
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
@@ -89,7 +95,7 @@ export default function NewTransferPage() {
     fetchManagers();
   }, []);
 
-  if (status === 'loading') return null;
+  //if (status === 'loading') return null;
   if (!session || session.user.role !== 'USER') {
     if (typeof window !== 'undefined') {
       router.replace('/dashboard');
@@ -169,7 +175,7 @@ export default function NewTransferPage() {
               <select
                 id="assetId"
                 name="assetId"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
                 disabled={assetsLoading || !!assetsError}
                 onChange={handleAssetChange}
@@ -188,7 +194,7 @@ export default function NewTransferPage() {
                 {!assetsLoading && !assetsError && 'Choose the asset you want to transfer.'}
               </div>
               {selectedAsset && (
-                <div className="bg-gray-50 rounded p-2 mt-2 border text-xs">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded p-2 mt-2 border text-xs">
                   <div><b>Serial:</b> {selectedAsset.serialNumber}</div>
                   <div><b>Location:</b> {selectedAsset.location}</div>
                   <div><b>Status:</b> {selectedAsset.status}</div>
@@ -205,7 +211,7 @@ export default function NewTransferPage() {
                 type="text"
                 id="fromLocation"
                 name="fromLocation"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-gray-100 cursor-not-allowed"
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
                 required
                 value={selectedAsset?.location || ''}
                 readOnly
@@ -221,7 +227,7 @@ export default function NewTransferPage() {
                 type="text"
                 id="toLocation"
                 name="toLocation"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
               />
             </div>
@@ -233,7 +239,7 @@ export default function NewTransferPage() {
               <select
                 id="managerId"
                 name="managerId"
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
                 value={selectedManager}
                 onChange={e => setSelectedManager(e.target.value)}
@@ -255,7 +261,7 @@ export default function NewTransferPage() {
                 id="reason"
                 name="reason"
                 rows={3}
-                className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-800 p-2"
                 required
               />
             </div>

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { X, Calendar, User, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Asset {
   id: string;
@@ -128,13 +129,13 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#2A2D3E' }}>
-        <div className="flex items-center justify-between p-6 border-b border-gray-600">
-          <h2 className="text-xl font-semibold text-white">Request Audit</h2>
+    <div className="fixed inset-0 bg-black/50 dark:bg-white/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Request Audit</h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-white transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -143,14 +144,14 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Asset Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Asset *
             </label>
             <select
               value={formData.assetId}
               onChange={(e) => setFormData({ ...formData, assetId: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="">Select an asset</option>
               {assets.map((asset) => (
@@ -163,13 +164,13 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
 
           {/* Manager Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Assign to Manager (Optional)
             </label>
             <select
               value={formData.managerId}
               onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="">Any available manager</option>
               {managers.map((manager) => (
@@ -178,14 +179,14 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Leave empty to allow any manager to review this request
             </p>
           </div>
 
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Title *
             </label>
             <input
@@ -194,13 +195,13 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
               placeholder="e.g., Suspected Damage Inspection"
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-white dark:bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Reason */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Reason for Audit *
             </label>
             <textarea
@@ -209,20 +210,20 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
               required
               rows={3}
               placeholder="Explain why this audit is needed..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-white dark:bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Urgency and Requested Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Urgency
               </label>
               <select
                 value={formData.urgency}
                 onChange={(e) => setFormData({ ...formData, urgency: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -232,22 +233,22 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Requested Date *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 value={formData.requestedDate}
                 onChange={(e) => setFormData({ ...formData, requestedDate: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Detailed Description
             </label>
             <textarea
@@ -255,13 +256,13 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}
               placeholder="Provide detailed information about the issue or concern..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Expected Findings */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Expected Findings
             </label>
             <textarea
@@ -269,12 +270,12 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
               onChange={(e) => setFormData({ ...formData, expectedFindings: e.target.value })}
               rows={3}
               placeholder="What do you expect the audit to reveal or confirm?"
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Info Box */}
-          <div className="bg-blue-900 bg-opacity-50 border border-blue-600 rounded-md p-4">
+          <div className="bg-blue-600 dark:bg-blue-900 dark:bg-opacity-50 border border-blue-600 rounded-md p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-200">
@@ -301,20 +302,22 @@ export default function CreateRequestModal({ isOpen, onClose, onSuccess }: Creat
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className=" py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed dark:bg-red-500 dark:hover:bg-red-600"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Submitting...
+                  Creating...
                 </>
               ) : (
-                'Submit Request'
+                'Create Request'
               )}
             </button>
           </div>
         </form>
       </div>
+      {/* Toast Notification Container */}
+            <ToastContainer />
     </div>
   );
 }

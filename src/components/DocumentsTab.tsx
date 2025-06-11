@@ -91,10 +91,10 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
     });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 dark:space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Documents</h2>
+          <h2 className="text-xl font-semibold dark:text-gray-100">Documents</h2>
           <p className="text-sm text-gray-500">
             Manage documents for {assetName}
           </p>
@@ -102,7 +102,7 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
         {canUploadDocuments && (
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
           >
             + Upload Document
           </button>
@@ -112,23 +112,23 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-grow">
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500">🔍</span>
           <input
             type="text"
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="pl-10 pr-4 py-2 w-full border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
           />
         </div>
         <div className="flex gap-2">
           <select
             value={filterType || ''}
             onChange={(e) => setFilterType(e.target.value || null)}
-            className="border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
           >
             <option value="">All Types</option>
-            <option value="INVOICE">Invoice</option>
+            
             <option value="WARRANTY">Warranty</option>
             <option value="MANUAL">Manual</option>
             <option value="MAINTENANCE_RECORD">Maintenance Record</option>
@@ -153,9 +153,11 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
 
       {/* Documents list */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </div>
+       
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+          </div>
+        
       ) : filteredAndSortedDocuments.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {filteredAndSortedDocuments.map((document) => {
@@ -185,12 +187,12 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
           })}
         </div>
       ) : (
-        <div className="text-center py-8 bg-gray-50 rounded-lg">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+        <div className="text-center py-8 bg-gray-50 rounded-lg dark:bg-gray-800">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4 dark:bg-blue-900 dark:text-blue-300">
             📄
           </div>
-          <h3 className="text-lg font-medium text-gray-900">No Documents Found</h3>
-          <p className="mt-2 text-sm text-gray-500">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No Documents Found</h3>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             {searchTerm || filterType
               ? 'No documents match your search criteria. Try adjusting your filters.'
               : 'Upload documents to keep track of important files for this asset.'}
@@ -198,7 +200,7 @@ export function DocumentsTab({ assetId, assetName }: DocumentsTabProps) {
           {canUploadDocuments && !searchTerm && !filterType && (
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="mt-4 inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
             >
               + Upload First Document
             </button>

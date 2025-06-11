@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 // GET /api/assets/[id]/documents - Get all documents for an asset
-export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
+export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -57,7 +57,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 });
 
 // POST /api/assets/[id]/documents - Create a new document for an asset
-export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
+export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {

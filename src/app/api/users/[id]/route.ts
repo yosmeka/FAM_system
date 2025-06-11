@@ -79,6 +79,10 @@ export async function DELETE(request: NextRequest, { params: { id } }: { params:
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
   try {
+    // First delete notifications associated with the user
+    await prisma.notification.deleteMany({ where: { userId: id } });
+    
+    // Then delete the user
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

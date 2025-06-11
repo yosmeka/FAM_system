@@ -6,6 +6,7 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { generatePdf } from '@/lib/generatePdf';
 import { Download } from 'lucide-react';
+import { BackButton } from '@/components/ui/BackButton';
 import type {
   AssetStats,
   AssetStatusData,
@@ -25,9 +26,9 @@ export default function AssetReportsPage() {
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
     return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
-        <p className="text-center">You do not have permission to view asset reports.</p>
+      <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <h1 className="text-2xl font-semibold text-center text-red-600 dark:text-red-400">Access Denied</h1>
+        <p className="text-center text-gray-700 dark:text-gray-300">You do not have permission to view asset reports.</p>
       </div>
     );
   }
@@ -102,25 +103,30 @@ export default function AssetReportsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      <div className="flex justify-center items-center min-h-[400px] bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-6">Asset Reports</h1>
+    <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <BackButton href="/reports" className='text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300' />
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Asset Reports</h1>
+        </div>
+      </div>
 
       {/* Filter Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div>
-          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 sr-only">Filter by Category</label>
+          <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 sr-only">Filter by Category</label>
           <select
             id="categoryFilter"
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
           >
             <option value="all">All Categories</option>
             {getFilterOptions().map((option, idx) => (
@@ -132,12 +138,12 @@ export default function AssetReportsPage() {
         </div>
 
         <div>
-          <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 sr-only">Filter by Status</label>
+          <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 sr-only">Filter by Status</label>
           <select
             id="statusFilter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
           >
             <option value="all">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -153,7 +159,7 @@ export default function AssetReportsPage() {
               setSelectedFilter('all');
               setStatusFilter('all');
             }}
-            className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
           >
             Clear Filters
           </button>
@@ -168,6 +174,7 @@ export default function AssetReportsPage() {
           trend={assetStats?.assetGrowth || 0}
           trendLabel="vs last month"
           variant="default"
+          className="bg-white dark:bg-gray-800"
         />
         <RoleBasedStats
           name="Total Value"
@@ -179,12 +186,14 @@ export default function AssetReportsPage() {
           trend={Number(((assetStats?.valueGrowth || 0) / (assetStats?.totalValue || 1) * 100).toFixed(1))}
           trendLabel="vs last month"
           variant="success"
+          className="bg-white dark:bg-gray-800"
         />
         <RoleBasedStats
           name="Asset Utilization"
           value={assetStats?.activeAssets || 0}
           description={`${((assetStats?.activeAssets || 0) / (assetStats?.totalAssets || 1) * 100).toFixed(1)}% Active`}
           variant="default"
+          className="bg-white dark:bg-gray-800"
         />
         <RoleBasedStats
           name="Maintenance Cost"
@@ -194,15 +203,16 @@ export default function AssetReportsPage() {
             maximumFractionDigits: 0
           }).format(assetStats?.maintenanceCost || 0)}
           variant="warning"
+          className="bg-white dark:bg-gray-800"
         />
       </div>
 
       {/* Asset Distribution Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Assets by Category Chart */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {selectedFilter === 'all' 
                 ? `Assets by Category`
                 : `Assets in ${selectedFilter}`}
@@ -231,16 +241,17 @@ export default function AssetReportsPage() {
                   statusFilter !== 'all' ? `${item.category} (${item.status})` : item.category
                 ),
                 values: getFilteredData().map((item) => item.count),
+                customColors: ['#10B981', '#F59E0B', '#EF4444', '#6B7280', '#3B82F6', '#8B5CF6', '#EC4899']
               }}
             />
           ) : (
-            <div className="text-center text-gray-500">No data available</div>
+            <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
           )}
         </div>
 
         {/* Status Distribution */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Asset Status Distribution</h2>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Status Distribution</h2>
           {statusDistribution.length > 0 ? (
             <RoleBasedChart
               type="pie"
@@ -251,17 +262,18 @@ export default function AssetReportsPage() {
                   item.status.charAt(0) + item.status.slice(1).toLowerCase()
                 ),
                 values: statusDistribution.map((item) => item.count),
+                customColors: ['#10B981', '#F59E0B', '#EF4444', '#6B7280', '#3B82F6', '#8B5CF6', '#EC4899']
               }}
             />
           ) : (
-            <div className="text-center text-gray-500">No data available</div>
+            <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
           )}
         </div>
       </div>
 
       {/* Depreciation Trend */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8">
-        <h2 className="text-lg font-semibold mb-4">Asset Value & Depreciation Trend</h2>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-8">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Asset Value & Depreciation Trend</h2>
         {depreciationData.length > 0 ? (
           <RoleBasedChart
             type="line"
@@ -281,12 +293,12 @@ export default function AssetReportsPage() {
             }}
           />
         ) : (
-          <div className="text-center text-gray-500">No data available</div>
+          <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
         )}
       </div>
 
       {/* Asset Value Table */}
-      <div className="bg-white rounded-lg shadow">
+      <div className="bg-white rounded-lg shadow dark:bg-gray-900">
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">
@@ -337,9 +349,10 @@ export default function AssetReportsPage() {
                   render: (value, item) => `$${(Number(item.value) / Number(item.count)).toFixed(2)}`,
                 },
               ]}
+              className="bg-white dark:bg-gray-800"
             />
           ) : (
-            <div className="text-center text-gray-500">No data available</div>
+            <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
           )}
         </div>
       </div>

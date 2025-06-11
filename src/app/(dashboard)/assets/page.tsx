@@ -191,10 +191,10 @@ export default function AssetsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 bg-white dark:bg-gray-900">
       <Toaster position="top-right" />
       <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900">Assets</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Assets</h1>
         {checkPermission('Asset create') && (
           <Link
             href="/assets/new"
@@ -210,14 +210,14 @@ export default function AssetsPage() {
           <input
             type="text"
             placeholder="Search assets..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <div>
           <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -230,7 +230,7 @@ export default function AssetsPage() {
         </div>
         <div>
           <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
@@ -259,22 +259,22 @@ export default function AssetsPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-4">Loading assets...</div>
+        <div className="text-center py-4 text-gray-900 dark:text-gray-100">Loading assets...</div>
       ) : error ? (
-        <div className="text-center py-4 text-red-600">
+        <div className="text-center py-4 text-red-600 dark:text-red-400">
           Error loading assets. Please try again.
         </div>
       ) : filteredAssets.length === 0 ? (
-        <div className="text-center py-4 text-gray-500">No assets found</div>
+        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No assets found</div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <ul className="divide-y divide-gray-200">
+        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAssets.map((asset) => (
-              <li key={asset.id} className={`hover:bg-gray-50 ${isAssetDisposed(asset) ? 'bg-gray-50' : ''}`}>
+              <li key={asset.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isAssetDisposed(asset) ? 'bg-gray-50 dark:bg-gray-700' : ''}`}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {asset.name}
                       </p>
                       <p className="ml-2 flex-shrink-0 flex">
@@ -290,7 +290,7 @@ export default function AssetsPage() {
                     <div className="flex items-center space-x-2">
                       <Link
                         href={`/assets/${asset.id}`}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                       >
                         View
                       </Link>
@@ -299,14 +299,14 @@ export default function AssetsPage() {
                           {checkPermission('Asset edit') && (
                             <Link
                               href={`/assets/${asset.id}/edit`}
-                              className="text-blue-600 hover:underline mr-2"
+                              className="text-blue-600 dark:text-blue-400 hover:underline mr-2"
                             >
                               Edit
                             </Link>
                           )}
                           {checkPermission('Asset delete') && (
                             <button
-                              className="text-red-600 hover:underline"
+                              className="text-red-600 dark:text-red-400 hover:underline"
                               onClick={() => setDeleteAssetId(asset.id)}
                             >
                               Delete
@@ -318,14 +318,14 @@ export default function AssetsPage() {
                   </div>
                   <div className="mt-2 sm:flex sm:justify-between">
                     <div className="sm:flex">
-                      <p className="flex items-center text-sm text-gray-500">
+                      <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                         Serial: {asset.serialNumber}
                       </p>
-                      <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                      <p className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400 sm:mt-0 sm:ml-6">
                         Department: {asset.department || "Not specified"}
                       </p>
                     </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                    <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400 sm:mt-0">
                       <p>Purchase Date: {formatDate(asset.purchaseDate)}</p>
                       <p className="ml-4">
                         Value: {formatCurrency(asset.currentValue)}
@@ -338,19 +338,19 @@ export default function AssetsPage() {
           </ul>
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
+            <div className="flex justify-center items-center gap-2 py-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
               <button
-                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
                 Page {page} of {totalPages}
               </span>
               <button
-                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-900 dark:text-gray-100"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
@@ -364,13 +364,13 @@ export default function AssetsPage() {
       {/* Delete Confirmation Modal */}
       {deleteAssetId && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Confirm Deletion</h2>
-            <p>Are you sure you want to delete this asset?</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Confirm Deletion</h2>
+            <p className="text-gray-700 dark:text-gray-300">Are you sure you want to delete this asset?</p>
             <div className="mt-6 flex justify-end space-x-2">
               <button
                 onClick={() => setDeleteAssetId(null)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded hover:bg-gray-400 dark:hover:bg-gray-600"
               >
                 Cancel
               </button>

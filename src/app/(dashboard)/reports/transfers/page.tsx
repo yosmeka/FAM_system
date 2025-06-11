@@ -6,6 +6,7 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { PdfExportButton } from '@/components/PdfExportButton';
 import { TransferReportData } from '@/utils/pdfUtils';
+import { BackButton } from '@/components/ui/BackButton';
 
 // Define interfaces for our data types
 interface TransferStats {
@@ -113,10 +114,10 @@ export default function TransferReportsPage() {
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
+      <div className="flex items-center justify-center min-h-screen dark:bg-gray-900">
+        <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600 dark:text-red-400">Access Denied</h1>
+          <p className="text-gray-700 dark:text-gray-300">You do not have permission to view this page.</p>
         </div>
       </div>
     );
@@ -132,13 +133,13 @@ export default function TransferReportsPage() {
     }
   }, [session, fetchTransferReports]);
 
-  if (status === 'loading') return null;
+  //if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
     return (
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-semibold text-center text-red-600">Access Denied</h1>
-        <p className="text-center">You do not have permission to view transfer reports.</p>
+      <div className="container mx-auto p-6 dark:bg-gray-900">
+        <h1 className="text-2xl font-semibold text-center text-red-600 dark:text-red-400">Access Denied</h1>
+        <p className="text-center text-gray-700 dark:text-gray-300">You do not have permission to view transfer reports.</p>
       </div>
     );
   }
@@ -146,24 +147,29 @@ export default function TransferReportsPage() {
 
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg shadow-sm">
-        <div className="flex items-center">
+    <div className="container mx-auto p-6 dark:bg-gray-900">
+      <div className="flex justify-between items-center mb-8 p-4 rounded-lg shadow-sm dark:bg-gray-900">
+        <div className="flex items-center dark:bg-gray-900">
+        <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
           <div className="bg-indigo-100 p-3 rounded-full mr-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clipRule="evenodd" />
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Transfer Reports</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Transfer Reports</h1>
             <p className="text-gray-600 text-sm">Comprehensive analysis of asset transfers across departments</p>
           </div>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center dark:bg-gray-900">
           <div className="mr-4 text-right">
             <div className="text-sm text-gray-600">Report Period</div>
             <div className="font-medium">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
@@ -175,7 +181,7 @@ export default function TransferReportsPage() {
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="col-span-4">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Transfer Summary</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-400">Transfer Summary</h2>
         </div>
 
         <RoleBasedStats
@@ -208,7 +214,7 @@ export default function TransferReportsPage() {
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="col-span-4">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Performance Metrics</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-400">Performance Metrics</h2>
         </div>
 
         <RoleBasedStats
@@ -240,7 +246,7 @@ export default function TransferReportsPage() {
       {/* Technical Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="col-span-4">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Technical Metrics</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-400">Technical Metrics</h2>
         </div>
 
         <RoleBasedStats
@@ -272,17 +278,17 @@ export default function TransferReportsPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="col-span-2">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800">Visualizations</h2>
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-400">Visualizations</h2>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dark:bg-gray-900">
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-500 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm9 4a1 1 0 10-2 0v6a1 1 0 102 0V7zm-3 2a1 1 0 10-2 0v4a1 1 0 102 0V9zm-3 3a1 1 0 10-2 0v1a1 1 0 102 0v-1z" clipRule="evenodd" />
             </svg>
             Location Transfer Summary
           </h2>
-          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             <RoleBasedChart
               type="bar"
               data={locationTransfers.map(loc => ({
@@ -312,14 +318,14 @@ export default function TransferReportsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 dark:bg-gray-900">
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-500 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-500" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
             Monthly Transfer Trends
           </h2>
-          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             {monthlyTrends && monthlyTrends.length > 0 ? (
               <>
                 <div className="mb-4 grid grid-cols-3 gap-4">
@@ -346,7 +352,7 @@ export default function TransferReportsPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm mb-4">
                       <thead>
-                        <tr className="bg-gray-100">
+                        <tr className="bg-gray-100 dark:bg-gray-900">
                           <th className="p-2 text-left">Month</th>
                           <th className="p-2 text-right">Total</th>
                           <th className="p-2 text-right">Approved</th>
@@ -357,7 +363,7 @@ export default function TransferReportsPage() {
                         {monthlyTrends
                           .sort((a, b) => a.month.localeCompare(b.month))
                           .map((item, index) => (
-                            <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'}>
                               <td className="p-2 text-left">{formatMonth(item.month)}</td>
                               <td className="p-2 text-right">{item.count}</td>
                               <td className="p-2 text-right">{item.approved}</td>
@@ -405,18 +411,18 @@ export default function TransferReportsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-400 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
               <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
             </svg>
             Status Distribution
           </h2>
-          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             {statusDistribution && statusDistribution.length > 0 ? (
               <div className="flex flex-col">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 ">
                   {statusDistribution.map((item) => {
                     // Define colors based on status
                     let bgColor = "bg-gray-100";
@@ -454,7 +460,7 @@ export default function TransferReportsPage() {
                     return (
                       <div
                         key={item.status}
-                        className={`text-center p-3 rounded-lg ${bgColor} border border-gray-200 shadow-sm transition-all duration-300 hover:shadow-md`}
+                        className={`text-center p-3 pl-1 rounded-lg ${bgColor} border border-gray-200 shadow-sm transition-all duration-300 dark:bg-gray-900 hover:shadow-md`}
                       >
                         <div className={`text-sm font-medium ${textColor}`}>{item.status}</div>
                         <div className={`text-2xl font-bold ${valueColor}`}>{item.count}</div>
@@ -490,14 +496,14 @@ export default function TransferReportsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-          <h2 className="text-lg font-semibold mb-4 text-gray-700 flex items-center">
+        <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+          <h2 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-500 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
             </svg>
             Monthly Approval Rates
           </h2>
-          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50">
+          <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             {monthlyTrends && monthlyTrends.length > 0 ? (
               <>
                 <div className="mb-4 grid grid-cols-3 gap-4">
@@ -520,10 +526,10 @@ export default function TransferReportsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm mb-4">
+                <div className="overflow-x-auto ">
+                  <table className="w-full text-sm mb-4 ">
                     <thead>
-                      <tr className="bg-gray-100">
+                      <tr className="bg-gray-100 dark:bg-gray-900">
                         <th className="p-2 text-left">Month</th>
                         <th className="p-2 text-right">Total</th>
                         <th className="p-2 text-right">Approved</th>
@@ -532,7 +538,7 @@ export default function TransferReportsPage() {
                     </thead>
                     <tbody>
                       {monthlyTrends.map((item, index) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-900'}>
                           <td className="p-2 text-left">{item.month}</td>
                           <td className="p-2 text-right">{item.count}</td>
                           <td className="p-2 text-right">{item.approved}</td>
@@ -569,15 +575,15 @@ export default function TransferReportsPage() {
       </div>
 
       {/* Location Transfer Summary */}
-      <div className="bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-500 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
               <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
             Location Transfer Summary
           </h2>
-          <div className="border border-gray-100 rounded-lg overflow-hidden">
+          <div className="border border-gray-100 rounded-lg overflow-hidden dark:bg-gray-900">
             <RoleBasedTable
               data={locationTransfers}
               columns={[

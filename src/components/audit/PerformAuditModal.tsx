@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { X, Camera, MapPin, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Asset {
   id: string;
@@ -170,15 +171,15 @@ export default function PerformAuditModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#2A2D3E' }}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-600">
           <div>
-            <h2 className="text-xl font-semibold text-white">Perform Audit</h2>
-            <p className="text-gray-400">{title}</p>
+            <h2 className="text-xl font-semibold dark:text-white">Perform Audit</h2>
+            <p className="text-gray-400 dark:text-gray-300">{title}</p>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-red-500 transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -186,45 +187,45 @@ export default function PerformAuditModal({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Asset Information */}
-          <div className="p-4 bg-gray-700 rounded-md">
-            <h3 className="text-lg font-medium text-white mb-3">Asset Information</h3>
+          <div className="p-4 dark:bg-gray-700 rounded-md">
+            <h3 className="text-lg font-medium dark:text-white mb-3">Asset Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-400">Name:</span>
-                <span className="text-white ml-2">{asset.name}</span>
+                <span className="text-gray-700 dark:text-gray-300">Name:</span>
+                <span className="text-gray-600 dark:text-gray-200 ml-2">{asset.name}</span>
               </div>
               <div>
-                <span className="text-gray-400">Serial:</span>
-                <span className="text-white ml-2">{asset.serialNumber}</span>
+                <span className="text-gray-700 dark:text-gray-300">Serial:</span>
+                <span className="text-gray-600 dark:text-gray-200 ml-2">{asset.serialNumber}</span>
               </div>
               <div>
-                <span className="text-gray-400">Department:</span>
-                <span className="text-white ml-2">{asset.department}</span>
+                <span className="text-gray-700 dark:text-gray-300">Department:</span>
+                <span className="text-gray-600 dark:text-gray-200 ml-2">{asset.department}</span>
               </div>
               <div>
-                <span className="text-gray-400">Category:</span>
-                <span className="text-white ml-2">{asset.category}</span>
+                <span className="text-gray-700 dark:text-gray-300">Category:</span>
+                <span className="text-gray-600 dark:text-gray-200 ml-2">{asset.category}</span>
               </div>
             </div>
           </div>
 
           {/* Instructions */}
           {instructions && (
-            <div className="p-4 bg-blue-900 bg-opacity-50 border border-blue-600 rounded-md">
-              <h3 className="text-lg font-medium text-blue-200 mb-2 flex items-center gap-2">
+            <div className="p-4 dark:bg-blue-900 bg-opacity-50 border border-blue-600 rounded-md">
+              <h3 className="text-lg font-medium dark:text-blue-200 text-blue-600 mb-2 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
                 Instructions
               </h3>
-              <p className="text-blue-100 whitespace-pre-wrap">{instructions}</p>
+              <p className="dark:text-blue-100 text-blue-600 whitespace-pre-wrap">{instructions}</p>
             </div>
           )}
 
           {/* Audit Checklist */}
           <div>
-            <h3 className="text-lg font-medium text-white mb-4">Audit Checklist</h3>
+            <h3 className="text-lg font-medium dark:text-white mb-4">Audit Checklist</h3>
             <div className="space-y-3">
               {formData.checklistItems.map((item, index) => (
-                <div key={index} className="p-3 bg-gray-700 rounded-md">
+                <div key={index} className="p-3 dark:bg-gray-700 rounded-md">
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
@@ -233,13 +234,13 @@ export default function PerformAuditModal({
                       className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <div className="flex-1">
-                      <label className="text-white font-medium">{item.item}</label>
+                      <label className="text-gray-700 dark:text-white font-medium">{item.item}</label>
                       <input
                         type="text"
                         placeholder="Add notes (optional)"
                         value={item.notes || ''}
                         onChange={(e) => handleChecklistChange(index, 'notes', e.target.value)}
-                        className="mt-2 w-full px-3 py-1 text-sm border border-gray-600 rounded-md bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="mt-2 w-full px-3 py-1 text-sm border border-gray-600 rounded-md dark:bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -250,14 +251,14 @@ export default function PerformAuditModal({
 
           {/* Asset Condition */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium dark:text-gray-700 text-gray-600 mb-2">
               Asset Condition *
             </label>
             <select
               value={formData.condition}
               onChange={(e) => setFormData({ ...formData, condition: e.target.value as any })}
               required
-              className={`w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${getConditionColor(formData.condition)}`}
+              className={`w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 text-gray-300 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${getConditionColor(formData.condition)}`}
             >
               <option value="EXCELLENT">Excellent</option>
               <option value="GOOD">Good</option>
@@ -285,7 +286,7 @@ export default function PerformAuditModal({
             
             {!formData.locationVerified && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium dark:text-white mb-2">
                   Actual Location *
                 </label>
                 <input
@@ -294,7 +295,7 @@ export default function PerformAuditModal({
                   onChange={(e) => setFormData({ ...formData, actualLocation: e.target.value })}
                   required={!formData.locationVerified}
                   placeholder="Where was the asset actually found?"
-                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             )}
@@ -302,7 +303,7 @@ export default function PerformAuditModal({
 
           {/* Audit Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium dark:text-white mb-2">
               Audit Notes *
             </label>
             <textarea
@@ -311,13 +312,13 @@ export default function PerformAuditModal({
               required
               rows={4}
               placeholder="Describe your findings, observations, and any issues discovered..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 text-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Discrepancies */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium dark:text-white mb-2">
               Discrepancies Found
             </label>
             <textarea
@@ -325,13 +326,13 @@ export default function PerformAuditModal({
               onChange={(e) => setFormData({ ...formData, discrepancies: e.target.value })}
               rows={3}
               placeholder="List any discrepancies between records and actual findings..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 text-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Recommendations */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium dark:text-white mb-2">
               Recommendations
             </label>
             <textarea
@@ -339,13 +340,13 @@ export default function PerformAuditModal({
               onChange={(e) => setFormData({ ...formData, recommendations: e.target.value })}
               rows={3}
               placeholder="Provide recommendations for maintenance, repairs, or other actions..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 text-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Photo Upload Placeholder */}
           {/* <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium  dark:text-white mb-2">
               Photos (Optional)
             </label>
             <div className="border-2 border-dashed border-gray-600 rounded-md p-6 text-center">
@@ -384,6 +385,7 @@ export default function PerformAuditModal({
           </div>
         </form>
       </div>
+      <ToastContainer />
     </div>
   );
 }

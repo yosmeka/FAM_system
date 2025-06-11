@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { QueryProvider } from "@/providers/query-provider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { PermissionsProvider } from "@/contexts/PermissionsContext";
+import { ThemeProvider } from "@/components/ui/ThemeProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,8 +28,10 @@ export default function RootLayout({
           <AuthProvider>
             <PermissionsProvider>
               <QueryProvider>
-                {children}
-                <Toaster position="top-right" />
+                <ThemeProvider>
+                  {children}
+                  <Toaster position="top-right" />
+                </ThemeProvider>
               </QueryProvider>
             </PermissionsProvider>
           </AuthProvider>

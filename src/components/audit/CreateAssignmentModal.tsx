@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { X, Calendar, User, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Asset {
   id: string;
@@ -133,13 +134,13 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: '#2A2D3E' }}>
-        <div className="flex items-center justify-between p-6 border-b border-gray-600">
-          <h2 className="text-xl font-semibold text-white">Create Audit Assignment</h2>
+    <div className="fixed inset-0 bg-black/50 dark:bg-white/50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto dark:border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Audit Assignment</h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-white transition-colors"
           >
             <X className="h-6 w-6" />
           </button>
@@ -148,14 +149,14 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Asset Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Asset *
             </label>
             <select
               value={formData.assetId}
               onChange={(e) => setFormData({ ...formData, assetId: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="">Select an asset</option>
               {assets.map((asset) => (
@@ -175,7 +176,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
               value={formData.assignedToId}
               onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             >
               <option value="">Select an auditor</option>
               {users.map((user) => (
@@ -197,7 +198,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
               placeholder="e.g., Monthly Compliance Audit"
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </div>
 
@@ -209,9 +210,10 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              placeholder="Brief description of the audit assignment"
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+              placeholder="Provide a brief description of the audit scope..."
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+              rows={4}
             />
           </div>
 
@@ -219,12 +221,13 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Priority
+                Priority *
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -244,7 +247,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
                 value={formData.estimatedHours}
                 onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                 placeholder="e.g., 2.5"
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
           </div>
@@ -252,27 +255,27 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
           {/* Due Date and Scheduled Date */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Due Date *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 value={formData.dueDate}
                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Scheduled Date
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Scheduled Date *
               </label>
               <input
-                type="datetime-local"
+                type="date"
                 value={formData.scheduledDate}
                 onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               />
             </div>
           </div>
@@ -287,7 +290,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
               onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
               rows={4}
               placeholder="Detailed instructions for the auditor..."
-              className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
             />
           </div>
 
@@ -303,7 +306,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>
@@ -317,6 +320,8 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
           </div>
         </form>
       </div>
+      {/* Toast Notification Container */}
+      <ToastContainer />
     </div>
   );
 }

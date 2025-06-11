@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format, isValid } from "date-fns"
 import { useDebounce } from "use-debounce"
+import { CheckCircle } from "lucide-react"
 
 // Define custom icon components instead of using lucide-react
 const CalendarIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -76,7 +77,7 @@ const ASSET_CATEGORIES = [
 const assetFormSchema = z.object({
   // Basic Information
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   serialNumber: z.string().min(1, { message: "Serial number is required." }),
 
   // Financial Information
@@ -92,37 +93,37 @@ const assetFormSchema = z.object({
 
   // Classification
   status: z.string().default("ACTIVE"),
-  location: z.string().optional(),
+  location: z.string().optional().nullable(),
   department: z.string().default("Zemen Bank"), // This is now used as Company Name
-  category: z.string().optional(),
-  supplier: z.string().optional(),
+  category: z.string().optional().nullable(),
+  supplier: z.string().optional().nullable(),
 
   // Maintenance & Warranty
   warrantyExpiry: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
   lastMaintenance: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
   nextMaintenance: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
 
   // Depreciation
-  depreciationMethod: z.string().optional(),
-  usefulLifeMonths: z.coerce.number().min(1, { message: "Useful life must be at least 1 month." }).optional(),
+  depreciationMethod: z.string().optional().nullable(),
+  usefulLifeMonths: z.coerce.number().min(1, { message: "Useful life must be at least 1 month." }).optional().nullable(),
   depreciationStartDate: z.date({
     invalid_type_error: "Please select a valid date.",
-  }).optional().refine((date) => !date || isValid(date), {
+  }).optional().nullable().refine((date) => !date || isValid(date), {
     message: "Please select a valid date.",
   }),
-  salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional(),
+  salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional().nullable(),
 })
 
 type AssetFormValues = z.infer<typeof assetFormSchema>
@@ -422,31 +423,31 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Enhanced Progress indicator */}
-        <div className="mb-8 bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-100">
+        <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between mb-3">
-            <span className="text-sm font-medium flex items-center">
+            <span className="text-sm font-medium flex items-center text-gray-900 dark:text-gray-100">
               <span className="inline-flex items-center justify-center w-6 h-6 mr-2 bg-blue-600 text-white rounded-full text-xs">
                 {currentStepIndex + 1}
               </span>
               Step {currentStepIndex + 1} of {tabOrder.length}
             </span>
-            <span className="text-sm font-medium flex items-center">
-              <span className={`mr-2 ${progressPercentage > 50 ? 'text-green-600' : 'text-blue-600'}`}>
+            <span className="text-sm font-medium flex items-center text-gray-900 dark:text-gray-100">
+              <span className={`mr-2 ${progressPercentage > 50 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
                 {Math.round(progressPercentage)}% Complete
               </span>
               {progressPercentage === 100 && (
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               )}
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
             <div
               className={`h-3 rounded-full transition-all duration-500 ease-in-out ${
-                progressPercentage < 30 ? 'bg-blue-400' :
-                progressPercentage < 70 ? 'bg-blue-600' :
-                progressPercentage === 100 ? 'bg-green-600 animate-pulse' : 'bg-green-600'
+                progressPercentage < 30 ? 'bg-blue-400 dark:bg-blue-500' :
+                progressPercentage < 70 ? 'bg-blue-600 dark:bg-blue-400' :
+                progressPercentage === 100 ? 'bg-green-600 dark:bg-green-500 animate-pulse' : 'bg-green-600 dark:bg-green-500'
               }`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
@@ -464,138 +465,35 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-8 p-2 bg-gradient-to-r from-blue-50 via-purple-50 to-amber-50 rounded-lg shadow-md">
-            <TabsTrigger
-              value="basic"
-              className={cn(
-                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
-                activeTab === "basic"
-                  ? "font-bold bg-gradient-to-r from-blue-100 to-blue-50 shadow-md"
-                  : "hover:bg-blue-50",
-                completedTabs.includes("basic")
-                  ? "text-green-600 border-green-600"
-                  : ""
-              )}
-            >
-              <div className={cn(
-                "absolute inset-0 bg-blue-200 opacity-20",
-                activeTab === "basic" ? "animate-pulse" : "opacity-0"
-              )}></div>
-              <div className="relative z-10 flex items-center justify-center">
-                <span className={cn(
-                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
-                  completedTabs.includes("basic")
-                    ? "bg-green-100 text-green-800"
-                    : activeTab === "basic"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                )}>
-                  {completedTabs.includes("basic") ? "✓" : "1"}
-                </span>
-                <span>Basic Information</span>
-              </div>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="financial"
-              className={cn(
-                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
-                activeTab === "financial"
-                  ? "font-bold bg-gradient-to-r from-green-100 to-green-50 shadow-md"
-                  : "hover:bg-green-50",
-                completedTabs.includes("financial")
-                  ? "text-green-600 border-green-600"
-                  : ""
-              )}
-            >
-              <div className={cn(
-                "absolute inset-0 bg-green-200 opacity-20",
-                activeTab === "financial" ? "animate-pulse" : "opacity-0"
-              )}></div>
-              <div className="relative z-10 flex items-center justify-center">
-                <span className={cn(
-                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
-                  completedTabs.includes("financial")
-                    ? "bg-green-100 text-green-800"
-                    : activeTab === "financial"
-                      ? "bg-green-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                )}>
-                  {completedTabs.includes("financial") ? "✓" : "2"}
-                </span>
-                <span>Financial Details</span>
-              </div>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="classification"
-              className={cn(
-                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
-                activeTab === "classification"
-                  ? "font-bold bg-gradient-to-r from-purple-100 to-purple-50 shadow-md"
-                  : "hover:bg-purple-50",
-                completedTabs.includes("classification")
-                  ? "text-green-600 border-green-600"
-                  : ""
-              )}
-            >
-              <div className={cn(
-                "absolute inset-0 bg-purple-200 opacity-20",
-                activeTab === "classification" ? "animate-pulse" : "opacity-0"
-              )}></div>
-              <div className="relative z-10 flex items-center justify-center">
-                <span className={cn(
-                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
-                  completedTabs.includes("classification")
-                    ? "bg-green-100 text-green-800"
-                    : activeTab === "classification"
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                )}>
-                  {completedTabs.includes("classification") ? "✓" : "3"}
-                </span>
-                <span>Classification</span>
-              </div>
-            </TabsTrigger>
-
-            <TabsTrigger
-              value="maintenance"
-              className={cn(
-                "transition-all duration-300 rounded-md py-3 relative overflow-hidden",
-                activeTab === "maintenance"
-                  ? "font-bold bg-gradient-to-r from-amber-100 to-amber-50 shadow-md"
-                  : "hover:bg-amber-50",
-                completedTabs.includes("maintenance")
-                  ? "text-green-600 border-green-600"
-                  : ""
-              )}
-            >
-              <div className={cn(
-                "absolute inset-0 bg-amber-200 opacity-20",
-                activeTab === "maintenance" ? "animate-pulse" : "opacity-0"
-              )}></div>
-              <div className="relative z-10 flex items-center justify-center">
-                <span className={cn(
-                  "inline-flex items-center justify-center w-6 h-6 mr-2 rounded-full text-xs",
-                  completedTabs.includes("maintenance")
-                    ? "bg-green-100 text-green-800"
-                    : activeTab === "maintenance"
-                      ? "bg-amber-600 text-white"
-                      : "bg-gray-200 text-gray-700"
-                )}>
-                  {completedTabs.includes("maintenance") ? "✓" : "4"}
-                </span>
-                <span>Maintenance & Depreciation</span>
-              </div>
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+            {tabOrder.map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className={cn(
+                  "data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700",
+                  "data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100",
+                  "data-[state=active]:shadow-sm",
+                  "text-gray-600 dark:text-gray-400",
+                  "rounded-md px-3 py-2 text-sm font-medium transition-all",
+                  "hover:text-gray-900 dark:hover:text-gray-100",
+                  "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                )}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {completedTabs.includes(tab) && (
+                  <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                )}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="basic" className="space-y-6">
-            <Card className="border border-blue-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-blue-300 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-white">
-                <CardTitle className="text-blue-800">Basic Information</CardTitle>
-                <CardDescription>Enter the essential details about this asset.</CardDescription>
+            <Card className="border border-blue-100 dark:border-blue-900 shadow-md hover:shadow-lg transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/50 dark:to-gray-800">
+                <CardTitle className="text-blue-800 dark:text-blue-300">Basic Information</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Enter the essential details about this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -603,13 +501,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Asset Name</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Asset Name </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="Enter asset name"
                           {...field}
                           value={field.value || ""}
-                          className="border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
+                          className="border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                       </FormControl>
                       <FormMessage />
@@ -622,26 +520,26 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="serialNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Asset Tag ID</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Asset Tag ID *</FormLabel>
                       <div className="relative">
                         <FormControl>
                           <Input
                             placeholder="Enter serial number"
                             {...field}
                             value={field.value || ""}
-                            className="border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
+                            className="border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                         {isCheckingSerial && (
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 dark:border-blue-400 rounded-full border-t-transparent"></div>
                           </div>
                         )}
                       </div>
-                      <FormDescription>
+                      <FormDescription className="text-gray-600 dark:text-gray-400">
                         This must be unique across all assets.
                         {form.formState.errors.serialNumber ? (
-                          <span className="text-red-500 ml-1">
+                          <span className="text-red-500 dark:text-red-400 ml-1">
                             {form.formState.errors.serialNumber.message}
                           </span>
                         ) : null}
@@ -656,11 +554,11 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Description</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Enter a detailed description of the asset"
-                          className="min-h-[120px] border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-300 hover:border-blue-300 focus:shadow-md transform focus:translate-y-[-2px]"
+                          className="min-h-[120px] border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           {...field}
                           value={field.value || ""}
                         />
@@ -673,31 +571,21 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
             </Card>
 
             {/* Navigation buttons */}
-            <div className="flex justify-between mt-6">
+            <div className="flex justify-end gap-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={goToPreviousTab}
-                disabled={isFirstTab}
-                className={cn(
-                  "border-blue-200 text-blue-700 hover:bg-blue-50 transition-all duration-300 transform hover:scale-105 active:scale-95",
-                  isFirstTab && "opacity-50 cursor-not-allowed"
-                )}
+                onClick={() => router.push('/assets')}
+                className="text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
-                </svg>
-                Previous
+                Cancel
               </Button>
               <Button
                 type="button"
                 onClick={goToNextTab}
-                className="bg-blue-600 hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
               >
-                Next
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
+                Continue
               </Button>
             </div>
           </TabsContent>
@@ -715,20 +603,23 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="purchaseDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Purchase Date *</FormLabel>
+                        <FormLabel className="text-gray-900 dark:text-gray-100">Purchase Date *</FormLabel>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                            <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                           </div>
-                        <FormControl>
-                          <Input
+                          <FormControl>
+                            <Input
                               type="date"
-                            {...field}
-                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
-                              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                          />
-                        </FormControl>
+                              {...field}
+                              value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? new Date(value) : null);
+                              }}
+                              className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            />
+                          </FormControl>
                         </div>
                         <FormDescription>The date when the asset was purchased</FormDescription>
                         <FormMessage />
@@ -798,20 +689,32 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Status</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "ACTIVE"}>
                         <FormControl>
-                          <SelectTrigger className="border-purple-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all">
+                          <SelectTrigger className="border-purple-200 dark:border-purple-800 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 focus:border-purple-400 dark:focus:border-purple-600 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-white rounded-lg p-1">
-                          <SelectItem value="ACTIVE" className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer">
+                        <SelectContent className="border-purple-200 dark:border-purple-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1">
+                          <SelectItem value="ACTIVE" className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                               Active
                             </div>
                           </SelectItem>
+                          {/* <SelectItem value="UNDER_MAINTENANCE" className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500 mr-2"></div>
+                              Under Maintenance
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="DISPOSED" className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                              Disposed
+                            </div>
+                          </SelectItem> */}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -856,7 +759,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             />
                             <TooltipProvider>
                               <Tooltip>
-                                <TooltipTrigger asChild>
+                                <TooltipTrigger>
                                   <div className="ml-2 cursor-help">
                                     <InfoIcon className="h-4 w-4 text-purple-500" />
                                   </div>
@@ -880,19 +783,19 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Category</FormLabel>
+                        <FormLabel className="text-gray-900 dark:text-gray-100">Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                            <SelectTrigger className="border-purple-200 focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all">
+                          <FormControl>
+                            <SelectTrigger className="border-purple-200 dark:border-purple-800 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 focus:border-purple-400 dark:focus:border-purple-600 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
-                        </FormControl>
-                          <SelectContent className="border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-white rounded-lg p-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-purple-50 hover:scrollbar-thumb-purple-400">
+                          </FormControl>
+                          <SelectContent className="border-purple-200 dark:border-purple-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-purple-50 dark:scrollbar-track-gray-800 hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
                             {ASSET_CATEGORIES.map((category) => (
                               <SelectItem 
                                 key={category} 
                                 value={category}
-                                className="hover:bg-purple-100 focus:bg-purple-100 rounded-md my-1 cursor-pointer"
+                                className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100"
                               >
                                 <div className="flex items-center">
                                   <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
@@ -968,21 +871,23 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="warrantyExpiry"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Warranty Expiry Date</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Warranty Expiry Date</FormLabel>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         </div>
-                          <FormControl>
+                        <FormControl>
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                            min={format(new Date(), 'yyyy-MM-dd')}
-                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
+                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
-                          </FormControl>
+                        </FormControl>
                       </div>
                       <FormDescription>The date when the warranty expires</FormDescription>
                       <FormMessage />
@@ -995,18 +900,21 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="lastMaintenance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Last Maintenance Date</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Last Maintenance Date</FormLabel>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         </div>
                         <FormControl>
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
+                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                       </div>
@@ -1021,19 +929,21 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   name="nextMaintenance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Next Maintenance Date</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Next Maintenance Date</FormLabel>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                         </div>
                         <FormControl>
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                            onChange={(e) => field.onChange(new Date(e.target.value))}
-                            min={format(new Date(), 'yyyy-MM-dd')}
-                            className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
+                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                       </div>
@@ -1174,9 +1084,11 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             <Input
                               type="date"
                               {...field}
-                              value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
-                              onChange={(e) => field.onChange(new Date(e.target.value))}
-                              min={format(new Date(), 'yyyy-MM-dd')}
+                              value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? new Date(value) : null);
+                              }}
                               className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             />
                           </FormControl>

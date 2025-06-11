@@ -16,7 +16,8 @@ import {
   Trash2,
   MessageSquare
 } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface AuditRequest {
   id: string;
@@ -299,15 +300,15 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   if (!request) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ backgroundColor: '#212332' }}>
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-white mb-2">Request Not Found</h2>
@@ -318,7 +319,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="container mx-auto p-6 min-h-screen" style={{ backgroundColor: '#212332' }}>
+    <div className="container mx-auto p-6 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
@@ -592,6 +593,7 @@ export default function RequestDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       )}
+    <ToastContainer />
     </div>
   );
 }

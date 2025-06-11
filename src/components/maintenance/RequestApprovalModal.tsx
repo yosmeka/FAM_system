@@ -287,11 +287,9 @@ export default function RequestApprovalModal({
                     required
                   >
                     <option value="">Select a technician...</option>
-                    {technicians.map((tech) => (
-                      <option key={tech.id} value={tech.id}>
-                        {tech.name} ({tech.email})
+                      <option key={request.requester.name} value={request.requester.name}>
+                        {request.requester.name} ({request.requester.email})
                       </option>
-                    ))}
                   </select>
                 </div>
 

@@ -90,11 +90,13 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-lg p-6 min-w-[350px] max-w-[95vw]">
-        <h2 className="text-xl font-bold mb-2">Manage Permissions</h2>
-        <div className="mb-2 text-sm text-gray-600">User: <span className="font-semibold">{userEmail}</span></div>
+      <div className="bg-white rounded-lg shadow-lg p-6 min-w-[350px] max-w-[95vw] dark:bg-gray-800">
+        <h2 className="text-xl font-bold mb-2 dark:text-white">Manage Permissions</h2>
+        <div className="mb-2 text-sm text-gray-600 dark:text-gray-300">User: <span className="font-semibold dark:text-white">{userEmail}</span></div>
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+            <div className="flex items-center justify-center min-h-screen">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+            </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {allPermissions.map((perm) => (
@@ -106,10 +108,10 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
                   className="accent-red-600"
                   id={perm}
                 />
-                <label htmlFor={perm} className="text-gray-800 cursor-pointer">
+                <label htmlFor={perm} className="text-gray-800 cursor-pointer dark:text-white">
                   {perm}
                   {userOverrides[perm] !== undefined && (
-                    <span className="ml-1 text-xs text-gray-500">({userOverrides[perm] ? "granted" : "revoked"} by user)</span>
+                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-300">({userOverrides[perm] ? "granted" : "revoked"} by user)</span>
                   )}
                 </label>
               </div>
@@ -119,7 +121,7 @@ export default function UserPermissionsModal({ userId, userEmail, open, onClose 
         <div className="flex justify-end mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400"
+            className="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600"
             disabled={loading}
           >
             Close

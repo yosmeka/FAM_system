@@ -13,6 +13,47 @@ import { toast } from 'react-hot-toast';
 
 import React from 'react';
 
+// Delete Confirmation Modal Component
+function DeleteConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  assetName 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onConfirm: () => void;
+  assetName: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
+        <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
+        <p className="mb-4 dark:text-white">
+          Are you sure you want to delete the transfer request for asset "{assetName}"? 
+          This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-200 dark:hover:text-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TransfersPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -21,6 +62,7 @@ export default function TransfersPage() {
   const [transfers, setTransfers] = useState<TransferRequest[]>([]);
   const [rejectModal, setRejectModal] = useState<{ open: boolean; transferId: string | null }>({ open: false, transferId: null });
   const [rejectReason, setRejectReason] = useState('');
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; transferId: string | null; assetName: string }>({ open: false, transferId: null, assetName: '' });
   // Pagination state
   const [page, setPage] = useState(1);
   const pageSize = 6;
@@ -40,7 +82,13 @@ export default function TransfersPage() {
 
 
 // Show nothing until session is loaded
-  if (status === 'loading') return null;
+  if (loading){
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
+  } 
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
@@ -163,19 +211,7 @@ export default function TransfersPage() {
                 <RoleBasedButton
                   onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
-                    if (window.confirm('Are you sure you want to delete this transfer request?')) {
-                      (async () => {
-                        try {
-                          const response = await fetch(`/api/transfers/${transferId}`, { method: 'DELETE' });
-                          if (!response.ok) throw new Error('Failed to delete');
-                          toast.success('Transfer request deleted');
-                          router.push('/transfers');
-                          router.refresh();
-                        } catch {
-                          toast.error('Failed to delete transfer');
-                        }
-                      })();
-                    }
+                    setDeleteModal({ open: true, transferId: transferId, assetName: item.asset?.name || transferId });
                   }}
                   variant="danger"
                   size="sm"
@@ -282,9 +318,9 @@ export default function TransfersPage() {
       />
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4 bg-white border-t">
+        <div className="flex justify-center items-center gap-2 py-4 dark:bg-gray-900 border-t">
           <button
-            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-gray-700"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
           >
@@ -305,11 +341,11 @@ export default function TransfersPage() {
 
       {/* Rejection Reason Modal */}
       {rejectModal.open && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black  bg-opacity-50">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded shadow-lg w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">Reason for Rejection</h2>
             <textarea
-              className="w-full border rounded p-2 mb-4"
+              className="w-full border dark:bg-gray-800 rounded p-2 mb-4"
               rows={4}
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
@@ -317,7 +353,7 @@ export default function TransfersPage() {
             />
             <div className="flex justify-end space-x-2">
               <button
-                className="px-4 py-2 bg-gray-300 rounded"
+                className="px-4 py-2 bg-gray-300 dark:text-gray-800 rounded"
                 onClick={() => {
                   setRejectModal({ open: false, transferId: null });
                   setRejectReason('');
@@ -355,6 +391,24 @@ export default function TransfersPage() {
           </div>
         </div>
       )}
+      <DeleteConfirmationModal
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, transferId: null, assetName: '' })}
+        onConfirm={async () => {
+          try {
+            const response = await fetch(`/api/transfers/${deleteModal.transferId}`, { method: 'DELETE' });
+            if (!response.ok) throw new Error('Failed to delete');
+            toast.success('Transfer request deleted');
+            router.push('/transfers');
+            router.refresh();
+          } catch {
+            toast.error('Failed to delete transfer');
+          } finally {
+            setDeleteModal({ open: false, transferId: null, assetName: '' });
+          }
+        }}
+        assetName={deleteModal.assetName}
+      />
     </div>
   );
 }

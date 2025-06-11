@@ -164,24 +164,23 @@ export default function RequestIssuePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6" style={{ backgroundColor: '#212332' }}>
+    <div className="p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Report Maintenance Issues</h1>
+          <h1 className="text-2xl font-bold dark:text-white mb-2">Report Maintenance Issues</h1>
           <p className="text-gray-400">Submit corrective maintenance requests for asset issues</p>
         </div>
         <button
           onClick={() => setShowRequestForm(true)}
-          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
-          style={{ backgroundColor: '#2697FF' }}
+          className="flex items-center bg-red-600 gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
         >
           <Plus className="w-4 h-4" />
           Report Issue
@@ -205,10 +204,10 @@ export default function RequestIssuePage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               filter === tab.key
                 ? 'text-white'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-400 dark:hover:text-white hover:text-red-600'
             }`}
             style={{
-              backgroundColor: filter === tab.key ? '#2697FF' : '#2A2D3E',
+              backgroundColor: filter === tab.key ? 'red' : '',
             }}
           >
             {tab.label}
@@ -225,7 +224,7 @@ export default function RequestIssuePage() {
       {requests.length === 0 ? (
         <div className="text-center py-12">
           <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Maintenance Requests</h3>
+          <h3 className="text-xl font-semibold dark:text-white mb-2">No Maintenance Requests</h3>
           <p className="text-gray-400 mb-6">
             {filter === 'ALL'
               ? "You haven't submitted any maintenance requests yet."
@@ -235,7 +234,7 @@ export default function RequestIssuePage() {
           <button
             onClick={() => setShowRequestForm(true)}
             className="px-6 py-3 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: '#2697FF' }}
+            style={{ backgroundColor: 'red' }}
           >
             Report Your First Issue
           </button>
@@ -246,12 +245,11 @@ export default function RequestIssuePage() {
             <div
               key={request.id}
               className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#2A2D3E' }}
             >
               {/* Header */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
+                  <h3 className="text-lg font-semibold dark:text-white mb-1">
                     {request.asset.name}
                   </h3>
                   <p className="text-sm text-gray-400">
@@ -295,19 +293,19 @@ export default function RequestIssuePage() {
                 </div>
 
                 {request.manager && (
-                  <div className="text-sm text-gray-300">
+                  <div className="text-sm dark:text-gray-300 text-gray-700">
                     <span>Assigned to: {request.manager.name}</span>
                   </div>
                 )}
 
-                <div className="text-sm text-gray-400">
+                <div className="text-sm dark:text-gray-400 text-gray-700">
                   Submitted: {new Date(request.createdAt).toLocaleDateString()}
                 </div>
               </div>
 
               {/* Description */}
               <div className="mb-4">
-                <p className="text-sm text-gray-300 line-clamp-3">
+                <p className="text-sm dark:text-gray-300 text-gray-700 line-clamp-3">
                   {request.description}
                 </p>
               </div>
@@ -320,7 +318,7 @@ export default function RequestIssuePage() {
                     <span>Started: {new Date(request.workStartedAt).toLocaleDateString()}</span>
                   </div>
                   {request.assignedTo && (
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm dark:text-gray-300 text-gray-700">
                       Assigned to: {request.assignedTo.name}
                     </div>
                   )}
@@ -334,12 +332,12 @@ export default function RequestIssuePage() {
                     <span>Completed: {new Date(request.workCompletedAt).toLocaleDateString()}</span>
                   </div>
                   {request.laborHours && (
-                    <div className="text-sm text-gray-300 mb-1">
+                    <div className="text-sm dark:text-gray-300 text-gray-700 mb-1">
                       Labor Hours: {request.laborHours}h
                     </div>
                   )}
                   {request.totalCost && (
-                    <div className="flex items-center gap-2 text-sm text-green-400">
+                    <div className="flex items-center gap-2 text-sm dark:text-green-400 text-green-700">
                       <DollarSign className="w-4 h-4" />
                       <span>Total Cost: ${request.totalCost.toFixed(2)}</span>
                     </div>
@@ -378,49 +376,49 @@ export default function RequestIssuePage() {
                 )}
 
                 {/* View Details Button */}
-                <button
+                {/* <button
                   onClick={() => router.push(`/maintenance/${request.id}`)}
                   className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
                 >
                   <Eye className="w-4 h-4" />
                   Details
-                </button>
+                </button> */}
               </div>
 
               {/* Status Indicator */}
               <div className="flex items-center justify-center">
                 {request.status === 'PENDING_APPROVAL' && (
-                  <div className="flex items-center gap-2 text-yellow-400">
+                  <div className="flex items-center gap-2 dark:text-yellow-400 text-yellow-700">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager approval</span>
                   </div>
                 )}
                 {request.status === 'APPROVED' && (
-                  <div className="flex items-center gap-2 text-green-400">
+                  <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Ready to start work</span>
                   </div>
                 )}
                 {request.status === 'REJECTED' && (
-                  <div className="flex items-center gap-2 text-red-400">
+                  <div className="flex items-center gap-2 dark:text-red-400 text-red-700">
                     <XCircle className="w-4 h-4" />
                     <span className="text-sm">Request rejected</span>
                   </div>
                 )}
                 {request.status === 'IN_PROGRESS' && (
-                  <div className="flex items-center gap-2 text-blue-400">
+                  <div className="flex items-center gap-2 dark:text-blue-400 text-blue-700">
                     <Play className="w-4 h-4" />
                     <span className="text-sm">Work in progress</span>
                   </div>
                 )}
                 {request.status === 'WORK_COMPLETED' && (
-                  <div className="flex items-center gap-2 text-orange-400">
+                  <div className="flex items-center gap-2 dark:text-orange-400 text-orange-700">
                     <FileText className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager review</span>
                   </div>
                 )}
                 {request.status === 'COMPLETED' && (
-                  <div className="flex items-center gap-2 text-green-400">
+                  <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Work completed and approved</span>
                   </div>

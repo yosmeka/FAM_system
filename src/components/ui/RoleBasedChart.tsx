@@ -17,9 +17,18 @@ const ClientChart = dynamic(() => import("./ClientChart").then(mod => mod.Client
 
 import { ChartType } from '@/types/chart';
 
+interface ChartDataItem {
+  category?: string;
+  status?: string;
+  year?: string;
+  month?: string;
+  count?: number;
+  value?: number;
+}
+
 interface RoleBasedChartProps {
   type: ChartType;
-  data: any[] | {
+  data: ChartDataItem[] | {
     labels: string[];
     datasets: Array<{
       label?: string;
@@ -35,7 +44,7 @@ interface RoleBasedChartProps {
     labels?: string[];
     values?: number[];
     xAxis?: string[];
-    yAxis?: number[];
+    yAxis?: string[];
     series?: Array<{
       name: string;
       data: number[];
@@ -82,13 +91,13 @@ export function RoleBasedChart({
 
   if (isEmptyData()) {
     return (
-      <div className={cn("bg-white p-4 rounded-lg shadow", className)}>
+      <div className={cn("bg-white dark:bg-gray-800 p-4 rounded-lg shadow", className)}>
         {title && (
-          <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">
+          <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-2">
             {title}
           </h3>
         )}
-        <div className="text-center text-gray-500 py-10">No data available</div>
+        <div className="text-center text-gray-500 dark:text-gray-400 py-10">No data available</div>
       </div>
     );
   }
@@ -99,10 +108,32 @@ export function RoleBasedChart({
     plugins: {
       legend: {
         position: "top" as const,
+        labels: {
+          color: 'rgb(156, 163, 175)', // text-gray-400
+        },
       },
       title: {
         display: !!title,
         text: title,
+        color: 'rgb(17, 24, 39)', // text-gray-900
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)', // text-gray-400 with opacity
+        },
+        ticks: {
+          color: 'rgb(156, 163, 175)', // text-gray-400
+        },
+      },
+      y: {
+        grid: {
+          color: 'rgba(156, 163, 175, 0.1)', // text-gray-400 with opacity
+        },
+        ticks: {
+          color: 'rgb(156, 163, 175)', // text-gray-400
+        },
       },
     },
   };
@@ -114,6 +145,10 @@ export function RoleBasedChart({
 
   // Format data based on chart type
   const formattedData = (() => {
+    if (!Array.isArray(data)) {
+      return data;
+    }
+
     switch (type) {
       case 'heatmap':
         if (!options || !options.xAxis || !options.yAxis || !options.values) {
@@ -153,14 +188,14 @@ export function RoleBasedChart({
 
       case 'pie':
         // Ensure unique labels by appending index if needed
-        const pieLabels = data.map((item, index) => {
+        const pieLabels = data.map((item: ChartDataItem, index: number) => {
           const baseLabel = item.category || item.status || `Item ${index + 1}`;
           return baseLabel;
         });
         return {
           labels: pieLabels,
           datasets: [{
-            data: data.map(item => item.count || item.value || 0),
+            data: data.map((item: ChartDataItem) => item.count || item.value || 0),
             backgroundColor: options?.customColors || [
               '#FF6384',
               '#36A2EB',
@@ -179,7 +214,7 @@ export function RoleBasedChart({
         };
       case 'bar':
         // Ensure unique labels for bar chart
-        const barLabels = data.map((item, index) => {
+        const barLabels = data.map((item: ChartDataItem, index: number) => {
           const baseLabel = item.category || item.status || `Item ${index + 1}`;
           return baseLabel;
         });
@@ -187,7 +222,7 @@ export function RoleBasedChart({
           labels: barLabels,
           datasets: [{
             label: 'Count',
-            data: data.map(item => item.count || item.value || 0),
+            data: data.map((item: ChartDataItem) => item.count || item.value || 0),
             backgroundColor: '#36A2EB',
             borderColor: '#36A2EB',
             borderWidth: 1,
@@ -210,7 +245,7 @@ export function RoleBasedChart({
         }
 
         // Standard line chart from data array
-        const lineLabels = data.map((item, index) => {
+        const lineLabels = data.map((item: ChartDataItem, index: number) => {
           const baseLabel = item.year || item.month || `Item ${index + 1}`;
           return baseLabel;
         });
@@ -218,7 +253,7 @@ export function RoleBasedChart({
           labels: lineLabels,
           datasets: [{
             label: 'Value',
-            data: data.map(item => item.value || item.count || 0),
+            data: data.map((item: ChartDataItem) => item.value || item.count || 0),
             borderColor: '#FF6384',
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
             tension: 0.1,
@@ -231,14 +266,14 @@ export function RoleBasedChart({
   })();
 
   return (
-    <div className={cn("bg-white p-4 rounded-lg shadow", className)}>
+    <div className={cn("bg-white dark:bg-gray-800 p-4 rounded-lg shadow", className)}>
       {title && (
-        <h3 className="text-lg font-medium leading-6 text-gray-900 mb-2">
+        <h3 className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-2">
           {title}
         </h3>
       )}
       {description && (
-        <p className="text-sm text-gray-500 mb-4">{description}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{description}</p>
       )}
 
       {/* Use custom HeatMap component for heatmap type */}

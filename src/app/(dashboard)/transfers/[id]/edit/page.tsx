@@ -93,7 +93,7 @@ export default function EditTransferPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium">Asset</label>
-            <div className="bg-gray-100 rounded p-2 mt-1">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded p-2 mt-1">
               <div><b>Name:</b> {transfer.asset?.name}</div>
               <div><b>Serial Number:</b> {transfer.asset?.serialNumber}</div>
             </div>
@@ -102,7 +102,7 @@ export default function EditTransferPage() {
             <label className="block text-sm font-medium">From Location</label>
             <input
               type="text"
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-gray-100 cursor-not-allowed"
+              className="mt-1 block w-full rounded-md border border-gray-300 p-2 bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
               value={transfer.fromDepartment}
               readOnly
               disabled
@@ -114,7 +114,7 @@ export default function EditTransferPage() {
               type="text"
               id="toDepartment"
               name="toDepartment"
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-700 p-2"
               required
               value={toDepartment}
               onChange={e => setToDepartment(e.target.value)}
@@ -126,7 +126,7 @@ export default function EditTransferPage() {
               id="reason"
               name="reason"
               rows={3}
-              className="mt-1 block w-full rounded-md border border-gray-300 p-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 dark:bg-gray-700 p-2"
               required
               value={reason}
               onChange={e => setReason(e.target.value)}

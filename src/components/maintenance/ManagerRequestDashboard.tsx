@@ -134,8 +134,8 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
@@ -145,8 +145,8 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Corrective Maintenance Requests</h2>
-          <p className="text-gray-400">Review and approve issue reports submitted by technicians</p>
+          <h2 className="text-2xl font-bold dark:text-white">Corrective Maintenance Requests</h2>
+          <p className="text-gray-500 dark:text-gray-400">Review and approve issue reports submitted by technicians</p>
         </div>
       </div>
 
@@ -164,10 +164,10 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               filter === tab.key
                 ? 'text-white'
-                : 'text-gray-400 hover:text-white'
+                : 'text-gray-600 hover:text-red-600'
             }`}
             style={{
-              backgroundColor: filter === tab.key ? '#2697FF' : '#2A2D3E',
+              backgroundColor: filter === tab.key ? 'red' : '',
             }}
           >
             {tab.label}
@@ -183,9 +183,9 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
       {/* Requests Grid */}
       {requests.length === 0 ? (
         <div className="text-center py-12">
-          <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">No Corrective Maintenance Requests</h3>
-          <p className="text-gray-400">
+          <Wrench className="w-16 h-16 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold dark:text-white mb-2">No Corrective Maintenance Requests</h3>
+          <p className="text-gray-500 dark:text-gray-400">
             {filter === 'PENDING_APPROVAL'
               ? 'No pending corrective maintenance requests from technicians to review.'
               : `No ${filter.toLowerCase()} corrective maintenance requests.`
@@ -201,15 +201,14 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
             <div
               key={request.id}
               className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-              style={{ backgroundColor: '#2A2D3E' }}
             >
               {/* Header */}
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
+                  <h3 className="text-lg font-semibold dark:text-white mb-1">
                     {request.asset.name}
                   </h3>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {request.asset.serialNumber} • {request.asset.location}
                   </p>
                 </div>
@@ -228,8 +227,8 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
               {/* Issue Details */}
               <div className="space-y-3 mb-4">
                 {request.issueType && (
-                  <div className="flex items-center gap-2 text-sm text-gray-300">
-                    <AlertTriangle className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                    <AlertTriangle className="w-4 h-4 dark:text-gray-400" />
                     <span>{request.issueType}</span>
                   </div>
                 )}
@@ -243,12 +242,12 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 text-sm text-gray-300">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <User className="w-4 h-4" />
                   <span>Reported by: {request.requester.name}</span>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-300">
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                   <Calendar className="w-4 h-4" />
                   <span>Reported: {new Date(request.createdAt).toLocaleDateString()}</span>
                 </div>
@@ -256,19 +255,19 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
 
               {/* Description */}
               <div className="mb-4">
-                <p className="text-sm text-gray-300 line-clamp-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3">
                   {request.description}
                 </p>
               </div>
 
               {/* Impact Description */}
               {request.impactDescription && (
-                <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg">
+                <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-600/30 rounded-lg dark:bg-yellow-900/20 dark:border-yellow-600/30">
                   <div className="flex items-center gap-2 mb-1">
-                    <AlertCircle className="w-4 h-4 text-yellow-500" />
-                    <span className="text-sm font-medium text-yellow-500">Operational Impact</span>
+                    <AlertCircle className="w-4 h-4 text-yellow-500 dark:text-yellow-300" />
+                    <span className="text-sm font-medium text-yellow-500 dark:text-yellow-300">Operational Impact</span>
                   </div>
-                  <p className="text-sm text-yellow-100">
+                  <p className="text-sm text-yellow-100 dark:text-yellow-300">
                     {request.impactDescription}
                   </p>
                 </div>

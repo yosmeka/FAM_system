@@ -327,7 +327,7 @@ export default function MaintenanceRequestForm({
           {/* Manager Selection */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Assign to Manager <span className="text-red-500">*</span>
+              Report to Manager <span className="text-red-500">*</span>
             </label>
             <select
               value={managerId}
@@ -370,7 +370,7 @@ export default function MaintenanceRequestForm({
             <button
               type="submit"
               disabled={submitting}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
               <Wrench className="w-4 h-4" />
               {submitting ? 'Submitting...' : 'Submit Request'}
