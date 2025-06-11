@@ -82,13 +82,13 @@ export default function TransfersPage() {
 
 
 // Show nothing until session is loaded
-  if (loading){
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
-      </div>
-    );
-  } 
+  // if (loading){
+  //   return (
+  //     <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+  //       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+  //     </div>
+  //   );
+  // } 
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {

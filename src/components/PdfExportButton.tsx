@@ -83,7 +83,7 @@ export function PdfExportButton({ reportData }: PdfExportButtonProps) {
 
       // Department Transfers
       doc.setFontSize(14);
-      doc.text('Department Transfer Summary', 14, finalY + 15);
+      doc.text('Location Transfer Summary', 14, finalY + 15);
 
       const departmentData = reportData.departmentTransfers.map(dept => [
         dept.department || 'Unknown',

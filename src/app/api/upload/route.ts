@@ -5,6 +5,16 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { withRole } from '@/middleware/rbac';
+import mime from 'mime-types';
+
+const allowedMimeTypes = [
+  'application/pdf',
+  'image/png',
+  'image/jpg',
+  'image/jpeg',
+  'image/gif',
+  'text/plain',
+];
 
 // Helper function to ensure upload directory exists
 async function ensureUploadDir(dir: string) {
@@ -60,6 +70,14 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     if (file.size > maxSize) {
       return NextResponse.json(
         { error: 'File size exceeds the limit (10MB)' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ MIME type check here
+    if (!allowedMimeTypes.includes(file.type)) {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Only PDF, images, and text files are allowed.' },
         { status: 400 }
       );
     }
