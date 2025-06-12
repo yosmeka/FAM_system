@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Settings, AlertCircle, CheckCircle, Trash2, Play } from 'lucide-react';
+import { ArrowLeft, Calendar, Settings,  Trash2, Play } from 'lucide-react';
 
 interface MaintenanceSchedule {
   id: string;
@@ -59,11 +59,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState(true);
   const [generatingTask, setGeneratingTask] = useState(false);
 
-  useEffect(() => {
-    fetchSchedule();
-  }, [resolvedParams.id]);
-
-  const fetchSchedule = async () => {
+  const fetchSchedule = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/maintenance-schedules/${resolvedParams.id}`);
@@ -76,7 +72,11 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams.id]);
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [fetchSchedule]);
 
   const generateTask = async () => {
     if (!confirm('Generate a new maintenance task for this schedule?')) {
@@ -194,7 +194,7 @@ export default function ScheduleDetailPage({ params }: { params: Promise<{ id: s
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">Schedule Not Found</h2>
-          <p className="text-gray-400 mb-4">The maintenance schedule you're looking for doesn't exist.</p>
+          <p className="text-gray-400 mb-4">The maintenance schedule you are looking for does not exist.</p>
           <button
             onClick={() => router.push('/maintenance/scheduled')}
             className="px-4 py-2 rounded-lg text-white transition-colors"

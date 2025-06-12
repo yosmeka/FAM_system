@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
@@ -38,25 +38,25 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
 
   const router = useRouter();
 
-  useEffect(() => {
-    if (!deleted) {
-      fetchDisposalDetails();
-    }
-  }, [params.id, deleted]);
-
-  const fetchDisposalDetails = async () => {
+  const fetchDisposalDetails = useCallback(async () => {
     try {
       const response = await fetch(`/api/disposals/${params.id}`);
       if (!response.ok) throw new Error('Failed to fetch disposal details');
       const data = await response.json();
       setDisposal(data);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
+      console.error('Failed to load disposal details');
       toast.error('Failed to load disposal details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id]);
+
+  useEffect(() => {
+    if (!deleted) {
+      fetchDisposalDetails();
+    }
+  }, [deleted, fetchDisposalDetails]);
 
   useEffect(() => {
     if (deleted) {
@@ -90,7 +90,7 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
       if (!response.ok) throw new Error('Failed to delete disposal');
       toast.success('Disposal request deleted');
       setDeleted(true);
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete disposal');
     } finally {
       setLoading(false);
@@ -105,7 +105,7 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
       if (!response.ok) throw new Error('Failed to approve disposal');
       toast.success('Disposal request approved');
       fetchDisposalDetails();
-    } catch (error) {
+    } catch {
       toast.error('Failed to approve disposal');
     } finally {
       setLoading(false);
@@ -120,7 +120,7 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
       if (!response.ok) throw new Error('Failed to reject disposal');
       toast.success('Disposal request rejected');
       fetchDisposalDetails();
-    } catch (error) {
+    } catch {
       toast.error('Failed to reject disposal');
     } finally {
       setLoading(false);

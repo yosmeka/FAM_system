@@ -6,11 +6,19 @@ import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
 import { useRole } from '@/hooks/useRole';
 
+interface Asset {
+  id: string;
+  name: string;
+  serialNumber?: string;
+  status?: string;
+  currentValue?: number;
+}
+
 export default function RequestMaintenancePage() {
   const { data: session, status } = useSession();
   const { isUser } = useRole();
   const router = useRouter();
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   

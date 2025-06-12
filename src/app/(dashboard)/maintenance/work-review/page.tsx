@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/hooks/useRole';
-import { CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
+import { CheckCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
 import ManagerWorkReviewModal from '@/components/maintenance/ManagerWorkReviewModal';
 
 interface WorkReviewTask {
@@ -38,7 +37,6 @@ interface WorkReviewTask {
 }
 
 export default function WorkReviewPage() {
-  const { data: session } = useSession();
   const { isManager, isAdmin } = useRole();
   const router = useRouter();
   const [tasks, setTasks] = useState<WorkReviewTask[]>([]);
@@ -47,22 +45,7 @@ export default function WorkReviewPage() {
   const [selectedTask, setSelectedTask] = useState<WorkReviewTask | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
-  useEffect(() => {
-    if (!isManager && !isAdmin) {
-      router.push('/maintenance');
-      return;
-    }
-    fetchWorkReviewTasks();
-  }, [filter]); // Removed isManager and isAdmin from dependencies
-
-  // Separate useEffect for role checking to avoid infinite loop
-  useEffect(() => {
-    if (!isManager && !isAdmin) {
-      router.push('/maintenance');
-    }
-  }, [isManager, isAdmin, router]);
-
-  const fetchWorkReviewTasks = async () => {
+  const fetchWorkReviewTasks = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -79,7 +62,15 @@ export default function WorkReviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (!isManager && !isAdmin) {
+      router.push('/maintenance');
+      return;
+    }
+    fetchWorkReviewTasks();
+  }, [filter, isManager, isAdmin, router, fetchWorkReviewTasks]);
 
   const handleReviewWork = (task: WorkReviewTask) => {
     setSelectedTask(task);

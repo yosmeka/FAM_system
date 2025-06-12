@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Plus, Settings, CheckCircle } from 'lucide-react';
@@ -40,6 +40,25 @@ interface MaintenanceSchedule {
   }>;
 }
 
+interface MaintenanceTask {
+  id: string;
+  description: string;
+  status: string;
+  priority: string;
+  completedAt?: string;
+  workPerformed?: string;
+  laborHours?: number;
+  totalCost?: number;
+  asset: {
+    name: string;
+    serialNumber: string;
+  };
+  assignedTo?: {
+    name: string;
+    email: string;
+  };
+}
+
 export default function ScheduledMaintenancePage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -48,12 +67,11 @@ export default function ScheduledMaintenancePage() {
   const [filter, setFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-
   // Manager review states
   const [activeTab, setActiveTab] = useState('schedules'); // 'schedules' or 'reviews'
-  const [pendingReviews, setPendingReviews] = useState<any[]>([]);
+  const [pendingReviews, setPendingReviews] = useState<MaintenanceTask[]>([]);
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [selectedTaskForReview, setSelectedTaskForReview] = useState<any>(null);
+  const [selectedTaskForReview, setSelectedTaskForReview] = useState<MaintenanceTask | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   const handleScheduleCreated = () => {
@@ -61,15 +79,7 @@ export default function ScheduledMaintenancePage() {
     fetchSchedules(); // Refresh the schedules list
   };
 
-  useEffect(() => {
-    if (activeTab === 'schedules') {
-      fetchSchedules();
-    } else if (activeTab === 'reviews') {
-      fetchPendingReviews();
-    }
-  }, [filter, activeTab]);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filter !== 'all') {
@@ -86,7 +96,15 @@ export default function ScheduledMaintenancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (activeTab === 'schedules') {
+      fetchSchedules();
+    } else if (activeTab === 'reviews') {
+      fetchPendingReviews();
+    }
+  }, [filter, activeTab, fetchSchedules]);
 
   const fetchPendingReviews = async () => {
     try {
@@ -103,7 +121,7 @@ export default function ScheduledMaintenancePage() {
     }
   };
 
-  const handleReviewTask = (task: any) => {
+  const handleReviewTask = (task: MaintenanceTask) => {
     setSelectedTaskForReview(task);
     setShowReviewModal(true);
   };
@@ -113,8 +131,6 @@ export default function ScheduledMaintenancePage() {
     setSelectedTaskForReview(null);
     setShowReviewModal(false);
   };
-
-
 
   const getFrequencyDisplay = (frequency: string) => {
     const frequencyMap: { [key: string]: string } = {
@@ -411,7 +427,7 @@ export default function ScheduledMaintenancePage() {
                       Recent tasks: {schedule.maintenanceTasks.length}
                     </p>
                     <div className="flex gap-1">
-                      {schedule.maintenanceTasks.slice(0, 5).map((task, index) => (
+                      {schedule.maintenanceTasks.slice(0, 5).map((task) => (
                         <div
                           key={task.id}
                           className={`w-2 h-2 rounded-full ${

@@ -31,7 +31,7 @@ interface DisposalDetails {
 export default function EditDisposalPage() {
   const [redirecting, setRedirecting] = useState(false);
   const params = useParams() as { id: string };
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [disposal, setDisposal] = useState<DisposalDetails | null>(null);
@@ -51,8 +51,8 @@ export default function EditDisposalPage() {
         setMethod(data.method || '');
         setReason(data.reason || '');
         setExpectedValue(data.expectedValue?.toString() || '');
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch disposal');
+      } catch (err: Error | unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch disposal');
       } finally {
         setLoading(false);
       }
@@ -88,8 +88,8 @@ export default function EditDisposalPage() {
       toast.success('Disposal updated successfully');
       setRedirecting(true);
       router.push('/disposals');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update disposal');
+    } catch (err: Error | unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update disposal');
     } finally {
       setLoading(false);
     }

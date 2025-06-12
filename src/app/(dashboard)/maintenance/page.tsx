@@ -2,12 +2,10 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useRole } from '@/hooks/useRole';
 import { Plus, Settings, CheckCircle } from 'lucide-react';
 
 export default function MaintenancePage() {
   const { data: session } = useSession();
-  const { isManager, isAdmin, isUser } = useRole();
   const router = useRouter();
 
   const maintenanceOptions = [

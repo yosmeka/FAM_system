@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Plus, Settings, Trash2, Eye, Edit, FileText } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit, FileText } from 'lucide-react';
 
 interface MaintenanceTemplate {
   id: string;
@@ -28,37 +28,11 @@ interface MaintenanceTemplate {
 }
 
 export default function MaintenanceTemplatesPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-
-
-
-// Show nothing until session is loaded
-  if (status === 'loading') return null;
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-
-
-
-
-
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
 
   const fetchTemplates = async () => {
     try {
@@ -81,6 +55,25 @@ export default function MaintenanceTemplatesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  // Show nothing until session is loaded
+  if (status === 'loading') return null;
+
+  // If not allowed, show access denied
+  if (session?.user?.role === 'AUDITOR') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   const deleteTemplate = async (templateId: string) => {
     if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {

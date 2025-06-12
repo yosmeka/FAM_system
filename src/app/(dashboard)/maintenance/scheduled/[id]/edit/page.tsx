@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, X } from 'lucide-react';
@@ -72,16 +72,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     templateId: '',
   });
 
-  useEffect(() => {
-    if (session?.user?.role !== 'MANAGER' && session?.user?.role !== 'ADMIN') {
-      router.push('/maintenance/scheduled');
-      return;
-    }
-
-    fetchData();
-  }, [resolvedParams.id, session]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -136,7 +127,16 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams.id, session?.user?.id]);
+
+  useEffect(() => {
+    if (session?.user?.role !== 'MANAGER' && session?.user?.role !== 'ADMIN') {
+      router.push('/maintenance/scheduled');
+      return;
+    }
+
+    fetchData();
+  }, [resolvedParams.id, session, router, fetchData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -212,7 +212,7 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">Schedule Not Found</h2>
-          <p className="text-gray-400 mb-4">The maintenance schedule you're trying to edit doesn't exist.</p>
+          <p className="text-gray-400 mb-4">The maintenance schedule you are trying to edit does not exist.</p>
           <button
             onClick={() => router.push('/maintenance/scheduled')}
             className="px-4 py-2 rounded-lg text-white transition-colors"
@@ -250,10 +250,10 @@ export default function EditSchedulePage({ params }: { params: Promise<{ id: str
           </button>
 
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={saving}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: saving ? '#666' : '#2697FF' }}
+            style={{ backgroundColor: '#2697FF' }}
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Changes'}

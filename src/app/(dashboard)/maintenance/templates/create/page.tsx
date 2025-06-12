@@ -30,7 +30,7 @@ export default function CreateTemplatePage() {
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">Access Denied</h2>
-          <p className="text-gray-400 mb-4">You don't have permission to create maintenance templates.</p>
+          <p className="text-gray-400 mb-4">You do nothave permission to create maintenance templates.</p>
           <button
             onClick={() => router.push('/maintenance/templates')}
             className="px-4 py-2 rounded-lg text-white transition-colors"

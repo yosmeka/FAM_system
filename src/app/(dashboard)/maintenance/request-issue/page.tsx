@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, Eye, Play, FileText, DollarSign } from 'lucide-react';
+import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, Play, FileText, DollarSign } from 'lucide-react';
 import MaintenanceRequestForm from '@/components/maintenance/MaintenanceRequestForm';
 import WorkDocumentationModal from '@/components/maintenance/WorkDocumentationModal';
 
@@ -37,8 +36,7 @@ interface MaintenanceRequest {
 }
 
 export default function RequestIssuePage() {
-  const { data: session } = useSession();
-  const router = useRouter();
+  const { data: session, status } = useSession();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -46,30 +44,7 @@ export default function RequestIssuePage() {
   const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
   const [showWorkModal, setShowWorkModal] = useState(false);
 
-
-// Show nothing until session is loaded
-  if (status === 'loading') return null;
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-
-
-
-  useEffect(() => {
-    fetchMyRequests();
-  }, [filter]);
-
-  const fetchMyRequests = async () => {
+  const fetchMyRequests = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -89,7 +64,17 @@ export default function RequestIssuePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (session?.user?.role === 'AUDITOR') {
+      return;
+    }
+
+    fetchMyRequests();
+  }, [filter, status, session?.user?.role, fetchMyRequests]);
 
   const handleRequestCreated = () => {
     fetchMyRequests();
