@@ -152,7 +152,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
     } else if (userRole === 'MANAGER' || userRole === 'ADMIN') {
       // Managers can update assignment details
       if (userRole === 'MANAGER' && currentAssignment.assignedById !== userId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
 
       const allowedFields = [
@@ -178,7 +178,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
         }
       });
     } else {
-      return NextResponse.json({ error: 'Invalid action or insufficient permissions' }, { status: 400 });
+      return Response.json({ error: 'Invalid action or insufficient permissions' }, { status: 400 });
     }
 
     const updatedAssignment = await prisma.auditAssignment.update({
@@ -212,10 +212,10 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
       },
     });
 
-    return NextResponse.json(updatedAssignment);
+    return Response.json(updatedAssignment);
   } catch (error) {
     console.error('Error updating audit assignment:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update audit assignment' },
       { status: 500 }
     );
@@ -230,7 +230,7 @@ export const DELETE = withRole([ 'MANAGER'], async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -245,17 +245,17 @@ export const DELETE = withRole([ 'MANAGER'], async function DELETE(
     });
 
     if (!assignment) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+      return Response.json({ error: 'Assignment not found' }, { status: 404 });
     }
 
     // Managers can only delete assignments they created
     if (session.user.role === 'MANAGER' && assignment.assignedById !== session.user.id) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Don't allow deletion of completed assignments
     if (assignment.status === 'COMPLETED') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Cannot delete completed assignments' },
         { status: 400 }
       );
@@ -265,10 +265,10 @@ export const DELETE = withRole([ 'MANAGER'], async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ message: 'Assignment deleted successfully' });
+    return Response.json({ message: 'Assignment deleted successfully' });
   } catch (error) {
     console.error('Error deleting audit assignment:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete audit assignment' },
       { status: 500 }
     );
