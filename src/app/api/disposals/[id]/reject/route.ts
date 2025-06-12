@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendNotification } from '@/lib/notifications';
 import { getServerSession } from 'next-auth';
@@ -7,15 +6,15 @@ import { authOptions } from '@/lib/auth';
 // POST /api/disposals/[id]/reject
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const id = params.id;
+    const { id } = await params;
     const disposal = await prisma.disposal.update({
       where: { id },
       data: {
@@ -49,10 +48,10 @@ export async function POST(
       });
     }
 
-    return NextResponse.json(disposal);
+    return Response.json(disposal);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to reject disposal' },
       { status: 500 }
     );

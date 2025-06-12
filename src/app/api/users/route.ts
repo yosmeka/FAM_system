@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { Response } from 'next/server';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { hash } from 'bcryptjs'; // Import hash function
 
 import { hasPermission } from './[id]/route';
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     (session?.user && await hasPermission(session.user, 'User view (list and detail)'));
 
   if (!session?.user || !canViewUsers) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
@@ -44,17 +44,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(users);
+    return Response.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user || !(await hasPermission(session.user, 'User create'))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const { name, email, password, role } = body;
 
     if (!password) {
-      return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+      return Response.json({ error: 'Password is required' }, { status: 400 });
     }
 
     const hashedPassword = await hash(password, 12);
@@ -91,16 +91,16 @@ export async function POST(request: NextRequest) {
 
     // Return user object without the password
     const { password: _password, ...userWithoutPassword } = user; // _password signals intentional omission
-    return NextResponse.json(userWithoutPassword);
+    return Response.json(userWithoutPassword);
   } catch (error: any) {
     console.error('Error creating user:', error);
     // Check if this is a Prisma unique constraint error
     if (error?.code === 'P2002') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Email already in use. Please use a different email address.' },
         { status: 400 }
       );
     }
-    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+    return Response.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -63,7 +62,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
+    return Response.json({
       schedules: schedules.map(s => ({
         id: s.id,
         title: s.title,
@@ -90,6 +89,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Debug API error:', error);
-    return NextResponse.json({ error: 'Failed to fetch debug data' }, { status: 500 });
+    return Response.json({ error: 'Failed to fetch debug data' }, { status: 500 });
   }
 }

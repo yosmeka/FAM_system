@@ -1,25 +1,23 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { sendNotification } from '@/lib/notifications';
-import { Prisma } from '@prisma/client';
 
 // POST /api/disposals/[id]/approve
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = params.id;
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is a manager
     if (session.user.role !== 'MANAGER') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Only managers can approve disposal requests' },
         { status: 403 }
       );
@@ -35,7 +33,7 @@ export async function POST(
     });
 
     if (!disposal) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Disposal request not found' },
         { status: 404 }
       );
@@ -43,56 +41,31 @@ export async function POST(
 
     // Check if the request is still pending
     if (disposal.status !== 'PENDING') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Can only approve pending disposal requests' },
         { status: 400 }
       );
     }
 
-    // Start a transaction since we need to update both disposal and asset
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Update the disposal status
-      const updatedDisposal = await tx.disposal.update({
-        where: { id },
-        data: {
-          status: 'APPROVED'
-        },
-        include: {
-          asset: true,
-          requester: true
-        }
-      });
+    // Update the disposal status
+    const result = await prisma.disposal.update({
+      where: { id },
+      data: {
+        status: 'APPROVED'
+      },
+      include: {
+        asset: true,
+        requester: true
+      }
+    });
 
-      // Update the asset status to DISPOSED
-      await tx.asset.update({
-        where: { id: disposal.assetId },
-        data: {
-          status: 'DISPOSED',
-          currentValue: 0, // Asset is no longer valuable to the organization
-        }
-      });
-
-      // Create asset history records
-      await tx.assetHistory.createMany({
-        data: [
-          {
-            assetId: disposal.assetId,
-            field: 'status',
-            oldValue: disposal.asset.status,
-            newValue: 'DISPOSED',
-            changedBy: session.user.email || 'system',
-          },
-          {
-            assetId: disposal.assetId,
-            field: 'currentValue',
-            oldValue: disposal.asset.currentValue?.toString() || '0',
-            newValue: '0',
-            changedBy: session.user.email || 'system',
-          }
-        ]
-      });
-
-      return updatedDisposal;
+    // Update the asset status to DISPOSED
+    await prisma.asset.update({
+      where: { id: disposal.assetId },
+      data: {
+        status: 'DISPOSED',
+        currentValue: 0, // Asset is no longer valuable to the organization
+      }
     });
 
     // Send notification to requester
@@ -105,10 +78,10 @@ export async function POST(
       });
     }
 
-    return NextResponse.json(result);
+    return Response.json(result);
   } catch (error) {
     console.error('Error approving disposal:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to approve disposal request' },
       { status: 500 }
     );
@@ -117,34 +90,35 @@ export async function POST(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the disposal request
     const disposal = await prisma.disposal.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { asset: true }
     });
 
     if (!disposal) {
-      return NextResponse.json({ error: 'Disposal not found' }, { status: 404 });
+      return Response.json({ error: 'Disposal not found' }, { status: 404 });
     }
 
     // Update the disposal status
     const updatedDisposal = await prisma.disposal.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
       include: { asset: true }
     });
 
     // Update the asset's status
-    const updatedAsset = await prisma.asset.update({
+    await prisma.asset.update({
       where: { id: disposal.assetId },
       data: {
         status: 'DISPOSED',
@@ -152,29 +126,9 @@ export async function PUT(
       }
     });
 
-    // Track the changes in asset history
-    await prisma.assetHistory.createMany({
-      data: [
-        {
-          assetId: disposal.assetId,
-          field: 'status',
-          oldValue: disposal.asset.status,
-          newValue: 'DISPOSED',
-          changedBy: session.user?.email || 'system',
-        },
-        {
-          assetId: disposal.assetId,
-          field: 'currentValue',
-          oldValue: disposal.asset.currentValue.toString(),
-          newValue: '0',
-          changedBy: session.user?.email || 'system',
-        }
-      ]
-    });
-
-    return NextResponse.json(updatedDisposal);
+    return Response.json(updatedDisposal);
   } catch (error) {
     console.error('Error approving disposal:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
