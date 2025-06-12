@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { PdfExportButton } from '@/components/PdfExportButton';
 import { TransferReportData } from '@/utils/pdfUtils';
 import { BackButton } from '@/components/ui/BackButton';
+import { Download, Settings, ChevronDown } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 
 // Define interfaces for our data types
 interface TransferStats {
@@ -23,6 +26,7 @@ interface TransferStats {
   transferEfficiency: number;
   transferVelocity: number;
   transferGrowth: number;
+  totalTransfersAllTime: number;
 }
 
 interface MonthlyTrend {
@@ -40,6 +44,12 @@ interface LocationTransfer {
   avgProcessingDays: number;
   netChange?: number; // Virtual property for table display
   actions?: string;   // Virtual property for table display
+  assetName?: string;
+  fromDepartment?: string;
+  toDepartment?: string;
+  status?: string;
+  createdAt?: string;
+  requesterName?: string;
 }
 
 interface StatusDistributionItem {
@@ -48,7 +58,14 @@ interface StatusDistributionItem {
   percentage: number;
 }
 
-import { useSession } from 'next-auth/react';
+interface TransferData {
+  assetName: string;
+  fromDepartment: string;
+  toDepartment: string;
+  status: string;
+  createdAt: string;
+  requesterName: string;
+}
 
 // Helper function to format month string (YYYY-MM) to a more readable format
 const formatMonth = (monthStr: string): string => {
@@ -70,8 +87,15 @@ export default function TransferReportsPage() {
   const [transferStats, setTransferStats] = useState<TransferStats | null>(null);
   const [monthlyTrends, setMonthlyTrends] = useState<MonthlyTrend[]>([]);
   const [locationTransfers, setLocationTransfers] = useState<LocationTransfer[]>([]);
+  const [transferData, setTransferData] = useState<TransferData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<StatusDistributionItem[]>([]);
   const [reportData, setReportData] = useState<TransferReportData | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [fromLocationFilter, setFromLocationFilter] = useState<string>('ALL');
+  const [toLocationFilter, setToLocationFilter] = useState<string>('ALL');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const fetchTransferReports = useCallback(async () => {
     try {
@@ -79,36 +103,148 @@ export default function TransferReportsPage() {
       const response = await fetch('/api/reports/transfers');
       if (!response.ok) throw new Error('Failed to fetch transfer reports');
       const data = await response.json();
+      
+      console.log('API Response:', data);
+      console.log('Transfers:', data.transfers);
 
       setTransferStats(data.stats);
-      // Set monthly trends data with debugging
-      console.log('Monthly Trends Data:', data.monthlyTrends);
       setMonthlyTrends(data.monthlyTrends || []);
-      setLocationTransfers(data.departmentTransfers); // API still returns as departmentTransfers
-      // Set status distribution data with debugging
-      console.log('Status Distribution Data:', data.statusDistribution);
+      setLocationTransfers(data.departmentTransfers || []);
+      setTransferData(data.transfers || []);
       setStatusDistribution(data.statusDistribution || []);
 
-      // Store complete report data for PDF export
+      console.log('Transfer Data State:', data.transfers || []);
+
       setReportData({
         stats: data.stats,
-        departmentTransferMatrix: data.departmentTransferMatrix || [], // Keep the original key for PDF export
+        departmentTransferMatrix: data.departmentTransferMatrix || [],
         monthlyTrends: data.monthlyTrends,
-        departmentTransfers: data.departmentTransfers, // Keep the original key for PDF export
-        statusDistribution: data.statusDistribution || [] // Include status distribution data
+        departmentTransfers: data.departmentTransfers,
+        statusDistribution: data.statusDistribution || []
       });
     } catch (error) {
       console.error('Error:', error);
+      toast.error('Failed to fetch transfer reports');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
+  const filteredTransfers = useMemo(() => {
+    return transferData.filter(transfer => {
+      // Apply status filter
+      if (statusFilter !== 'ALL' && transfer.status !== statusFilter) {
+        return false;
+      }
 
+      // Apply from location filter
+      if (fromLocationFilter !== 'ALL' && transfer.fromDepartment !== fromLocationFilter) {
+        return false;
+      }
 
+      // Apply to location filter
+      if (toLocationFilter !== 'ALL' && transfer.toDepartment !== toLocationFilter) {
+        return false;
+      }
 
+      // Apply date range filter
+      const transferDate = new Date(transfer.createdAt);
+      if (startDate && transferDate < new Date(startDate)) {
+        return false;
+      }
+      if (endDate && transferDate > new Date(endDate)) {
+        return false;
+      }
 
-// Show nothing until session is loaded
+      return true;
+    });
+  }, [transferData, statusFilter, fromLocationFilter, toLocationFilter, startDate, endDate]);
+
+  const exportToPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text('Transfer Report', 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+      const tableColumn = ['Asset Name', 'From Location', 'To Location', 'Status', 'Date', 'Requested By'];
+      const tableRows = filteredTransfers.map(transfer => [
+        transfer.assetName,
+        transfer.fromDepartment,
+        transfer.toDepartment,
+        transfer.status,
+        new Date(transfer.createdAt).toLocaleDateString(),
+        transfer.requesterName
+      ]);
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 30,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+      doc.save(`transfer-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const transfersSheet = XLSX.utils.json_to_sheet(
+        filteredTransfers.map(transfer => ({
+          'Asset Name': transfer.assetName,
+          'From Location': transfer.fromDepartment,
+          'To Location': transfer.toDepartment,
+          'Status': transfer.status,
+          'Date': new Date(transfer.createdAt).toLocaleDateString(),
+          'Requested By': transfer.requesterName
+        }))
+      );
+      const wscols = [
+        { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 25 }
+      ];
+      transfersSheet['!cols'] = wscols;
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, transfersSheet, 'Transfers');
+      XLSX.writeFile(workbook, `transfer-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Asset Name', 'From Location', 'To Location', 'Status', 'Date', 'Requested By'].join(',');
+    const rows = filteredTransfers.map(transfer => [
+      transfer.assetName,
+      transfer.fromDepartment,
+      transfer.toDepartment,
+      transfer.status,
+      new Date(transfer.createdAt).toLocaleDateString(),
+      transfer.requesterName
+    ].join(','));
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transfer-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  // Show nothing until session is loaded
   if (status === 'loading') return null;
 
   // If not allowed, show access denied
@@ -122,10 +258,6 @@ export default function TransferReportsPage() {
       </div>
     );
   }
-
-
-
-
 
   useEffect(() => {
     if (session && session.user && session.user.role !== 'ADMIN') {
@@ -144,8 +276,6 @@ export default function TransferReportsPage() {
     );
   }
 
-
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -158,7 +288,7 @@ export default function TransferReportsPage() {
     <div className="container mx-auto p-6 dark:bg-gray-900">
       <div className="flex justify-between items-center mb-8 p-4 rounded-lg shadow-sm dark:bg-gray-900">
         <div className="flex items-center dark:bg-gray-900">
-        <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
+          <BackButton href="/reports" className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300" />
           <div className="bg-indigo-100 p-3 rounded-full mr-4">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clipRule="evenodd" />
@@ -169,15 +299,15 @@ export default function TransferReportsPage() {
             <p className="text-gray-600 text-sm">Comprehensive analysis of asset transfers across departments</p>
           </div>
         </div>
-        <div className="flex items-center dark:bg-gray-900">
-          <div className="mr-4 text-right">
+        <div className="flex items-center gap-4 dark:bg-gray-900">
+          <div className="text-right">
             <div className="text-sm text-gray-600">Report Period</div>
             <div className="font-medium">{new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
           </div>
-          <PdfExportButton reportData={reportData} />
         </div>
       </div>
 
+      
       {/* Summary Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="col-span-4">
@@ -186,26 +316,26 @@ export default function TransferReportsPage() {
 
         <RoleBasedStats
           name="Total Transfers"
-          value={transferStats?.totalTransfers || 0}
+          value={transferData.length}
           trend={transferStats?.transferGrowth || 0}
           trendLabel="vs last month"
           className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
         />
         <RoleBasedStats
           name="Completed Transfers"
-          value={transferStats?.completedTransfers || 0}
+          value={transferData.filter(transfer => transfer.status === 'COMPLETED').length}
           variant="success"
           className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
         />
         <RoleBasedStats
           name="Pending Transfers"
-          value={transferStats?.pendingTransfers || 0}
+          value={transferData.filter(transfer => transfer.status === 'PENDING').length}
           variant="warning"
           className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
         />
         <RoleBasedStats
           name="Rejected Transfers"
-          value={transferStats?.rejectedTransfers || 0}
+          value={transferData.filter(transfer => transfer.status === 'REJECTED').length}
           variant="danger"
           className="transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
         />
@@ -291,12 +421,26 @@ export default function TransferReportsPage() {
           <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             <RoleBasedChart
               type="bar"
-              data={locationTransfers.map(loc => ({
-                location: loc.department,
-                outgoing: loc.outgoing,
-                incoming: loc.incoming,
-                netChange: loc.incoming - loc.outgoing
-              }))}
+              data={{
+                labels: locationTransfers.map(loc => loc.department),
+                datasets: [
+                  {
+                    label: 'Outgoing',
+                    data: locationTransfers.map(loc => loc.outgoing),
+                    backgroundColor: '#EF4444'
+                  },
+                  {
+                    label: 'Incoming',
+                    data: locationTransfers.map(loc => loc.incoming),
+                    backgroundColor: '#10B981'
+                  },
+                  {
+                    label: 'Net Change',
+                    data: locationTransfers.map(loc => loc.incoming - loc.outgoing),
+                    backgroundColor: '#3B82F6'
+                  }
+                ]
+              }}
               options={{
                 xAxis: locationTransfers.map(loc => loc.department),
                 series: [
@@ -332,19 +476,19 @@ export default function TransferReportsPage() {
                   <div className="text-center">
                     <div className="text-sm text-gray-500">Total Transfers</div>
                     <div className="text-xl font-bold text-blue-600">
-                      {monthlyTrends.reduce((sum, item) => sum + item.count, 0)}
+                      {transferData.length}
                     </div>
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-gray-500">Approved</div>
                     <div className="text-xl font-bold text-green-600">
-                      {monthlyTrends.reduce((sum, item) => sum + item.approved, 0)}
+                      {transferData.filter(transfer => transfer.status === 'COMPLETED').length}
                     </div>
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-gray-500">Rejected</div>
                     <div className="text-xl font-bold text-red-600">
-                      {monthlyTrends.reduce((sum, item) => sum + (item.rejected || 0), 0)}
+                      {transferData.filter(transfer => transfer.status === 'REJECTED').length}
                     </div>
                   </div>
                 </div>
@@ -422,7 +566,7 @@ export default function TransferReportsPage() {
           <div className="border border-gray-100 rounded-lg p-2 bg-gray-50 dark:bg-gray-900">
             {statusDistribution && statusDistribution.length > 0 ? (
               <div className="flex flex-col">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4 ">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   {statusDistribution.map((item) => {
                     // Define colors based on status
                     let bgColor = "bg-gray-100";
@@ -435,7 +579,7 @@ export default function TransferReportsPage() {
                         textColor = "text-yellow-700";
                         valueColor = "text-yellow-600";
                         break;
-                      case "IN_PROGRESS":
+                      case "APPROVED":
                         bgColor = "bg-blue-50";
                         textColor = "text-blue-700";
                         valueColor = "text-blue-600";
@@ -449,11 +593,6 @@ export default function TransferReportsPage() {
                         bgColor = "bg-red-50";
                         textColor = "text-red-700";
                         valueColor = "text-red-600";
-                        break;
-                      case "CANCELLED":
-                        bgColor = "bg-gray-50";
-                        textColor = "text-gray-700";
-                        valueColor = "text-gray-600";
                         break;
                     }
 
@@ -480,10 +619,9 @@ export default function TransferReportsPage() {
                     customColors: statusDistribution.map((item) => {
                       switch(item.status) {
                         case "PENDING": return '#FBBF24'; // yellow-400
-                        case "IN_PROGRESS": return '#3B82F6'; // blue-500
+                        case "APPROVED": return '#3B82F6'; // blue-500
                         case "COMPLETED": return '#10B981'; // green-500
                         case "REJECTED": return '#EF4444'; // red-500
-                        case "CANCELLED": return '#9CA3AF'; // gray-400
                         default: return '#6366F1'; // indigo-500
                       }
                     })
@@ -661,6 +799,232 @@ export default function TransferReportsPage() {
                 //     </div>
                 //   ),
                 // },
+              ]}
+            />
+          </div>
+        </div>
+      </div>
+
+      
+
+      {/* Filters */}
+      <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Filter Transfers</h2>
+            <div className="relative ml-auto">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <Download size={16} />
+                Export
+                <ChevronDown size={16} />
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 dark:bg-gray-800">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        exportToPDF();
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Export as PDF
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportToExcel();
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Export as Excel
+                    </button>
+                    <button
+                      onClick={() => {
+                        exportToCSV();
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      Export as CSV
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="flex items-center gap-2">
+              <Settings size={16} className="text-gray-500" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+              >
+                <option value="ALL">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={fromLocationFilter}
+                onChange={(e) => setFromLocationFilter(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+              >
+                <option value="ALL">All From Locations</option>
+                {Array.from(new Set(locationTransfers.map(t => t.department))).map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={toLocationFilter}
+                onChange={(e) => setToLocationFilter(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+              >
+                <option value="ALL">All To Locations</option>
+                {Array.from(new Set(locationTransfers.map(t => t.department))).map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                placeholder="Start Date"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                placeholder="End Date"
+              />
+            </div>
+          </div>
+          {(statusFilter !== 'ALL' || fromLocationFilter !== 'ALL' || toLocationFilter !== 'ALL' || startDate || endDate) && (
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={() => {
+                  setStatusFilter('ALL');
+                  setFromLocationFilter('ALL');
+                  setToLocationFilter('ALL');
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Asset Transfer Table */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md hover:shadow-xl transition-all duration-300 mt-8">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+            </svg>
+            Asset Transfer Details
+          </h2>
+          <div className="border border-gray-100 rounded-lg overflow-hidden dark:bg-gray-900">
+            <RoleBasedTable
+              data={filteredTransfers}
+              columns={[
+                {
+                  key: 'assetName',
+                  header: 'Asset Name',
+                  render: (value) => (
+                    <div className="font-medium text-gray-900 dark:text-white">{value}</div>
+                  ),
+                },
+                {
+                  key: 'fromDepartment',
+                  header: 'From Location',
+                  render: (value) => (
+                    <div className="text-center bg-red-50 py-1 px-2 rounded-md text-red-700 font-medium">
+                      {value}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'toDepartment',
+                  header: 'To Location',
+                  render: (value) => (
+                    <div className="text-center bg-green-50 py-1 px-2 rounded-md text-green-700 font-medium">
+                      {value}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  render: (value) => {
+                    let bgColor = "bg-gray-100";
+                    let textColor = "text-gray-600";
+
+                    switch(value) {
+                      case "PENDING":
+                        bgColor = "bg-yellow-50";
+                        textColor = "text-yellow-700";
+                        break;
+                      case "APPROVED":
+                        bgColor = "bg-blue-50";
+                        textColor = "text-blue-700";
+                        break;
+                      case "COMPLETED":
+                        bgColor = "bg-green-50";
+                        textColor = "text-green-700";
+                        break;
+                      case "REJECTED":
+                        bgColor = "bg-red-50";
+                        textColor = "text-red-700";
+                        break;
+                    }
+
+                    return (
+                      <div className={`text-center py-1 px-2 rounded-md font-medium ${bgColor} ${textColor}`}>
+                        {value}
+                      </div>
+                    );
+                  },
+                },
+                {
+                  key: 'createdAt',
+                  header: 'Transfer Date',
+                  render: (value) => (
+                    <div className="text-center text-gray-600 dark:text-gray-400">
+                      {new Date(value).toLocaleDateString()}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'requesterName',
+                  header: 'Requested By',
+                  render: (value) => (
+                    <div className="text-center text-gray-600 dark:text-gray-400">
+                      {value}
+                    </div>
+                  ),
+                },
               ]}
             />
           </div>
