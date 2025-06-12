@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -8,7 +7,7 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     console.log('Fetching disposals for user:', session.user.id, 'with role:', session.user.role);
@@ -43,10 +42,10 @@ export async function GET() {
     });
 
     console.log('Found disposals:', disposals.length);
-    return NextResponse.json(disposals);
+    return Response.json(disposals);
   } catch (error) {
     console.error('Error fetching disposals:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch disposals' },
       { status: 500 }
     );
@@ -58,7 +57,7 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -68,7 +67,7 @@ export async function POST(request: Request) {
     // Validate required fields
     if (!assetId || !reason || !method) {
       console.error('Missing required fields:', { assetId, reason, method });
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields', details: { assetId, reason, method } },
         { status: 400 }
       );
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
 
     if (!asset) {
       console.error('Asset not found:', assetId);
-      return NextResponse.json(
+      return Response.json(
         { error: 'Asset not found' },
         { status: 404 }
       );
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
 
     if (asset.status === 'DISPOSED') {
       console.error('Asset already disposed:', assetId);
-      return NextResponse.json(
+      return Response.json(
         { error: 'Asset is already disposed' },
         { status: 400 }
       );
@@ -155,10 +154,10 @@ export async function POST(request: Request) {
     ));
 
     console.log('Successfully created disposal request:', disposal);
-    return NextResponse.json(disposal);
+    return Response.json(disposal);
   } catch (error: any) {
     console.error('Error creating disposal request:', error);
-    return NextResponse.json(
+    return Response.json(
       {
         error: 'Failed to create disposal request',
         details: error.message,

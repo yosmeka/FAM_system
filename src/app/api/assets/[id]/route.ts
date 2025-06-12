@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -13,7 +13,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // First, clean up any self-referencing links
@@ -103,17 +103,17 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
     }
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    return NextResponse.json(asset);
+    return Response.json(asset);
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error fetching asset:', error.message);
     } else {
       console.error('Unknown error fetching asset:', error);
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
 
@@ -126,7 +126,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user has 'Asset edit' permission (user-specific or role-based)
@@ -134,7 +134,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     const { hasPermission } = await import('@/app/api/users/[id]/route');
     const permitted = await hasPermission({ id: userId, role }, 'Asset edit');
     if (!permitted) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -145,7 +145,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     });
 
     if (!currentAsset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Prepare data for update, handling potential invalid values from frontend
@@ -265,13 +265,13 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       }
     }
 
-    return NextResponse.json(updatedAsset);
+    return Response.json(updatedAsset);
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error updating asset:', error.message);
       // Return a more specific error response for invalid data
       if (error.message.startsWith('Invalid number format') || error.message.startsWith('Invalid date format') || error.message.startsWith('Missing required date field')) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return Response.json({ error: error.message }, { status: 400 });
       }
     } else {
       console.error('Unknown error updating asset:', error);
@@ -285,7 +285,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     // More detailed handling for Prisma unique constraint error (P2002)
     if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
       // Assuming the unique constraint is on the serialNumber field
-      return NextResponse.json({
+      return Response.json({
         error: 'Serial number must be unique',
         code: 'P2002',
         field: 'serialNumber',
@@ -293,7 +293,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       }, { status: 409 }); // Use 409 Conflict for unique constraint errors
     }
 
-    return NextResponse.json({ error: 'Failed to update asset' }, { status: 500 });
+    return Response.json({ error: 'Failed to update asset' }, { status: 500 });
   }
 });
 
@@ -306,7 +306,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // First check if the asset exists
@@ -315,7 +315,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // First delete all related records manually to avoid foreign key constraint issues
@@ -373,7 +373,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
       },
     });
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return Response.json({ success: true }, { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error deleting asset:', error.message);
@@ -383,7 +383,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
 
     // Check for specific Prisma errors
     if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2003') {
-      return NextResponse.json(
+      return Response.json(
         {
           error: 'Failed to delete asset',
           code: 'P2003',
@@ -394,7 +394,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
       );
     }
 
-    return NextResponse.json(
+    return Response.json(
       {
         error: 'Failed to delete asset',
         details: error instanceof Error ? error.message : 'Unknown error',

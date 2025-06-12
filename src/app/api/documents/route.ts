@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -34,10 +33,10 @@ export async function POST(request: Request) {
     });
     
     console.log(`Created document with ID: ${document.id}`);
-    return NextResponse.json({ document });
+    return Response.json({ document });
   } catch (error) {
     console.error('Error creating document:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create document' },
       { status: 500 }
     );
@@ -50,7 +49,7 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -93,10 +92,10 @@ export async function GET(request: Request) {
       });
     }
     
-    return NextResponse.json({ documents: filteredDocuments });
+    return Response.json({ documents: filteredDocuments });
   } catch (error) {
     console.error('Error listing documents:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to list documents' },
       { status: 500 }
     );

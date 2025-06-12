@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -11,7 +10,7 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
     // Get the current user's ID from the session
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -103,10 +102,10 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET(request: Req
 
 
 
-    return NextResponse.json(maintenanceRequests);
+    return Response.json(maintenanceRequests);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance requests' },
       { status: 500 }
     );
@@ -121,7 +120,7 @@ export const POST = withRole([ 'USER'], async function POST(request: Request) {
 
     // Validate required fields
     if (!assetId || !description || !requestedById) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
@@ -152,10 +151,10 @@ export const POST = withRole([ 'USER'], async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json(maintenanceRequest);
+    return Response.json(maintenanceRequest);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create maintenance request' },
       { status: 500 }
     );
