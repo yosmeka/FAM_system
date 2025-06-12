@@ -1,18 +1,14 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
-import { db } from "./db";
-import { PrismaClient } from '@prisma/client';
-import { Role } from "@/types/auth";
+import { prisma } from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/login",
+    signIn: "/auth/login",
   },
   providers: [
     CredentialsProvider({
@@ -23,7 +19,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          throw new Error("Invalid credentials");
         }
 
         const user = await prisma.user.findUnique({
@@ -32,61 +28,47 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user) {
-          return null;
+        if (!user || !user?.password) {
+          throw new Error("Invalid credentials");
         }
 
-        const isPasswordValid = await compare(credentials.password, user.password);
+        const isCorrectPassword = await compare(
+          credentials.password,
+          user.password
+        );
 
-        if (!isPasswordValid) {
-          return null;
+        if (!isCorrectPassword) {
+          throw new Error("Invalid credentials");
         }
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role as Role,
+          role: user.role,
         };
       },
     }),
   ],
   callbacks: {
-    async session({ token, session }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.name = token.name;
-        session.user.email = token.email;
-        session.user.role = token.role as Role;
-      }
-      return session;
-    },
     async jwt({ token, user }) {
-      // If user is provided (during sign in), update token
       if (user) {
-        token.id = user.id as string;
-        token.email = user.email as string;
-        token.name = user.name as string;
-        token.role = user.role as Role;
+        return {
+          ...token,
+          role: user.role,
+        };
       }
-
-      // If we have a token but no user, try to get user from database
-      if (!user && token.email) {
-        const dbUser = await db.user.findUnique({
-          where: {
-            email: token.email,
-          },
-        });
-
-        if (dbUser) {
-          token.id = dbUser.id as string;
-          token.email = dbUser.email as string;
-          token.name = dbUser.name as string;
-          token.role = dbUser.role as Role;
-        }
-      }
-
       return token;
     },
+    async session({ session, token }) {
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.sub,
+          role: token.role,
+        },
+      };
+    },
   },
-}; 
+};
