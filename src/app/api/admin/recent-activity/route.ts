@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// import { NextResponse } from 'next/server'; // Using Response instead for Next.js 15 compatibility
 import { prisma } from '@/lib/prisma';
 
 // Fetch last 10 user, permission, and role changes
@@ -23,9 +23,13 @@ export async function GET() {
         changedByUser: { select: { id: true, name: true, email: true } },
       },
     });
-    return NextResponse.json({ users: users || [], permissions: permissions || [], roleChanges: roleChanges || [] });
+    return new Response(JSON.stringify({ users: users || [], permissions: permissions || [], roleChanges: roleChanges || [] }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
-    return NextResponse.json({ users: [], permissions: [], roleChanges: [] });
+    return new Response(JSON.stringify({ users: [], permissions: [], roleChanges: [] }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 // TODO: For a real audit log of role changes, create a RoleChangeLog table and update this endpoint.
