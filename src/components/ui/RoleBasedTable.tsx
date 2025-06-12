@@ -37,15 +37,15 @@ export function RoleBasedTable<T>({
 
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-800">
+      <table className="min-w-full divide-y divide-red-200 dark:divide-red-700">
+        <thead className="bg-red-600 dark:bg-red-700">
           <tr>
-            {filteredColumns.map((column) => (
+            {filteredColumns.map((column, columnIndex) => (
               <th
-                key={String(column.key)}
+                key={`header-${String(column.key)}-${columnIndex}`}
                 scope="col"
                 className={cn(
-                  "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider",
+                  "px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider border-r border-red-500 last:border-r-0",
                   column.className
                 )}
               >
@@ -54,21 +54,22 @@ export function RoleBasedTable<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody className="bg-white dark:bg-black divide-y divide-red-200 dark:divide-red-700">
           {data.map((item, index) => (
             <tr
               key={index}
               onClick={() => onRowClick?.(item)}
               className={cn(
-                "hover:bg-gray-50 dark:hover:bg-gray-800",
-                onRowClick && "cursor-pointer"
+                "hover:bg-red-50 dark:hover:bg-red-900 transition-colors",
+                onRowClick && "cursor-pointer",
+                index % 2 === 0 ? "bg-white dark:bg-black" : "bg-red-50 dark:bg-gray-900"
               )}
             >
-              {filteredColumns.map((column) => (
+              {filteredColumns.map((column, columnIndex) => (
                 <td
-                  key={`${String(column.key)}-${index}`}
+                  key={`${String(column.key)}-${index}-${columnIndex}`}
                   className={cn(
-                    "px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400",
+                    "px-6 py-4 whitespace-nowrap text-sm text-black dark:text-white border-r border-red-200 dark:border-red-700 last:border-r-0",
                     column.className
                   )}
                 >

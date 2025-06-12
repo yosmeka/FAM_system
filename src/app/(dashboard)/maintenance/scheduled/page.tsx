@@ -91,7 +91,12 @@ export default function ScheduledMaintenancePage() {
   const fetchPendingReviews = async () => {
     try {
       setReviewLoading(true);
-      const response = await fetch('/api/maintenance?status=PENDING_REVIEW');
+      // Fetch preventive maintenance tasks that are completed and awaiting manager review
+      const params = new URLSearchParams();
+      params.append('status', 'WORK_COMPLETED');
+      params.append('maintenanceType', 'PREVENTIVE');
+
+      const response = await fetch(`/api/maintenance?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPendingReviews(data);
