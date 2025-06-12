@@ -7,15 +7,16 @@ import { sendNotification } from '@/lib/notifications';
 // POST /api/transfers/[id]/complete
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const transfer = await prisma.transfer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { asset: true, manager: true },
     });
     if (!transfer) {
@@ -29,7 +30,7 @@ export async function POST(
     }
     // Update transfer status and asset location/status
     const updatedTransfer = await prisma.transfer.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
     });
     const updatedAsset = await prisma.asset.update({
@@ -43,7 +44,7 @@ export async function POST(
     if (transfer.managerId) {
       await sendNotification({
         userId: transfer.managerId,
-        message: `Transfer for asset "${transfer.asset.name}" has been completed by the requester.`,
+        message: `Transfer for asset "${transfer.asset?.name || 'Unknown'}" has been completed by the requester.`,
         type: 'transfer_completed',
         meta: {
           assetId: transfer.assetId,
