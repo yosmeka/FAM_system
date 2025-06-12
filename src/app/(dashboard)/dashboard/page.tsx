@@ -11,10 +11,20 @@ import {
   Tooltip,
   Legend,
   ArcElement,
+  PointElement,
+  LineElement,
 } from 'chart.js/auto';
 import { Bar, Line, Pie } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
+
+interface CustomUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  image?: string;
+}
 
 // Register Chart.js components
 Chart.register(
@@ -24,14 +34,16 @@ Chart.register(
   Title,
   Tooltip,
   Legend,
-  ArcElement
+  ArcElement,
+  PointElement,
+  LineElement
 );
 
 interface DashboardData {
   stats: {
     totalAssets: number;
     activeAssets: number;
-    underMaintenanceAssets: number;
+    disposedAssets: number;
     totalValue: number;
   };
   monthlyDepreciation: Array<{
@@ -41,6 +53,15 @@ interface DashboardData {
   statusDistribution: Array<{
     status: string;
     count: number;
+  }>;
+  categoryDistribution: Array<{
+    category: string;
+    count: number;
+    value: number;
+  }>;
+  valueTrend: Array<{
+    month: string;
+    value: number;
   }>;
 }
 
@@ -52,6 +73,7 @@ import { NotificationBell } from '@/components/ui/NotificationBell';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const user = session?.user as CustomUser | undefined;
   
   const [adminStats, setAdminStats] = useState<{ users: number; roles: number; permissions: number } | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
@@ -163,47 +185,47 @@ export default function DashboardPage() {
 
   if (isAdmin) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-200 via-red-100 to-yellow-100 py-8 px-2 dark:bg-gray-900 dark:from-indigo-900 dark:via-red-900 dark:to-yellow-900">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#ff0000] via-[#000000] to-[#ffffff] py-8 px-2 dark:bg-gray-900 dark:from-[#ff0000] dark:via-[#000000] dark:to-[#ffffff]">
         <Toaster position="top-right" />
 
         {/* Welcome Banner */}
         <div className="flex flex-col items-center mb-8">
-          {session?.user?.image && (
-            <img src={session.user.image} alt="avatar" className="w-20 h-20 rounded-full shadow-lg mb-2 border-4 border-indigo-400" />
+          {user?.image && (
+            <img src={user.image} alt="avatar" className="w-20 h-20 rounded-full shadow-lg mb-2 border-4 border-[#ff0000]" />
           )}
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-700 via-red-500 to-yellow-500 mb-1 dark:from-indigo-400 dark:via-red-400 dark:to-yellow-400 drop-shadow-lg">Welcome, {session?.user?.name}</h1>
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#ff0000] via-[#000000] to-[#ffffff] mb-1 dark:from-[#ff0000] dark:via-[#000000] dark:to-[#ffffff] drop-shadow-lg">Welcome, {user?.name}</h1>
           <span className="text-lg text-gray-600 dark:text-gray-300 font-medium">System Administration Dashboard</span>
         </div>
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 w-full max-w-4xl mb-10">
-          <div className="bg-gradient-to-br from-indigo-500 via-indigo-300 to-white dark:from-indigo-900 dark:via-indigo-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-indigo-100 dark:border-indigo-800 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-[#ff0000] via-[#000000] to-[#ffffff] dark:from-[#ff0000] dark:via-[#000000] dark:to-[#ffffff] rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-[#ff0000] dark:border-[#ff0000] hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">👥</span>
-            <span className="text-5xl font-extrabold text-indigo-900 dark:text-indigo-100">
+            <span className="text-5xl font-extrabold text-[#ffffff] dark:text-[#ffffff]">
               {adminLoading ? '...' : <CountUp end={adminStats?.users ?? 0} />}
             </span>
-            <span className="text-lg text-indigo-700 dark:text-indigo-300 mt-2 font-semibold tracking-wide">Total Users</span>
+            <span className="text-lg text-[#ffffff] dark:text-[#ffffff] mt-2 font-semibold tracking-wide">Total Users</span>
           </div>
-          <div className="bg-gradient-to-br from-pink-400 via-red-300 to-white dark:from-pink-900 dark:via-red-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-red-100 dark:border-red-800 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-[#ff0000] via-[#000000] to-[#ffffff] dark:from-[#ff0000] dark:via-[#000000] dark:to-[#ffffff] rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-[#ff0000] dark:border-[#ff0000] hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">🛡️</span>
-            <span className="text-5xl font-extrabold text-red-900 dark:text-red-100">
+            <span className="text-5xl font-extrabold text-[#ffffff] dark:text-[#ffffff]">
               {adminLoading ? '...' : <CountUp end={adminStats?.roles ?? 0} />}
             </span>
-            <span className="text-lg text-red-700 dark:text-red-300 mt-2 font-semibold tracking-wide">Roles</span>
+            <span className="text-lg text-[#ffffff] dark:text-[#ffffff] mt-2 font-semibold tracking-wide">Roles</span>
           </div>
-          <div className="bg-gradient-to-br from-yellow-300 via-yellow-100 to-white dark:from-yellow-900 dark:via-yellow-700 dark:to-gray-900 rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-yellow-100 dark:border-yellow-800 hover:scale-105 transition-transform duration-200">
+          <div className="bg-gradient-to-br from-[#ff0000] via-[#000000] to-[#ffffff] dark:from-[#ff0000] dark:via-[#000000] dark:to-[#ffffff] rounded-2xl shadow-2xl p-8 flex flex-col items-center border border-[#ff0000] dark:border-[#ff0000] hover:scale-105 transition-transform duration-200">
             <span className="text-5xl mb-2 animate-bounce">🔑</span>
-            <span className="text-5xl font-extrabold text-yellow-700 dark:text-yellow-200">
+            <span className="text-5xl font-extrabold text-[#ffffff] dark:text-[#ffffff]">
               {adminLoading ? '...' : <CountUp end={adminStats?.permissions ?? 0} />}
             </span>
-            <span className="text-lg text-yellow-700 dark:text-yellow-200 mt-2 font-semibold tracking-wide">Permissions</span>
+            <span className="text-lg text-[#ffffff] dark:text-[#ffffff] mt-2 font-semibold tracking-wide">Permissions</span>
           </div>
         </div>
         {/* Quick Actions */}
         <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mb-3 drop-shadow">Quick Actions</h2>
+          <h2 className="text-2xl font-bold text-[#ff0000] dark:text-[#ff0000] mb-3 drop-shadow">Quick Actions</h2>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/users" className="bg-indigo-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800 transition font-semibold text-lg">Manage Users</a>
-            <a href="/role-permission" className="bg-red-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition font-semibold text-lg">Manage Roles & Permissions</a>
+            <a href="/users" className="bg-[#ff0000] text-white px-8 py-3 rounded-xl shadow-lg hover:bg-[#ff0000]/80 dark:bg-[#ff0000] dark:hover:bg-[#ff0000]/80 transition font-semibold text-lg">Manage Users</a>
+            <a href="/role-permission" className="bg-[#000000] text-white px-8 py-3 rounded-xl shadow-lg hover:bg-[#000000]/80 dark:bg-[#000000] dark:hover:bg-[#000000]/80 transition font-semibold text-lg">Manage Roles & Permissions</a>
           </div>
         </div>
         {/* Charts */}
@@ -230,7 +252,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ff0000]"></div>
       </div>
     );
   }
@@ -238,9 +260,9 @@ export default function DashboardPage() {
   const stats = [
     { name: 'Total Assets', value: dashboardData?.stats.totalAssets.toString() || '0' },
     { name: 'Active Assets', value: dashboardData?.stats.activeAssets.toString() || '0' },
-    { name: 'Under Maintenance', value: dashboardData?.stats.underMaintenanceAssets.toString() || '0' },
+    { name: 'Disposed Assets', value: dashboardData?.stats.disposedAssets.toString() || '0' },
     { 
-      name: 'Total Value', 
+      name: 'Total Purchase Price', 
       value: new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD'
@@ -254,39 +276,54 @@ export default function DashboardPage() {
       {
         data: dashboardData?.statusDistribution.map((item) => item.count) || [],
         backgroundColor: [
-          'rgba(75, 192, 192, 0.6)',
-          'rgba(255, 206, 86, 0.6)',
-          'rgba(54, 162, 235, 0.6)',
-          'rgba(255, 99, 132, 0.6)',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
         ],
         borderColor: [
-          'rgba(75, 192, 192, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 99, 132, 1)',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
         ],
         borderWidth: 1,
       },
     ],
   };
 
-  // Sort monthly depreciation data by month
-  const sortedDepreciation = dashboardData?.monthlyDepreciation?.sort((a, b) => {
-    const dateA = new Date(a.month);
-    const dateB = new Date(b.month);
-    return dateA.getTime() - dateB.getTime();
-  }) || [];
-
-  const monthlyDepreciationData = {
-    labels: sortedDepreciation.map((item) => {
-      const date = new Date(item.month);
-      return date.toLocaleString('default', { month: 'short' });
-    }),
+  const categoryDistributionData = {
+    labels: dashboardData?.categoryDistribution.map((item) => item.category) || [],
     datasets: [
       {
-        label: 'Monthly Depreciation',
-        data: sortedDepreciation.map((item) => item.depreciation),
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        data: dashboardData?.categoryDistribution.map((item) => item.count) || [],
+        backgroundColor: [
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+        ],
+        borderColor: [
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+          'gray',
+          '#ff0000',
+          '#000000',
+          '#ffffff',
+        ],
+        borderWidth: 1,
       },
     ],
   };
@@ -296,7 +333,7 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Welcome back, <span className="font-bold text-red-600">{session?.user?.name}</span>
+          Welcome back, <span className="font-bold text-[#ff0000]">{session?.user?.name}</span>
         </p>
       </div>
 
@@ -307,7 +344,7 @@ export default function DashboardPage() {
             className="relative overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 pt-5 pb-12 shadow sm:px-6 sm:pt-6"
           >
             <dt>
-              <div className="absolute rounded-md bg-indigo-500 p-3">
+              <div className="absolute rounded-md bg-[#ff0000] p-3">
                 <svg
                   className="h-6 w-6 text-white"
                   fill="none"
@@ -347,73 +384,12 @@ export default function DashboardPage() {
 
         <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
           <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-            Monthly Depreciation
+            Asset Category Distribution
           </h2>
           <div className="h-80">
-            <Bar
-              data={monthlyDepreciationData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      callback: (value) => {
-                        if (typeof value === 'number') {
-                          return new Intl.NumberFormat('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          }).format(value);
-                        }
-                        return '';
-                      },
-                    },
-                  },
-                },
-              }}
-            />
+            <Pie data={categoryDistributionData} />
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <RoleBasedChart
-          type="bar"
-          data={{
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [
-              {
-                label: 'Asset Value',
-                data: [12000, 19000, 15000, 25000, 22000, 30000],
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1,
-              },
-            ],
-          }}
-          title="Asset Value Distribution"
-          permission="view_analytics"
-        />
-        <RoleBasedChart
-          type="line"
-          data={{
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [
-              {
-                label: 'Asset Growth',
-                data: [0, 10, 5, 15, 10, 20],
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1,
-              },
-            ],
-          }}
-          title="Asset Growth Trend"
-          permission="view_analytics"
-        />
       </div>
     </div>
   );

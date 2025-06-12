@@ -155,7 +155,7 @@ export default function RolePermissionPage() {
       'Asset create',
       'Asset edit',
       'Asset delete',
-      'Asset depreciation view',
+      //'Asset depreciation view',
       'Asset document upload/view',
       'Asset document delete',
     ],
@@ -178,13 +178,13 @@ export default function RolePermissionPage() {
     //   'Assign role to user',
     //   'Password reset',
     // ],
-    'Audits': [ // Added Audits category
-      'Audit view',
-      'Audit create',
-      'Audit perform',
-      'Audit review',
+    // 'Audits': [ // Added Audits category
+    //   'Audit view',
+    //   'Audit create',
+    //   'Audit perform',
+    //   'Audit review',
       // Add more specific audit permissions as needed
-    ],
+    //],
     'Reports': [ // Added Reports category
       'Report view general', // General permission to view any report
       'View asset report',

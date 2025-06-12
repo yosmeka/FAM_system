@@ -203,7 +203,7 @@ export default function TransfersPage() {
                     e.stopPropagation();
                     router.push(`/transfers/${transferId}/edit`);
                   }}
-                  variant="primary"
+                  className="text-[#ffffff] bg-gray-400 dark:bg-gray-700 dark:text-[#ffffff] mr-2"
                   size="sm"
                 >
                   Edit

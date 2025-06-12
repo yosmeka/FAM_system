@@ -371,7 +371,7 @@ export default function DisposalsPage() {
                     e.stopPropagation();
                     router.push(`/disposals/${value}/edit`);
                   }}
-                  variant="primary"
+                  className="text-[#ffffff] bg-gray-400 dark:bg-gray-700 dark:text-[#ffffff] mr-2"
                   size="sm"
                 >
                   Edit

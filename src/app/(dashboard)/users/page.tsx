@@ -272,24 +272,24 @@ export default function UsersPage() {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEditClick(user)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                          className="bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-800 "
                         >
                           Edit
                         </button>
+                        {checkPermission('User manage permissions') || isAdmin && (
+                          <button
+                          onClick={() => setPermissionsModalUser({ id: user.id, email: user.email })}
+                          className="bg-[#000000] text-white px-3 py-1 rounded hover:bg-gray-600"
+                          >
+                            Permissions
+                          </button>
+                        )}
                         {checkPermission('User delete') && (
                           <button
                             onClick={() => setDeleteUserId(user.id)}
-                            className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                            className="bg-[#ff0000] text-white px-3 py-1 rounded hover:bg-red-600"
                           >
                             Delete
-                          </button>
-                        )}
-                        {checkPermission('User manage permissions') || isAdmin && (
-                          <button
-                            onClick={() => setPermissionsModalUser({ id: user.id, email: user.email })}
-                            className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                          >
-                            Permissions
                           </button>
                         )}
                       </div>
@@ -393,7 +393,7 @@ export default function UsersPage() {
                 <option value="USER">User</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
-                <option value="AUDITOR">Auditor</option>
+                {/* <option value="AUDITOR">Auditor</option> */}
               </select>
             </div>
             <div className="mt-6 flex justify-end space-x-2">

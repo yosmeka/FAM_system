@@ -26,12 +26,12 @@ export function RoleBasedButton({
     lg: 'px-6 py-3 text-lg',
   };
 
-  const baseStyles = `rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${sizeStyles[size]}`;
+  const baseStyles = `rounded-lg font-medium transition-colors ${sizeStyles[size]}`;
   const variantStyles = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-    secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-500',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500',
+    primary: 'bg-blue-600 text-white hover:scale-110 transition-all duration-300 ease-in-out',
+    secondary: 'bg-gray-200 text-gray-700 hover:scale-110 transition-all duration-300 ease-in-out',
+    danger: 'bg-red-600 text-white hover:scale-110 transition-all duration-300 ease-in-out',
+    success: 'bg-green-600 text-white hover:scale-110 transition-all duration-300 ease-in-out',
   };
 
   return (

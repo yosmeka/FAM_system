@@ -223,8 +223,8 @@ export default function AssetsPage() {
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">Active</option>
-            <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-            <option value="TRANSFERRED">Transferred</option>
+            {/* <option value="UNDER_MAINTENANCE">Under Maintenance</option>
+            <option value="TRANSFERRED">Transferred</option> */}
             <option value="DISPOSED">Disposed</option>
           </select>
         </div>
@@ -270,7 +270,7 @@ export default function AssetsPage() {
         <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAssets.map((asset) => (
-              <li key={asset.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isAssetDisposed(asset) ? 'bg-gray-50 dark:bg-gray-700' : ''}`}>
+              <li key={asset.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${isAssetDisposed(asset) ? 'bg-gray-50 dark:bg-gray-700' : ''}`}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -290,7 +290,7 @@ export default function AssetsPage() {
                     <div className="flex items-center space-x-2">
                       <Link
                         href={`/assets/${asset.id}`}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                        className="text-gray-600 hover:text-gray-900 hover:underline dark:text-gray-300 dark:hover:text-gray-200"
                       >
                         View
                       </Link>
@@ -299,14 +299,14 @@ export default function AssetsPage() {
                           {checkPermission('Asset edit') && (
                             <Link
                               href={`/assets/${asset.id}/edit`}
-                              className="text-blue-600 dark:text-blue-400 hover:underline mr-2"
+                              className="text-gray-800 dark:text-gray-400 hover:underline mr-2"
                             >
-                              Edit
+                              Edits
                             </Link>
                           )}
                           {checkPermission('Asset delete') && (
                             <button
-                              className="text-red-600 dark:text-red-400 hover:underline"
+                              className="text-[#ff0000] dark:[#ff0000] hover:underline"
                               onClick={() => setDeleteAssetId(asset.id)}
                             >
                               Delete

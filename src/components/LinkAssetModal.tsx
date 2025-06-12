@@ -77,7 +77,7 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] bg-[#ffffff] dark:bg-gray-800">
         <DialogHeader>
           <DialogTitle className="text-lg font-medium">Link Asset</DialogTitle>
           <button
@@ -110,7 +110,7 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
                 {filteredAssets.map((asset) => (
                   <div
                     key={asset.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent"
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent dark:hover:bg-gray-700"
                   >
                     <div>
                       <p className="font-medium">{asset.serialNumber}</p>
@@ -136,7 +136,7 @@ export function LinkAssetModal({ open, onClose, onSuccess, currentAssetId, avail
             <Button
               onClick={onClose}
               variant="outline"
-              className="mr-2"
+              className="mr-2 dark:text-gray-100"
             >
               Cancel
             </Button>

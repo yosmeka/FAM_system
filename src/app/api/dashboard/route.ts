@@ -8,14 +8,14 @@ export async function GET() {
         const activeAssets = await prisma.asset.count({
             where: { status: 'ACTIVE' }
         });
-        const underMaintenanceAssets = await prisma.asset.count({
-            where: { status: 'UNDER_MAINTENANCE' }
+        const disposedAssets = await prisma.asset.count({
+            where: { status: 'DISPOSED' }
         });
 
-        // Calculate total value
+        // Calculate total purchase price
         const totalValue = await prisma.asset.aggregate({
             _sum: {
-                currentValue: true
+                purchasePrice: true
             }
         });
 
@@ -44,13 +44,37 @@ export async function GET() {
             }
         });
 
+        // Get asset category distribution
+        const categoryDistribution = await prisma.asset.groupBy({
+            by: ['category'],
+            _count: {
+                id: true
+            },
+            _sum: {
+                purchasePrice: true
+            }
+        });
+
+        // Get asset value trend (last 6 months)
+        const valueTrend = await prisma.asset.groupBy({
+            by: ['purchaseDate'],
+            where: {
+                purchaseDate: {
+                    gte: sixMonthsAgo
+                }
+            },
+            _sum: {
+                currentValue: true
+            }
+        });
+
         // Format the data
         const formattedData = {
             stats: {
                 totalAssets,
                 activeAssets,
-                underMaintenanceAssets,
-                totalValue: totalValue._sum.currentValue || 0
+                disposedAssets,
+                totalValue: totalValue._sum.purchasePrice || 0
             },
             monthlyDepreciation: monthlyDepreciation.map((item: {
                 purchaseDate: Date;
@@ -70,6 +94,28 @@ export async function GET() {
             }) => ({
                 status: item.status,
                 count: item._count.id
+            })),
+            categoryDistribution: categoryDistribution.map((item: {
+                category: string | null;
+                _count: {
+                    id: number;
+                };
+                _sum: {
+                    purchasePrice: number | null;
+                }
+            }) => ({
+                category: item.category || 'Uncategorized',
+                count: item._count.id,
+                value: item._sum.purchasePrice || 0
+            })),
+            valueTrend: valueTrend.map((item: {
+                purchaseDate: Date;
+                _sum: {
+                    currentValue: number | null;
+                }
+            }) => ({
+                month: item.purchaseDate.toISOString().split('T')[0],
+                value: item._sum.currentValue || 0
             }))
         };
 

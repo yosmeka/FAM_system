@@ -9,7 +9,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-700 hover:text-sky-300 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500 transition-all duration-300 ease-in-out transform hover:scale-110"
+      className="relative inline-flex items-center justify-center rounded-md p-2 text-[#000000] dark:text-[#ffffff] hover:text-red-400 dark:hover:text-red-400 transition-all duration-300 ease-in-out transform hover:scale-110"
       aria-label="Toggle theme"
     >
       <span className="absolute -inset-0.5" />

@@ -324,7 +324,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                 <RoleBasedButton
                   variant="primary"
                   onClick={() => router.push(`/transfers/${transfer.id}/edit`)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="text-[#ffffff] bg-gray-400 dark:bg-gray-700 dark:text-[#ffffff] mr-2"
                 >
                   Edit
                 </RoleBasedButton>
