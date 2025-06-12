@@ -426,13 +426,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
         <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex justify-between mb-3">
             <span className="text-sm font-medium flex items-center text-gray-900 dark:text-gray-100">
-              <span className="inline-flex items-center justify-center w-6 h-6 mr-2 bg-blue-600 text-white rounded-full text-xs">
+              <span className="inline-flex items-center justify-center w-6 h-6 mr-2 bg-red-600 text-white rounded-full text-xs">
                 {currentStepIndex + 1}
               </span>
               Step {currentStepIndex + 1} of {tabOrder.length}
             </span>
             <span className="text-sm font-medium flex items-center text-gray-900 dark:text-gray-100">
-              <span className={`mr-2 ${progressPercentage > 50 ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
+              <span className={`mr-2 ${progressPercentage > 50 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {Math.round(progressPercentage)}% Complete
               </span>
               {progressPercentage === 100 && (
@@ -445,23 +445,23 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
             <div
               className={`h-3 rounded-full transition-all duration-500 ease-in-out ${
-                progressPercentage < 30 ? 'bg-blue-400 dark:bg-blue-500' :
-                progressPercentage < 70 ? 'bg-blue-600 dark:bg-blue-400' :
-                progressPercentage === 100 ? 'bg-green-600 dark:bg-green-500 animate-pulse' : 'bg-green-600 dark:bg-green-500'
+                progressPercentage < 30 ? 'bg-red-400 dark:bg-red-500' :
+                progressPercentage < 70 ? 'bg-red-600 dark:bg-red-400' :
+                progressPercentage === 100 ? 'bg-red-600 dark:bg-red-500 animate-pulse' : 'bg-red-600 dark:bg-red-500'
               }`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
           <p className="text-xs mt-2 flex justify-between">
             <span className="text-gray-500">Fill in more fields to increase your progress</span>
-            <span className={cn(
+            {/* <span className={cn(
               "font-medium",
               progressPercentage < 30 ? "text-blue-500" :
               progressPercentage < 70 ? "text-blue-600" :
               progressPercentage === 100 ? "text-green-600 font-bold" : "text-green-600"
             )}>
               {progressPercentage === 100 ? "✓ Complete!" : `${progressPercentage}% Complete`}
-            </span>
+            </span> */}
           </p>
         </div>
 
@@ -477,8 +477,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                   "data-[state=active]:shadow-sm",
                   "text-gray-600 dark:text-gray-400",
                   "rounded-md px-3 py-2 text-sm font-medium transition-all",
-                  "hover:text-gray-900 dark:hover:text-gray-100",
-                  "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  "hover:text-gray-900 dark:hover:text-gray-100"
                 )}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -490,9 +489,9 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </TabsList>
 
           <TabsContent value="basic" className="space-y-6">
-            <Card className="border border-blue-100 dark:border-blue-900 shadow-md hover:shadow-lg transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/50 dark:to-gray-800">
-                <CardTitle className="text-blue-800 dark:text-blue-300">Basic Information</CardTitle>
+            <Card className="border shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white dark:from-red-900/50 dark:to-red-800">
+                <CardTitle className="text-[#000000] dark:text-[#ffffff]">Basic Information</CardTitle>
                 <CardDescription className="text-gray-600 dark:text-gray-400">Enter the essential details about this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -507,7 +506,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           placeholder="Enter asset name"
                           {...field}
                           value={field.value || ""}
-                          className="border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                       </FormControl>
                       <FormMessage />
@@ -527,12 +526,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             placeholder="Enter serial number"
                             {...field}
                             value={field.value || ""}
-                            className="border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                         {isCheckingSerial && (
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 dark:border-blue-400 rounded-full border-t-transparent"></div>
+                            <div className="animate-spin h-4 w-4 border-2 border-red-500 dark:border-red-400 rounded-full border-t-transparent"></div>
                           </div>
                         )}
                       </div>
@@ -558,7 +557,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormControl>
                         <Textarea
                           placeholder="Enter a detailed description of the asset"
-                          className="min-h-[120px] border-blue-200 dark:border-blue-800 focus:border-blue-400 dark:focus:border-blue-600 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 transition-all duration-300 hover:border-blue-300 dark:hover:border-blue-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          className="min-h-[120px] transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           {...field}
                           value={field.value || ""}
                         />
@@ -572,29 +571,24 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
             {/* Navigation buttons */}
             <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push('/assets')}
-                className="text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </Button>
-              <Button
+            <Button
                 type="button"
                 onClick={goToNextTab}
-                className="bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600"
+                className="bg-red-600 hover:bg-red-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
-                Continue
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
               </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="financial" className="space-y-6">
             <Card className="border border-green-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-green-300 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-white">
-                <CardTitle className="text-green-800">Financial Details</CardTitle>
-                <CardDescription>Enter the financial information for this asset.</CardDescription>
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white dark:from-red-900/50 dark:to-red-800">
+                <CardTitle className="text-[#000000] dark:text-[#ffffff]">Financial Details</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Enter the financial information for this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -606,7 +600,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                         <FormLabel className="text-gray-900 dark:text-gray-100">Purchase Date *</FormLabel>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
+                            <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-red-500" aria-hidden="true" />
                           </div>
                           <FormControl>
                             <Input
@@ -617,7 +611,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                                 const value = e.target.value;
                                 field.onChange(value ? new Date(value) : null);
                               }}
-                              className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                              className="pl-10 transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             />
                           </FormControl>
                         </div>
@@ -640,7 +634,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             placeholder="0.00"
                             {...field}
                             value={field.value ?? ""}
-                            className="border-green-200 focus:border-green-400 focus:ring-2 focus:ring-green-200 transition-all"
+                            className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                         <FormMessage />
@@ -657,7 +651,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
-                className="border-green-200 text-green-700 hover:bg-green-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
+                className="border-red-200 text-red-700 hover:bg-red-50 dark:hover:bg-red-600 dark:hover:text-red-200 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -667,7 +661,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
               <Button
                 type="button"
                 onClick={goToNextTab}
-                className="bg-green-600 hover:bg-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                className="bg-red-600 hover:bg-red-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Next
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
@@ -678,10 +672,10 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </TabsContent>
 
           <TabsContent value="classification" className="space-y-6">
-            <Card className="border border-purple-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-purple-300 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-white">
-                <CardTitle className="text-purple-800">Classification</CardTitle>
-                <CardDescription>Categorize this asset for better organization.</CardDescription>
+            <Card className="border border-red-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-red-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white dark:from-red-900/50 dark:to-red-800">
+                <CardTitle className="text-[#000000] dark:text-[#ffffff]">Classification</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Categorize this asset for better organization.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -692,12 +686,12 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                       <FormLabel className="text-gray-900 dark:text-gray-100">Status</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value || "ACTIVE"}>
                         <FormControl>
-                          <SelectTrigger className="border-purple-200 dark:border-purple-800 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 focus:border-purple-400 dark:focus:border-purple-600 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                          <SelectTrigger className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="border-purple-200 dark:border-purple-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1">
-                          <SelectItem value="ACTIVE" className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
+                        <SelectContent className="border-red-200 dark:border-red-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1">
+                          <SelectItem value="ACTIVE" className="hover:bg-red-100 dark:hover:bg-red-900 focus:bg-red-100 dark:focus:bg-red-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                               Active
@@ -734,7 +728,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                             placeholder="Asset location"
                             {...field}
                             value={field.value || ""}
-                            className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                            className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
                         <FormMessage />
@@ -755,13 +749,13 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                               {...field}
                               value="Zemen Bank"
                               disabled={true}
-                              className="border-purple-200 bg-purple-50 text-purple-800 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                              className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             />
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger>
                                   <div className="ml-2 cursor-help">
-                                    <InfoIcon className="h-4 w-4 text-purple-500" />
+                                    <InfoIcon className="h-4 w-4 text-red-500" />
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -786,19 +780,19 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                         <FormLabel className="text-gray-900 dark:text-gray-100">Category</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
-                            <SelectTrigger className="border-purple-200 dark:border-purple-800 focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-800 focus:border-purple-400 dark:focus:border-purple-600 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                            <SelectTrigger className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
                               <SelectValue placeholder="Select category" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="border-purple-200 dark:border-purple-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-300 dark:scrollbar-thumb-purple-700 scrollbar-track-purple-50 dark:scrollbar-track-gray-800 hover:scrollbar-thumb-purple-400 dark:hover:scrollbar-thumb-purple-600">
+                          <SelectContent className="border-red-200 dark:border-red-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-red-300 dark:scrollbar-thumb-red-700 scrollbar-track-red-50 dark:scrollbar-track-gray-800 hover:scrollbar-thumb-red-400 dark:hover:scrollbar-thumb-red-600">
                             {ASSET_CATEGORIES.map((category) => (
                               <SelectItem 
                                 key={category} 
                                 value={category}
-                                className="hover:bg-purple-100 dark:hover:bg-purple-900 focus:bg-purple-100 dark:focus:bg-purple-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100"
+                                className="hover:bg-red-100 dark:hover:bg-red-900 focus:bg-red-100 dark:focus:bg-red-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100"
                               >
                                 <div className="flex items-center">
-                                  <div className="w-2 h-2 rounded-full bg-purple-500 mr-2"></div>
+                                  <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
                                   {category}
                                 </div>
                               </SelectItem>
@@ -823,7 +817,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           placeholder="Supplier name"
                           {...field}
                           value={field.value || ""}
-                          className="border-purple-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-200 transition-all"
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                       </FormControl>
                       <FormMessage />
@@ -839,7 +833,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
-                className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
+                className="border-red-200 text-red-700 hover:bg-red-50 dark:hover:bg-red-600 dark:hover:text-red-200 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -849,7 +843,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
               <Button
                 type="button"
                 onClick={goToNextTab}
-                className="bg-purple-600 hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+                className="bg-red-600 hover:bg-red-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Next
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
@@ -860,10 +854,10 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </TabsContent>
 
           <TabsContent value="maintenance" className="space-y-6">
-            <Card className="border border-amber-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-amber-300 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-amber-50 to-white">
-                <CardTitle className="text-amber-800">Warranty</CardTitle>
-                <CardDescription>Track warranty information.</CardDescription>
+            <Card className="border border-red-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-red-300 transform hover:-translate-y-1">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white dark:from-red-900/50 dark:to-red-800">
+                <CardTitle className="text-[#000000] dark:text-[#ffffff]">Warranty</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Track warranty information.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -958,9 +952,9 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
             {/* Update the depreciation card to be conditionally rendered */}
             {selectedCategory !== "Land" && (
             <Card className="border border-red-100 shadow-md hover:shadow-lg transition-all duration-300 hover:border-red-300 transform hover:-translate-y-1">
-              <CardHeader className="bg-gradient-to-r from-red-50 to-white">
-                <CardTitle className="text-red-800">Depreciation</CardTitle>
-                <CardDescription>Set up depreciation parameters for this asset.</CardDescription>
+              <CardHeader className="bg-gradient-to-r from-red-50 to-white dark:from-red-900/50 dark:to-red-800">
+                <CardTitle className="text-[#000000] dark:text-[#ffffff]">Depreciation</CardTitle>
+                <CardDescription className="text-gray-600 dark:text-gray-400">Set up depreciation parameters for this asset.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -1108,7 +1102,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="button"
                 variant="outline"
                 onClick={goToPreviousTab}
-                className="border-amber-200 text-amber-700 hover:bg-amber-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
+                className="border-red-200 text-red-700 hover:bg-red-50 transition-all duration-300 transform hover:scale-105 active:scale-95"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -1119,7 +1113,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 type="submit"
                 disabled={isSubmitting}
                 className={cn(
-                  "bg-green-600 hover:bg-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg",
+                  "bg-red-600 hover:bg-red-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg",
                   isSubmitting && "opacity-70 cursor-not-allowed"
                 )}
               >
@@ -1144,7 +1138,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </TabsContent>
         </Tabs>
 
-        {/* Only show these buttons on the first three tabs */}
+        {/* Only show these buttons on the first three tabs
         {!isLastTab && (
           <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => router.push('/assets')}>
@@ -1154,7 +1148,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
               Continue
             </Button>
           </div>
-        )}
+        )} */}
       </form>
     </Form>
   )

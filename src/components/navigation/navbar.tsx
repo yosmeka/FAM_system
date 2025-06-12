@@ -12,12 +12,13 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Notification } from "@/types/notification";
+import { ColorWheelIcon } from "@radix-ui/react-icons";
 
 const navigation = [
 	{
 		name: "Dashboard",
 		href: "/dashboard",
-		roles: ["ADMIN", "MANAGER"],
+		roles: ["ADMIN", "MANAGER", "USER"],
 	},
 	{
 		name: "Assets",
@@ -29,21 +30,21 @@ const navigation = [
 		href: "/transfers",
 		roles: ["MANAGER", "USER"],
 	},
-	{
-		name: "Maintenance",
-		href: "/maintenance",
-		roles: ["MANAGER", "USER"],
-	},
-	{
-		name: "Audits",
-		href: "/audits/workflow",
-		roles: ["MANAGER",  "AUDITOR"],
-	},
-	{
-		name: "Audit Review",
-		href: "/audits/review",
-		roles: ["MANAGER"],
-	},
+	// {
+	// 	name: "Maintenance",
+	// 	href: "/maintenance",
+	// 	roles: ["MANAGER", "USER"],
+	// },
+	// {
+	// 	name: "Audits",
+	// 	href: "/audits/workflow",
+	// 	roles: ["MANAGER",  "AUDITOR"],
+	// },
+	// {
+	// 	name: "Audit Review",
+	// 	href: "/audits/review",
+	// 	roles: ["MANAGER"],
+	// },
 	{
 		name: "Disposals",
 		href: "/disposals",
@@ -108,13 +109,13 @@ export default function Navbar() {
 	const filteredNavigation = navigation.filter((item) => item.roles.includes(userRole));
 
 	return (
-		<Disclosure as="nav" className="bg-gradient-to-r from-gray-800 via-gray-900 to-black fixed top-0 left-0 w-full z-50 shadow-2xl border-b border-gray-700">
+		<Disclosure as="nav" className="bg-white dark:bg-gray-900 fixed top-0 left-0 w-full z-50 shadow-2xl border-b border-gray-700">
 			{({ open }: { open: boolean }) => (
 				<div>
 					<div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
 						<div className="relative flex h-16 items-center justify-between">
 							<div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
-								<Disclosure.Button className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-700 hover:text-sky-300 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500 transition-all duration-300 ease-in-out transform hover:scale-110">
+								<Disclosure.Button className="relative inline-flex items-center justify-center rounded-md p-2 text-[#000000] dark:text-[#ffffff] hover:text-[#ff0000] dark:hover:text-[#ff0000] transition-all duration-300 ease-in-out transform hover:scale-110">
 									<span className="absolute -inset-0.5" />
 									<span className="sr-only">Open main menu</span>
 									{open ? (
@@ -126,7 +127,7 @@ export default function Navbar() {
 							</div>
 							<div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
 								<Link href="/dashboard" className="flex flex-shrink-0 items-center gap-3 group">
-									<span className="flex items-center transform group-hover:scale-105 transition-transform duration-300">
+									<span className="flex items-center transform hover:scale-105 transition-transform duration-300">
 										<Image
 											src="/images/zemen logo.png"
 											alt="Zemen Bank Logo"
@@ -137,7 +138,7 @@ export default function Navbar() {
 											style={{ marginRight: 20 }}
 										/>
 									</span>
-									<span className="text-red-400 text-2xl font-bold tracking-wider group-hover:text-sky-200 transition-colors duration-300 ease-in-out">
+									<span className="text-2xl font-bold font-sans tracking-wider hover:scale-105 transition-colors duration-300 ease-in-out" style={{color: "#Ff0000"}}>
 										FAMS
 									</span>
 								</Link>
@@ -149,8 +150,8 @@ export default function Navbar() {
 												href={item.href}
 												className={classNames(
 													pathname === item.href
-														? "text-sky-400 border-b-[3px] border-sky-500 font-semibold" // Active desktop link
-														: "text-gray-300 hover:text-sky-300 hover:bg-gray-700/50 focus:text-sky-300 focus:bg-gray-700/60 transition-all duration-300 ease-in-out",
+														? "text-[#Ff0000] border-b-[3px] border-red-500 font-semibold" // Active desktop link
+														: "text-[#000000] dark:text-white hover:text-[#ff0000] dark:hover:text-[#ff0000]",
 													"rounded-lg px-3.5 py-2 text-sm font-medium focus:outline-none transform hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:shadow-sm"
 												)}
 											>
@@ -170,10 +171,10 @@ export default function Navbar() {
 								{/* Profile Dropdown */}
 								<Menu as="div" className="relative ml-4">
 									<div>
-										<Menu.Button className="relative flex rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 hover:ring-sky-500 transition-all duration-300 ease-in-out transform hover:scale-105">
+										<Menu.Button className="relative flex rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 hover:ring-red-500 transition-all duration-300 ease-in-out transform hover:scale-105">
 											<span className="absolute -inset-1.5" />
 											<span className="sr-only">Open user menu</span>
-											<div className="h-9 w-9 rounded-full bg-sky-500 flex items-center justify-center text-white text-base font-semibold ring-1 ring-sky-400">
+											<div className="h-9 w-9 rounded-full bg-red-500 flex items-center justify-center text-white text-base font-semibold ring-1 ring-red-400">
 												{session.user?.name?.[0]?.toUpperCase()}
 											</div>
 										</Menu.Button>
@@ -236,9 +237,9 @@ export default function Navbar() {
 									href={item.href}
 									className={classNames(
 										pathname === item.href
-											? "text-sky-300 font-semibold border-l-[3px] border-sky-400" // Active mobile link
-											: "text-gray-400 hover:bg-gray-700/70 hover:text-sky-300",
-										"block rounded-lg px-3 py-2.5 text-base font-medium transition-all duration-200 ease-in-out"
+											? "text-[#ff0000] font-semibold border-l-[3px] border-[#ff0000]" // Active mobile link
+											: "text-[#000000] dark:text-[#ffffff] hover:text-[#ff0000] dark:hover:text-[#ff0000]",
+										"block rounded-lg px-3 py-2.5 text-base hover:-translate-y-0.5 font-medium transition-all duration-200 ease-in-out"
 									)}
 								>
 									{item.name}

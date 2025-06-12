@@ -56,22 +56,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-center justify-between login-page-bg">
+    <div className="min-h-screen flex items-center justify-center login-page-bg">
       {/* No background pattern - removed */}
-
-      {/* Left side content - hidden on mobile */}
-      
-      <div className="hidden md:flex md:flex-1 p-8 flex-col items-start justify-center h-full md:ml-8 lg:ml-16 relative z-10">
-        {/* <h1 className="text-3xl lg:text-4xl font-bold zemen-red mb-3 lg:mb-4">
-          Zemen Bank
-        </h1>
-        <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">
-          Fixed Asset Management System
-        </h2>
-        <p className="text-gray-600 max-w-md mb-6 lg:mb-8 text-sm lg:text-base">
-          Efficiently manage, track, and optimize your organization's assets with our comprehensive asset management solution.
-        </p> */}
-      </div>
 
       {/* Login form */}
       <div className="login-container w-full max-w-sm bg-white p-6 rounded-xl login-card-shadow border border-gray-200 mx-4 md:mx-0 md:mr-8 lg:mr-16 md:self-center md:flex-none">

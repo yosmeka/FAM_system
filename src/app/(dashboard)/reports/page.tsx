@@ -11,18 +11,18 @@ const reportTypes = [
     path: '/reports/assets',
     icon: '📊',
   },
-  {
-    title: 'Audit Reports',
-    description: '🔍 Track audit compliance and findings',
-    path: '/reports/audits',
-    icon: '🔍',
-  },
-  {
-    title: 'Maintenance Reports',
-    description: '🔧 Track maintenance history and status',
-    path: '/reports/maintenance',
-    icon: '🔧',
-  },
+  // {
+  //   title: 'Audit Reports',
+  //   description: '🔍 Track audit compliance and findings',
+  //   path: '/reports/audits',
+  //   icon: '🔍',
+  // },
+  // {
+  //   title: 'Maintenance Reports',
+  //   description: '🔧 Track maintenance history and status',
+  //   path: '/reports/maintenance',
+  //   icon: '🔧',
+  // },
   {
     title: 'Transfer Reports',
     description: '🔄 Analyze asset movement patterns',

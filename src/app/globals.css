@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom color variables */
+:root {
+  --color-red: #FF0000;
+  --color-black: #000000;
+}
+
 /* Print-only elements - hidden on screen but visible in PDF */
 @media screen {
   .print-only {

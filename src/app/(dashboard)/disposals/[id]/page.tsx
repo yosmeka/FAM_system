@@ -173,10 +173,10 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
               <h3 className="font-medium">Expected Value</h3>
               <p className="text-gray-600 dark:text-gray-400">${disposal.expectedValue.toFixed(2)}</p>
             </div>
-            <div>
+            {/* <div>
               <h3 className="font-medium">Actual Value</h3>
               <p className="text-gray-600 dark:text-gray-400">{disposal.actualValue ? `$${disposal.actualValue.toFixed(2)}` : 'N/A'}</p>
-            </div>
+            </div> */}
           </div>
 
           <div>
@@ -198,7 +198,7 @@ export default function DisposalDetailsPage({ params }: { params: { id: string }
               <RoleBasedButton
                 variant="primary"
                 onClick={() => router.push(`/disposals/${disposal.id}/edit`)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="text-[#ffffff] bg-gray-400 dark:bg-gray-700 dark:text-[#ffffff] mr-2"
               >
                 Edit
               </RoleBasedButton>

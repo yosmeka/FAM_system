@@ -577,7 +577,7 @@ export default function TransferReportsPage() {
       {/* Location Transfer Summary */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md hover:shadow-xl transition-all duration-300">
         <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-500 flex items-center">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-indigo-500" viewBox="0 0 20 20" fill="currentColor">
               <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
@@ -591,7 +591,7 @@ export default function TransferReportsPage() {
                   key: 'department',
                   header: 'Location',
                   render: (value) => (
-                    <div className="font-medium text-gray-900">{value}</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{value}</div>
                   ),
                 },
                 {
