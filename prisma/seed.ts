@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, DepreciationMethod } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -113,6 +113,11 @@ async function main() {
       location: 'Utility Room 1',
       category: 'EQUIPMENT',
       type: 'Generator',
+      depreciableCost: 25000,
+      salvageValue: 2500,
+      usefulLifeMonths: 120, // 10 years
+      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationStartDate: new Date('2022-02-01'),
     },
     {
       name: 'HVAC Unit - North Wing',
@@ -125,6 +130,11 @@ async function main() {
       location: 'Rooftop Sector A',
       category: 'EQUIPMENT',
       type: 'HVAC',
+      depreciableCost: 15000,
+      salvageValue: 1500,
+      usefulLifeMonths: 180, // 15 years
+      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationStartDate: new Date('2021-09-01'),
     },
     {
       name: 'Dell Latitude 7420',
@@ -137,6 +147,11 @@ async function main() {
       location: 'IT Storage',
       category: 'IT_EQUIPMENT',
       type: 'Laptop',
+      depreciableCost: 1200,
+      salvageValue: 100,
+      usefulLifeMonths: 36, // 3 years
+      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationStartDate: new Date('2023-06-01'),
     },
     {
       name: 'Ford Transit Van',
@@ -149,6 +164,11 @@ async function main() {
       location: 'Company Garage',
       category: 'VEHICLE',
       type: 'Van',
+      depreciableCost: 35000,
+      salvageValue: 5000,
+      usefulLifeMonths: 60, // 5 years
+      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationStartDate: new Date('2020-03-01'),
     },
   ];
 
