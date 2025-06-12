@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -10,7 +9,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     const userId = session.user.id;
@@ -37,10 +36,10 @@ export async function GET() {
       }
     });
     
-    return NextResponse.json(assets);
+    return Response.json(assets);
   } catch (error) {
     console.error('Error fetching user assets:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch assets' },
       { status: 500 }
     );

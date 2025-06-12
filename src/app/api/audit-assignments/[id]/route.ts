@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -12,7 +11,7 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -62,7 +61,7 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
     });
 
     if (!assignment) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+      return Response.json({ error: 'Assignment not found' }, { status: 404 });
     }
 
     // Check access permissions
@@ -70,19 +69,19 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
     const userId = session.user.id;
 
     if (userRole === 'AUDITOR' && assignment.assignedToId !== userId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
     if (userRole === 'MANAGER' && assignment.assignedById !== userId) {
       // Managers can only see assignments they created
       // You could extend this to include department-based access
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    return NextResponse.json(assignment);
+    return Response.json(assignment);
   } catch (error) {
     console.error('Error fetching audit assignment:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch audit assignment' },
       { status: 500 }
     );
@@ -97,7 +96,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -116,7 +115,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
     });
 
     if (!currentAssignment) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+      return Response.json({ error: 'Assignment not found' }, { status: 404 });
     }
 
     const userRole = session.user.role;
@@ -143,7 +142,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
       };
     } else if (action === 'cancel' && (userRole === 'MANAGER' || userRole === 'ADMIN')) {
       if (userRole === 'MANAGER' && currentAssignment.assignedById !== userId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
       updateFields = {
         status: 'CANCELLED',
