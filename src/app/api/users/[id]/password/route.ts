@@ -4,9 +4,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { compare, hash } from 'bcryptjs';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.id !== params.id) {
+  if (!session?.user || session.user.id !== id) {
     return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -17,7 +18,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return Response.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: params.id } });
+    const user = await prisma.user.findUnique({ where: { id } });
     if (!user || !user.password) {
       return Response.json({ error: 'User not found' }, { status: 404 });
     }
@@ -28,7 +29,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const hashed = await hash(newPassword, 10);
-    await prisma.user.update({ where: { id: params.id }, data: { password: hashed } });
+    await prisma.user.update({ where: { id }, data: { password: hashed } });
 
     return Response.json({ success: true });
   } catch (error) {

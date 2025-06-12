@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth';
 
 // GET: List all permissions for a user (explicit + effective)
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: userId } = await params;
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,12 +47,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 // POST: Grant or revoke a specific permission for a user
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: userId } = await params;
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = params.id;
   const { permissionName, granted } = await request.json();
   const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
   if (!permission) return Response.json({ error: 'Permission not found' }, { status: 404 });
@@ -65,12 +66,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 }
 
 // DELETE: Remove a user-specific permission override (revert to role-based)
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id: userId } = await params;
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const userId = params.id;
   const { permissionName } = await request.json();
   const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
   if (!permission) return Response.json({ error: 'Permission not found' }, { status: 404 });

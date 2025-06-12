@@ -32,7 +32,8 @@ export async function hasPermission(user: { id: string, role: string }, permissi
 }
 
 // PUT /api/users/[id] -- update user info
-export async function PUT(request: NextRequest, { params: { id } }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
 
@@ -72,7 +73,8 @@ export async function PUT(request: NextRequest, { params: { id } }: { params: { 
   }
 }
 
-export async function DELETE(request: NextRequest, { params: { id } }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
   if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User delete'))) {
