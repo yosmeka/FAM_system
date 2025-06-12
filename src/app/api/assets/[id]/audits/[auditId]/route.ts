@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -7,13 +6,13 @@ import { authOptions } from '@/lib/auth';
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string; auditId: string }> }
-): Promise<Response> {
+) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Await params in Next.js 15
@@ -28,13 +27,13 @@ export async function GET(
     });
 
     if (!audit) {
-      return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+      return Response.json({ error: 'Audit not found' }, { status: 404 });
     }
 
-    return NextResponse.json(audit);
+    return Response.json(audit);
   } catch (error) {
     console.error('Error fetching audit:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch audit' },
       { status: 500 }
     );
@@ -45,13 +44,13 @@ export async function GET(
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string; auditId: string }> }
-): Promise<Response> {
+) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Await params in Next.js 15
@@ -66,7 +65,7 @@ export async function PUT(
     });
 
     if (!existingAudit) {
-      return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+      return Response.json({ error: 'Audit not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -129,10 +128,10 @@ export async function PUT(
       });
     }
 
-    return NextResponse.json(updatedAudit);
+    return Response.json(updatedAudit);
   } catch (error) {
     console.error('Error updating audit:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update audit', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
@@ -143,13 +142,13 @@ export async function PUT(
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string; auditId: string }> }
-): Promise<Response> {
+) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Await params in Next.js 15
@@ -164,7 +163,7 @@ export async function DELETE(
     });
 
     if (!existingAudit) {
-      return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+      return Response.json({ error: 'Audit not found' }, { status: 404 });
     }
 
     // Delete the audit
@@ -207,10 +206,10 @@ export async function DELETE(
       });
     }
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting audit:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete audit', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

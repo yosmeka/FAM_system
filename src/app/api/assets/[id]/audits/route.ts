@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -7,13 +6,13 @@ import { authOptions } from '@/lib/auth';
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-): Promise<Response> {
+) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -26,7 +25,7 @@ export async function GET(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Get all audits for the asset
@@ -39,10 +38,10 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(audits);
+    return Response.json(audits);
   } catch (error) {
     console.error('Error fetching asset audits:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch asset audits' },
       { status: 500 }
     );
@@ -53,13 +52,13 @@ export async function GET(
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-): Promise<Response> {
+) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -72,7 +71,7 @@ export async function POST(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -80,7 +79,7 @@ export async function POST(
 
     // Validate required fields
     if (!body.auditDate || !body.condition) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: auditDate, condition' },
         { status: 400 }
       );
@@ -128,10 +127,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(audit, { status: 201 });
+    return Response.json(audit, { status: 201 });
   } catch (error) {
     console.error('Error creating asset audit:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create asset audit', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
