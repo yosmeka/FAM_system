@@ -131,7 +131,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
 
     // Check if user has 'Asset edit' permission (user-specific or role-based)
     const { id: userId, role } = session.user;
-    const { hasPermission } = await import('@/app/api/users/[id]/route');
+    const { hasPermission } = await import('@/lib/permissions');
     const permitted = await hasPermission({ id: userId, role }, 'Asset edit');
     if (!permitted) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });

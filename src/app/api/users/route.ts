@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { hash } from 'bcryptjs'; // Import hash function
 
-import { hasPermission } from './[id]/route';
+import { hasPermission } from '@/lib/permissions';
 import { sendUserCreationEmail } from '@/lib/server/email';
 
 export async function GET(request: NextRequest) {
