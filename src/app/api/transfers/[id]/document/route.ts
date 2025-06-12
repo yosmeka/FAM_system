@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -18,7 +18,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -36,7 +36,7 @@ export async function GET(
     });
 
     if (!transfer) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer not found' },
         { status: 404 }
       );
@@ -46,7 +46,7 @@ export async function GET(
     // or server-side calls (no session)
     if (session && session.user && transfer.requesterId !== session.user.id) {
       console.log(`GET /api/transfers/${id}/document - Forbidden: User ${session.user.id} is not the requester ${transfer.requesterId}`);
-      return NextResponse.json(
+      return Response.json(
         { error: 'Forbidden - Only the requester can access this document' },
         { status: 403 }
       );
@@ -78,17 +78,17 @@ export async function GET(
     }
 
     if (!document) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Document not found' },
         { status: 404 }
       );
     }
 
     // Return the document URL
-    return NextResponse.json({ documentUrl: document.url });
+    return Response.json({ documentUrl: document.url });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to retrieve document' },
       { status: 500 }
     );
@@ -109,7 +109,7 @@ export async function POST(
     // Allow document generation even without a session for server-side calls
     if (session && session.user && session.user.role !== 'MANAGER') {
       console.log(`POST /api/transfers/${id}/document - Unauthorized: User role is ${session.user.role}, not MANAGER`);
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized - Only managers can generate documents' },
         { status: 401 }
       );
@@ -125,7 +125,7 @@ export async function POST(
     });
 
     if (!transfer) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer not found' },
         { status: 404 }
       );
@@ -168,10 +168,10 @@ export async function POST(
         const document = result.document;
 
         console.log(`Created new document: ${document.id}`);
-        return NextResponse.json({ document });
+        return Response.json({ document });
       } catch (error) {
         console.error('Error creating document:', error);
-        return NextResponse.json(
+        return Response.json(
           { error: 'Failed to create document' },
           { status: 500 }
         );
@@ -179,7 +179,7 @@ export async function POST(
     }
 
     if (!transfer) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer not found' },
         { status: 404 }
       );
@@ -187,7 +187,7 @@ export async function POST(
 
     // Check if transfer is approved or rejected
     if (transfer.status !== 'APPROVED' && transfer.status !== 'REJECTED') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer must be approved or rejected to generate a document' },
         { status: 400 }
       );
@@ -300,10 +300,10 @@ export async function POST(
       console.log(`Created new document with ID: ${document.id}, meta:`, document.meta);
     }
 
-    return NextResponse.json({ document });
+    return Response.json({ document });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate document' },
       { status: 500 }
     );

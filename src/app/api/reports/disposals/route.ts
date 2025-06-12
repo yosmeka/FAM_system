@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/reports/disposals
@@ -130,7 +130,7 @@ export async function GET() {
       }
     ];
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalDisposals: disposedAssets.length,
         pendingDisposals: pendingCount,
@@ -158,7 +158,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate disposal reports' },
       { status: 500 }
     );

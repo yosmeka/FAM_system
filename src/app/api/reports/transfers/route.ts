@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/reports/transfers
@@ -289,7 +289,7 @@ export async function GET() {
     // Ensure transfer velocity is a valid number
     const validTransferVelocity = isNaN(transferVelocity) ? 0 : transferVelocity;
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalTransfers,
         pendingTransfers: pendingCount,
@@ -352,7 +352,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate transfer reports' },
       { status: 500 }
     );

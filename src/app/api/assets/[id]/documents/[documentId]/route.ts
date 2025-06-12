@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -29,7 +29,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: assetId, documentId } = await context.params;
@@ -43,13 +43,13 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
     });
 
     if (!document) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      return Response.json({ error: 'Document not found' }, { status: 404 });
     }
 
-    return NextResponse.json(document);
+    return Response.json(document);
   } catch (error) {
     console.error('Error fetching document:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch document' },
       { status: 500 }
     );
@@ -65,7 +65,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: assetId, documentId } = await context.params;
@@ -79,7 +79,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
     });
 
     if (!existingDocument) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      return Response.json({ error: 'Document not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -96,10 +96,10 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
       },
     });
 
-    return NextResponse.json(updatedDocument);
+    return Response.json(updatedDocument);
   } catch (error) {
     console.error('Error updating document:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update document' },
       { status: 500 }
     );
@@ -115,7 +115,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: assetId, documentId } = await context.params;
@@ -129,7 +129,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
     });
 
     if (!existingDocument) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+      return Response.json({ error: 'Document not found' }, { status: 404 });
     }
 
     // Delete the document
@@ -139,10 +139,10 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
       },
     });
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting document:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete document' },
       { status: 500 }
     );

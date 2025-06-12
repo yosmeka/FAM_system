@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -13,7 +13,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: assetId } = await context.params;
@@ -26,7 +26,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Fetch all documents for the asset
@@ -39,10 +39,10 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
       },
     });
 
-    return NextResponse.json(documents);
+    return Response.json(documents);
   } catch (error) {
     console.error('Error fetching documents:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch documents' },
       { status: 500 }
     );
@@ -58,7 +58,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: assetId } = await context.params;
@@ -71,7 +71,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -79,7 +79,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
 
     // Validate required fields
     if (!body.type || !body.url) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: type, url' },
         { status: 400 }
       );
@@ -97,10 +97,10 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
       },
     });
 
-    return NextResponse.json(document);
+    return Response.json(document);
   } catch (error) {
     console.error('Error creating document:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create document' },
       { status: 500 }
     );

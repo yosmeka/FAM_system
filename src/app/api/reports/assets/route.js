@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/reports/assets
@@ -119,10 +119,10 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       }))
     };
 
-    return NextResponse.json(formattedData);
+    return Response.json(formattedData);
   } catch (error) {
     console.error('Error fetching asset reports:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch asset reports' },
       { status: 500 }
     );

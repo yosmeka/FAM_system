@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -39,7 +39,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
     console.log(`Found ${allAudits.length} audit records`);
 
     if (allAudits.length === 0) {
-      return NextResponse.json({
+      return Response.json({
         stats: {
           totalAudits: 0,
           completedAudits: 0,
@@ -337,7 +337,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
         };
       });
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalAudits,
         completedAudits,
@@ -363,7 +363,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
 
   } catch (error) {
     console.error('Error generating audit reports:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate audit reports', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

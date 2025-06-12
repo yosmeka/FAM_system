@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { Role } from "@/types/auth";
 
@@ -9,7 +9,7 @@ export async function apiMiddleware(
   const token = await getToken({ req });
 
   if (!token) {
-    return NextResponse.json(
+    return Response.json(
       { error: "Unauthorized" },
       { status: 401 }
     );
@@ -22,7 +22,7 @@ export async function apiMiddleware(
       : userRole === requiredRole;
 
     if (!hasRole) {
-      return NextResponse.json(
+      return Response.json(
         { error: "Forbidden" },
         { status: 403 }
       );

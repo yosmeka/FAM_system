@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -21,13 +21,13 @@ export async function GET() {
     });
 
     // Return both for debugging
-    return NextResponse.json({
+    return Response.json({
       linkedAssets,
       assets,
       count: linkedAssets.length
     });
   } catch (error) {
     console.error('Error fetching linked assets:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // Helper function to format time ago
@@ -79,7 +79,7 @@ export async function GET() {
     console.log(`Found ${allMaintenanceRecords.length} maintenance records`);
 
     if (allMaintenanceRecords.length === 0) {
-      return NextResponse.json({
+      return Response.json({
         stats: {
           totalRequests: 0,
           pendingRequests: 0,
@@ -365,7 +365,7 @@ export async function GET() {
 
     console.log("Returning maintenance report data");
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalRequests,
         pendingRequests: pendingApprovalCount,
@@ -388,7 +388,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate maintenance reports' },
       { status: 500 }
     );

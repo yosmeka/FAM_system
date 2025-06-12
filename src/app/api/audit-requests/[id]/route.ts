@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -13,7 +13,7 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -25,7 +25,7 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
     });
 
     if (!auditRequest) {
-      return NextResponse.json({ error: 'Audit request not found' }, { status: 404 });
+      return Response.json({ error: 'Audit request not found' }, { status: 404 });
     }
 
     // Only assigned auditor, manager, or admin can view
@@ -33,12 +33,12 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
       session.user.role === 'AUDITOR' &&
       auditRequest.assignedAuditorId !== session.user.id
     ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(auditRequest);
+    return Response.json(auditRequest);
   } catch (error) {
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch audit request' },
       { status: 500 }
     );
@@ -53,7 +53,7 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -63,7 +63,7 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
     });
 
     if (!auditRequest) {
-      return NextResponse.json({ error: 'Audit request not found' }, { status: 404 });
+      return Response.json({ error: 'Audit request not found' }, { status: 404 });
     }
 
     // Only assigned auditor can submit/update the audit
@@ -71,7 +71,7 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
       session.user.role === 'AUDITOR' &&
       auditRequest.assignedAuditorId !== session.user.id
     ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -85,9 +85,9 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
       },
     });
 
-    return NextResponse.json(updated);
+    return Response.json(updated);
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update audit request' }, { status: 500 });
+    return Response.json({ error: 'Failed to update audit request' }, { status: 500 });
   }
 });
 
@@ -99,7 +99,7 @@ export const DELETE = withRole(['MANAGER', 'AUDITOR'], async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
@@ -114,16 +114,16 @@ export const DELETE = withRole(['MANAGER', 'AUDITOR'], async function DELETE(
     });
 
     if (!auditRequest) {
-      return NextResponse.json({ error: 'Audit request not found' }, { status: 404 });
+      return Response.json({ error: 'Audit request not found' }, { status: 404 });
     }
 
     // AUDITORs can only delete their own requests, and only if not completed
     if (session.user.role === 'AUDITOR') {
       if (auditRequest.requesterId !== session.user.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
       if (auditRequest.status === 'COMPLETED') {
-        return NextResponse.json(
+        return Response.json(
           { error: 'Cannot delete completed requests' },
           { status: 400 }
         );
@@ -134,10 +134,10 @@ export const DELETE = withRole(['MANAGER', 'AUDITOR'], async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ message: 'Audit request deleted successfully' });
+    return Response.json({ message: 'Audit request deleted successfully' });
   } catch (error) {
     console.error('Error deleting audit request:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete audit request' },
       { status: 500 }
     );
