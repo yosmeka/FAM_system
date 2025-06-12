@@ -392,7 +392,6 @@
 // }
 
 
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateDepreciation, generateChartData } from '@/utils/depreciation';
 import { getServerSession } from 'next-auth';
@@ -438,7 +437,7 @@ export async function GET(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Check if we have query parameters for recalculation
@@ -527,7 +526,7 @@ export async function GET(
     const chartData = generateChartData(depreciationResults);
 
     // Return the depreciation data
-    return NextResponse.json({
+    return Response.json({
       asset: {
         id: asset.id,
         name: asset.name,
@@ -553,7 +552,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error calculating depreciation:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to calculate depreciation' },
       { status: 500 }
     );
@@ -570,7 +569,7 @@ export async function PUT(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get URL to parse query parameters
@@ -597,7 +596,7 @@ export async function PUT(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Get the parameters from the query string
@@ -744,7 +743,7 @@ export async function PUT(
     }
 
     // Return the updated depreciation data
-    return NextResponse.json({
+    return Response.json({
       asset: {
         id: updatedAsset.id,
         name: updatedAsset.name,
@@ -770,7 +769,7 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating depreciation settings:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update depreciation settings', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
