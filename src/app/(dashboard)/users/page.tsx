@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation"; // Unused for now
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -19,10 +19,10 @@ import UserPermissionsModal from "./UserPermissionsModal";
 
 export default function UsersPage() {
   const { permissions } = usePermissionsContext();
-  console.log('Current permissions:', permissions);
+  console.log("Current permissions:", permissions);
   const { checkPermission } = usePermissions();
   const { data: session, status } = useSession();
-  const router = useRouter();
+  // const router = useRouter(); // Unused for now
   const isAdmin = session?.user?.role === "ADMIN";
 
   const [users, setUsers] = useState<User[]>([]);
@@ -42,15 +42,17 @@ export default function UsersPage() {
   // Password validation regex
   const validatePassword = (password: string) => {
     // First check if the password meets minimum requirements
-    const hasMinRequirements = 
-      /[a-z]/.test(password) &&    // at least one lowercase letter
-      /[A-Z]/.test(password) &&    // at least one uppercase letter
-      /\d/.test(password) &&       // at least one number
+    const hasMinRequirements =
+      /[a-z]/.test(password) && // at least one lowercase letter
+      /[A-Z]/.test(password) && // at least one uppercase letter
+      /\d/.test(password) && // at least one number
       /[@$!%*?&]/.test(password) && // at least one special character
-      password.length >= 8;        // at least 8 characters
+      password.length >= 8; // at least 8 characters
 
     if (!hasMinRequirements) {
-      setPasswordError("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
+      setPasswordError(
+        "Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)"
+      );
       //toast.error("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
       return false;
     }
@@ -60,35 +62,25 @@ export default function UsersPage() {
     return true;
   };
 
-  // Handle password input change
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const password = e.target.value;
-    setForm(prev => ({ ...prev, password }));
-    validatePassword(password);
-  };
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={form.password}
-                  onChange={handlePasswordChange}
-                  className="w-full border px-3 py-2 rounded dark:bg-gray-800"
-                />
-                {passwordError && (
-                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-                )}
-                {passwordError === "password" && (
-                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-                )}
+  // Handle password input change - inline in the form
+
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', role: 'USER' });
-  const [permissionsModalUser, setPermissionsModalUser] = useState<{id: string, email: string} | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    role: "USER",
+  });
+  const [permissionsModalUser, setPermissionsModalUser] = useState<{
+    id: string;
+    email: string;
+  } | null>(null);
 
   // Open edit modal and prefill form
   const handleEditClick = (user: User) => {
     setEditingUser(user);
     setEditForm({
-      name: user.name || '',
+      name: user.name || "",
       email: user.email,
       role: user.role,
     });
@@ -97,7 +89,7 @@ export default function UsersPage() {
   // Close edit modal
   const handleCloseEditModal = () => {
     setEditingUser(null);
-    setEditForm({ name: '', email: '', role: 'USER' });
+    setEditForm({ name: "", email: "", role: "USER" });
   };
 
   // Submit edit form
@@ -106,15 +98,15 @@ export default function UsersPage() {
     if (!editingUser) return;
     try {
       const res = await fetch(`/api/users/${editingUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
       });
       if (!res.ok) {
-        let errorMsg = 'Failed to update user';
+        let errorMsg = "Failed to update user";
         try {
-          const contentType = res.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
             const errorData = await res.json();
             errorMsg = errorData.error || errorMsg;
           }
@@ -123,15 +115,14 @@ export default function UsersPage() {
         }
         throw new Error(errorMsg);
       }
-      toast.success('User updated successfully!');
+      toast.success("User updated successfully!");
       fetchUsers();
       handleCloseEditModal();
-    } catch (err: any) {
-      toast.error('Error updating user');
+    } catch (err: unknown) {
+      toast.error("Error updating user");
       console.error(err);
     }
   };
-
 
   const fetchUsers = async () => {
     try {
@@ -139,8 +130,8 @@ export default function UsersPage() {
       if (!res.ok) throw new Error("Failed to fetch users");
       const data = await res.json();
       setUsers(data);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
       console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
@@ -148,7 +139,7 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
-    if (checkPermission('User view (list and detail)')) {
+    if (checkPermission("User view (list and detail)")) {
       fetchUsers();
     } else {
       setLoading(false);
@@ -156,11 +147,13 @@ export default function UsersPage() {
   }, [checkPermission]);
 
   // Conditional returns AFTER all hooks
-  if (!checkPermission('User view (list and detail)')) {
+  if (!checkPermission("User view (list and detail)")) {
     return (
       <div className="p-6 max-w-4xl mx-auto text-center">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
-        <p className="mt-2 text-gray-600">You do not have permission to view users.</p>
+        <p className="mt-2 text-gray-600">
+          You do not have permission to view users.
+        </p>
       </div>
     );
   }
@@ -199,7 +192,7 @@ export default function UsersPage() {
       setShowModal(false);
       fetchUsers();
       toast.success("User added successfully!");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error("An unexpected error occurred");
       console.error(err);
     } finally {
@@ -226,14 +219,12 @@ export default function UsersPage() {
     }
   };
 
-
-
   // Admin UI
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">User Management</h1>
-        {checkPermission('User create/invite') && (
+        {checkPermission("User create/invite") && (
           <button
             onClick={() => setShowModal(true)}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
@@ -243,9 +234,9 @@ export default function UsersPage() {
         )}
       </div>
       {loading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
-          </div>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+        </div>
       ) : error ? (
         <p className="text-center text-red-500">{error}</p>
       ) : users.length === 0 ? (
@@ -263,12 +254,19 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="border px-4 py-2 dark:border-gray-700 dark:text-white">{user.name || 'N/A'}</td>
-                  <td className="border px-4 py-2 dark:border-gray-700 dark:text-white">{user.email}</td>
+                <tr
+                  key={user.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <td className="border px-4 py-2 dark:border-gray-700 dark:text-white">
+                    {user.name || "N/A"}
+                  </td>
+                  <td className="border px-4 py-2 dark:border-gray-700 dark:text-white">
+                    {user.email}
+                  </td>
                   <td className="border px-4 py-2 capitalize">{user.role}</td>
                   <td className="border px-4 py-2">
-                    {checkPermission('User edit/update') && (
+                    {checkPermission("User edit/update") && (
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEditClick(user)}
@@ -276,15 +274,21 @@ export default function UsersPage() {
                         >
                           Edit
                         </button>
-                        {checkPermission('User manage permissions') || isAdmin && (
+                        {(checkPermission("User manage permissions") ||
+                          isAdmin) && (
                           <button
-                          onClick={() => setPermissionsModalUser({ id: user.id, email: user.email })}
-                          className="bg-[#000000] text-white px-3 py-1 rounded hover:bg-gray-600"
+                            onClick={() =>
+                              setPermissionsModalUser({
+                                id: user.id,
+                                email: user.email,
+                              })
+                            }
+                            className="bg-[#000000] text-white px-3 py-1 rounded hover:bg-gray-600"
                           >
                             Permissions
                           </button>
                         )}
-                        {checkPermission('User delete') && (
+                        {checkPermission("User delete") && (
                           <button
                             onClick={() => setDeleteUserId(user.id)}
                             className="bg-[#ff0000] text-white px-3 py-1 rounded hover:bg-red-600"
@@ -311,19 +315,25 @@ export default function UsersPage() {
                 type="text"
                 placeholder="Name"
                 value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded dark:bg-gray-700"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={editForm.email}
-                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, email: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded dark:bg-gray-700"
               />
               <select
                 value={editForm.role}
-                onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, role: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded dark:bg-gray-700"
               >
                 <option value="USER">User</option>
@@ -382,7 +392,9 @@ export default function UsersPage() {
                   className="w-full border px-3 py-2 rounded dark:bg-gray-800"
                 />
                 {passwordError && (
-                  <p className="text-sm text-red-500 dark:text-red-400">{passwordError}</p>
+                  <p className="text-sm text-red-500 dark:text-red-400">
+                    {passwordError}
+                  </p>
                 )}
               </div>
               <select
@@ -425,8 +437,12 @@ export default function UsersPage() {
       {deleteUserId && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md dark:bg-gray-900">
-            <h2 className="text-xl font-bold mb-4 dark:text-white">Confirm Deletion</h2>
-            <p className="dark:text-white">Are you sure you want to delete this user?</p>
+            <h2 className="text-xl font-bold mb-4 dark:text-white">
+              Confirm Deletion
+            </h2>
+            <p className="dark:text-white">
+              Are you sure you want to delete this user?
+            </p>
             <div className="mt-6 flex justify-end space-x-2">
               <button
                 onClick={() => setDeleteUserId(null)}
@@ -445,7 +461,7 @@ export default function UsersPage() {
         </div>
       )}
       {/* Edit User Modal */}
-      {editingUser && checkPermission('User edit') && (
+      {editingUser && checkPermission("User edit") && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Edit User</h2>
@@ -454,19 +470,25 @@ export default function UsersPage() {
                 type="text"
                 placeholder="Name"
                 value={editForm.name}
-                onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, name: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={editForm.email}
-                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, email: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded"
               />
               <select
                 value={editForm.role}
-                onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, role: e.target.value })
+                }
                 className="w-full border px-3 py-2 rounded"
               >
                 <option value="USER">User</option>
@@ -485,16 +507,16 @@ export default function UsersPage() {
                 onClick={async () => {
                   try {
                     const res = await fetch(`/api/users/${editingUser.id}`, {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
                       body: JSON.stringify(editForm),
                     });
-                    if (!res.ok) throw new Error('Failed to update user');
-                    toast.success('User updated successfully!');
+                    if (!res.ok) throw new Error("Failed to update user");
+                    toast.success("User updated successfully!");
                     setEditingUser(null);
                     fetchUsers();
                   } catch (err) {
-                    toast.error('Error updating user');
+                    toast.error("Error updating user");
                   }
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"

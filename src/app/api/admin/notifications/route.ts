@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// import { NextResponse } from 'next/server'; // Using Response instead for Next.js 15 compatibility
 import { prisma } from '@/lib/prisma';
 
 import { getServerSession } from 'next-auth';
@@ -8,7 +8,10 @@ import { authOptions } from '@/lib/auth';
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ notifications: [] }, { status: 401 });
+    return new Response(JSON.stringify({ notifications: [] }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
   const notifications = await (prisma as any).notification.findMany({
     where: { userId: session.user.id },
@@ -24,14 +27,19 @@ export async function GET() {
       meta: true // Include meta for document links
     }
   });
-  return NextResponse.json({ notifications });
+  return new Response(JSON.stringify({ notifications }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 // Mark a notification as read
 export async function PATCH(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -39,7 +47,10 @@ export async function PATCH(request: Request) {
     const { id } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Missing notification id' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing notification id' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const notification = await (prisma as any).notification.findUnique({
@@ -47,7 +58,10 @@ export async function PATCH(request: Request) {
     });
 
     if (!notification || notification.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Not found or forbidden' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Not found or forbidden' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const updated = await (prisma as any).notification.update({
@@ -55,13 +69,15 @@ export async function PATCH(request: Request) {
       data: { read: true }
     });
 
-    return NextResponse.json(updated);
+    return new Response(JSON.stringify(updated), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error marking notification as read:', error);
-    return NextResponse.json(
-      { error: 'Failed to mark notification as read' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Failed to mark notification as read' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 
@@ -69,7 +85,10 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   try {
@@ -77,7 +96,10 @@ export async function DELETE(request: Request) {
     const { id } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Missing notification id' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Missing notification id' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const notification = await (prisma as any).notification.findUnique({
@@ -85,19 +107,24 @@ export async function DELETE(request: Request) {
     });
 
     if (!notification || notification.userId !== session.user.id) {
-      return NextResponse.json({ error: 'Not found or forbidden' }, { status: 404 });
+      return new Response(JSON.stringify({ error: 'Not found or forbidden' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     await (prisma as any).notification.delete({
       where: { id }
     });
 
-    return NextResponse.json({ success: true });
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
   } catch (error) {
     console.error('Error deleting notification:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete notification' },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Failed to delete notification' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

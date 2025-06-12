@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// import { NextResponse } from 'next/server'; // Using Response instead for Next.js 15 compatibility
 import { prisma } from '@/lib/prisma';
 
 // Returns permission assignment count per month for the last 12 months
@@ -24,5 +24,7 @@ export async function GET() {
     })
   );
 
-  return NextResponse.json({ permissionAssignments });
+  return new Response(JSON.stringify({ permissionAssignments }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
