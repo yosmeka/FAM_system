@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -38,13 +37,13 @@ export async function GET(
     });
 
     if (!maintenance) {
-      return NextResponse.json({ error: 'Maintenance record not found' }, { status: 404 });
+      return Response.json({ error: 'Maintenance record not found' }, { status: 404 });
     }
 
-    return NextResponse.json(maintenance);
+    return Response.json(maintenance);
   } catch (error) {
     console.error('Error fetching maintenance record:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance record' },
       { status: 500 }
     );
@@ -100,7 +99,7 @@ export async function PUT(
     });
 
     if (!existingMaintenance) {
-      return NextResponse.json({ error: 'Maintenance record not found' }, { status: 404 });
+      return Response.json({ error: 'Maintenance record not found' }, { status: 404 });
     }
 
     // Get the asset
@@ -111,7 +110,7 @@ export async function PUT(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -253,10 +252,10 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(updatedMaintenance);
+    return Response.json(updatedMaintenance);
   } catch (error) {
     console.error('Error updating maintenance record:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update maintenance record' },
       { status: 500 }
     );
@@ -290,7 +289,7 @@ export async function DELETE(
     });
 
     if (!maintenance) {
-      return NextResponse.json({ error: 'Maintenance record not found' }, { status: 404 });
+      return Response.json({ error: 'Maintenance record not found' }, { status: 404 });
     }
 
     // Delete the maintenance record
@@ -300,10 +299,10 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting maintenance record:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete maintenance record' },
       { status: 500 }
     );

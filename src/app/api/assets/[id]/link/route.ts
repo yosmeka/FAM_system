@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -12,7 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const session = await getServerSession(authOptions);
     if (!session) {
       console.log("DEBUGGING API - Unauthorized");
-      return new NextResponse('Unauthorized', { status: 401 });
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const body = await req.json();
@@ -21,13 +20,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!toAssetId) {
       console.log("DEBUGGING API - Missing required fields");
-      return new NextResponse('Missing required fields', { status: 400 });
+      return new Response('Missing required fields', { status: 400 });
     }
 
     // Prevent linking an asset to itself
     if (id === toAssetId) {
       console.log("DEBUGGING API - Cannot link an asset to itself");
-      return new NextResponse('Cannot link an asset to itself', { status: 400 });
+      return new Response('Cannot link an asset to itself', { status: 400 });
     }
 
     // Check if both assets exist
@@ -53,7 +52,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (!fromAsset || !toAsset) {
       console.log("DEBUGGING API - One or both assets not found");
-      return new NextResponse('One or both assets not found', { status: 404 });
+      return new Response('One or both assets not found', { status: 404 });
     }
 
     console.log("DEBUGGING API - From Asset linked to count:", fromAsset.linkedTo?.length || 0);
@@ -70,7 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (isParent) {
       console.log("DEBUGGING API - Cannot link to an asset that is already a parent");
-      return new NextResponse('Cannot link to an asset that is already a parent', { status: 400 });
+      return new Response('Cannot link to an asset that is already a parent', { status: 400 });
     }
 
     // Check if the target asset is already a child of another asset
@@ -82,7 +81,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (isChild) {
       console.log("DEBUGGING API - Cannot link to an asset that is already a child of another asset");
-      return new NextResponse('Cannot link to an asset that is already a child of another asset', { status: 400 });
+      return new Response('Cannot link to an asset that is already a child of another asset', { status: 400 });
     }
 
     // Check if the current asset is already a child of another asset
@@ -94,7 +93,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (isCurrentAssetChild) {
       console.log("DEBUGGING API - This asset is already a child of another asset and cannot have children of its own");
-      return new NextResponse('This asset is already a child of another asset and cannot have children of its own', { status: 400 });
+      return new Response('This asset is already a child of another asset and cannot have children of its own', { status: 400 });
     }
 
     // Check if link already exists
@@ -109,7 +108,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     if (existingLink) {
       console.log("DEBUGGING API - Assets are already linked");
-      return new NextResponse('Assets are already linked', { status: 400 });
+      return new Response('Assets are already linked', { status: 400 });
     }
 
     // Create the link
@@ -162,9 +161,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     console.log("DEBUGGING API - Verified link:", verifyLink);
 
-    return NextResponse.json(linkedAsset);
+    return Response.json(linkedAsset);
   } catch (error) {
     console.error('DEBUGGING API - Error in POST /api/assets/[id]/link:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return new Response('Internal Server Error', { status: 500 });
   }
 }

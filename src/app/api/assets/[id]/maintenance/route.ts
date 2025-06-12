@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -32,7 +31,7 @@ export async function GET(
 
     if (!asset) {
       console.log("MAINTENANCE API - Asset not found:", id);
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     console.log("MAINTENANCE API - Asset found:", asset.name);
@@ -63,10 +62,10 @@ export async function GET(
 
     console.log("MAINTENANCE API - Found records:", maintenanceRecords.length);
 
-    return NextResponse.json(maintenanceRecords);
+    return Response.json(maintenanceRecords);
   } catch (error) {
     console.error('Error fetching maintenance records:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance records' },
       { status: 500 }
     );
@@ -99,7 +98,7 @@ export async function POST(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -107,7 +106,7 @@ export async function POST(
 
     // Validate required fields
     if (!body.description || !body.priority || !body.status) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: description, priority, status' },
         { status: 400 }
       );
@@ -232,10 +231,10 @@ export async function POST(
       }
     }
 
-    return NextResponse.json(maintenance);
+    return Response.json(maintenance);
   } catch (error) {
     console.error('Error creating maintenance record:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create maintenance record' },
       { status: 500 }
     );
