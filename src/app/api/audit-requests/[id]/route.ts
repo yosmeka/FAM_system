@@ -8,7 +8,7 @@ import { AuditNotificationService } from '@/lib/auditNotifications';
 // Only  MANAGER, and AUDITOR can view audit requests
 export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,9 +16,11 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Fetch the audit request
     const auditRequest = await prisma.auditRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { assignedAuditor: true, asset: true },
     });
 
@@ -46,7 +48,7 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
 // Only  MANAGER, and AUDITOR can update audit requests
 export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -54,8 +56,10 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const auditRequest = await prisma.auditRequest.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!auditRequest) {
@@ -74,7 +78,7 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
 
     // Update logic here (e.g., status, findings, etc.)
     const updated = await prisma.auditRequest.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...body,
         updatedAt: new Date(),
@@ -90,7 +94,7 @@ export const PUT = withRole([ 'MANAGER', 'AUDITOR'], async function PUT(
 // DELETE /api/audit-requests/[id] - Delete audit request
 export const DELETE = withRole(['MANAGER', 'AUDITOR'], async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -98,7 +102,7 @@ export const DELETE = withRole(['MANAGER', 'AUDITOR'], async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     // Check if request exists and user has permission
     const auditRequest = await prisma.auditRequest.findUnique({
       where: { id },

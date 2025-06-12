@@ -7,10 +7,11 @@ import { sendNotification } from '@/lib/notifications';
 // GET all maintenance records for an asset
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("MAINTENANCE API - GET request received for asset:", params.id);
+    const { id } = await params;
+    console.log("MAINTENANCE API - GET request received for asset:", id);
 
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -25,12 +26,12 @@ export async function GET(
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
     if (!asset) {
-      console.log("MAINTENANCE API - Asset not found:", params.id);
+      console.log("MAINTENANCE API - Asset not found:", id);
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
@@ -39,7 +40,7 @@ export async function GET(
     // Get all maintenance records for the asset
     const maintenanceRecords = await prisma.maintenance.findMany({
       where: {
-        assetId: params.id,
+        assetId: id,
       },
       orderBy: {
         createdAt: 'desc',
@@ -75,9 +76,11 @@ export async function GET(
 // POST a new maintenance record for an asset
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
@@ -91,7 +94,7 @@ export async function POST(
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -125,7 +128,7 @@ export async function POST(
 
     const maintenance = await prisma.maintenance.create({
       data: {
-        assetId: params.id,
+        assetId: id,
         description: body.description,
         priority: body.priority,
         status: isAdminOrManager ? body.status : 'PENDING_APPROVAL',
@@ -162,7 +165,7 @@ export async function POST(
 
       await prisma.asset.update({
         where: {
-          id: params.id,
+          id,
         },
         data: {
           lastMaintenance: completionDate,
@@ -174,14 +177,14 @@ export async function POST(
       await prisma.assetHistory.createMany({
         data: [
           {
-            assetId: params.id,
+            assetId: id,
             field: 'lastMaintenance',
             oldValue: asset.lastMaintenance ? asset.lastMaintenance.toISOString() : null,
             newValue: completionDate.toISOString(),
             changedBy: session.user?.email || 'system',
           },
           {
-            assetId: params.id,
+            assetId: id,
             field: 'nextMaintenance',
             oldValue: asset.nextMaintenance ? asset.nextMaintenance.toISOString() : null,
             newValue: nextMaintenanceDate.toISOString(),
@@ -216,7 +219,7 @@ export async function POST(
             message: `${requesterName} has requested maintenance for asset "${assetName}". Please review and approve or reject this request.`,
             type: 'maintenance_request',
             meta: {
-              assetId: params.id,
+              assetId: id,
               maintenanceId: maintenance.id,
               priority: maintenance.priority,
             },

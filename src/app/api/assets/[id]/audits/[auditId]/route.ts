@@ -6,8 +6,8 @@ import { authOptions } from '@/lib/auth';
 // GET a specific audit
 export async function GET(
   request: Request,
-  { params }: { params: { id: string; auditId: string } }
-) {
+  { params }: { params: Promise<{ id: string; auditId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -16,11 +16,14 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Await params in Next.js 15
+    const { id, auditId } = await params;
+
     // Check if the audit exists
     const audit = await prisma.assetAudit.findUnique({
       where: {
-        id: params.auditId,
-        assetId: params.id,
+        id: auditId,
+        assetId: id,
       },
     });
 
@@ -41,8 +44,8 @@ export async function GET(
 // PUT (update) a specific audit
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string; auditId: string } }
-) {
+  { params }: { params: Promise<{ id: string; auditId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -51,11 +54,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Await params in Next.js 15
+    const { id, auditId } = await params;
+
     // Check if the audit exists
     const existingAudit = await prisma.assetAudit.findUnique({
       where: {
-        id: params.auditId,
-        assetId: params.id,
+        id: auditId,
+        assetId: id,
       },
     });
 
@@ -65,11 +71,11 @@ export async function PUT(
 
     // Parse the request body
     const body = await request.json();
-    
+
     // Update the audit
     const updatedAudit = await prisma.assetAudit.update({
       where: {
-        id: params.auditId,
+        id: auditId,
       },
       data: {
         auditDate: body.auditDate ? new Date(body.auditDate) : undefined,
@@ -91,17 +97,17 @@ export async function PUT(
     if (body.nextAuditDate) {
       const mostRecentAudit = await prisma.assetAudit.findFirst({
         where: {
-          assetId: params.id,
+          assetId: id,
         },
         orderBy: {
           auditDate: 'desc',
         },
       });
 
-      if (mostRecentAudit && mostRecentAudit.id === params.auditId) {
+      if (mostRecentAudit && mostRecentAudit.id === auditId) {
         await prisma.asset.update({
           where: {
-            id: params.id,
+            id: id,
           },
           data: {
             nextAuditDate: new Date(body.nextAuditDate),
@@ -114,7 +120,7 @@ export async function PUT(
     if (body.discrepancyResolved === true && existingAudit.discrepancyResolved === false) {
       await prisma.assetHistory.create({
         data: {
-          assetId: params.id,
+          assetId: id,
           field: 'Audit Discrepancy Resolved',
           oldValue: 'Unresolved',
           newValue: 'Resolved',
@@ -136,8 +142,8 @@ export async function PUT(
 // DELETE a specific audit
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; auditId: string } }
-) {
+  { params }: { params: Promise<{ id: string; auditId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -146,11 +152,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Await params in Next.js 15
+    const { id, auditId } = await params;
+
     // Check if the audit exists
     const existingAudit = await prisma.assetAudit.findUnique({
       where: {
-        id: params.auditId,
-        assetId: params.id,
+        id: auditId,
+        assetId: id,
       },
     });
 
@@ -161,14 +170,14 @@ export async function DELETE(
     // Delete the audit
     await prisma.assetAudit.delete({
       where: {
-        id: params.auditId,
+        id: auditId,
       },
     });
 
     // If this was the most recent audit, update the asset's last audit date to the previous audit
     const previousAudit = await prisma.assetAudit.findFirst({
       where: {
-        assetId: params.id,
+        assetId: id,
       },
       orderBy: {
         auditDate: 'desc',
@@ -178,7 +187,7 @@ export async function DELETE(
     if (previousAudit) {
       await prisma.asset.update({
         where: {
-          id: params.id,
+          id: id,
         },
         data: {
           lastAuditDate: previousAudit.auditDate,
@@ -189,7 +198,7 @@ export async function DELETE(
       // If no audits remain, clear the last audit date
       await prisma.asset.update({
         where: {
-          id: params.id,
+          id: id,
         },
         data: {
           lastAuditDate: null,

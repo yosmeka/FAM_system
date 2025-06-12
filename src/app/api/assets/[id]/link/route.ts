@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     console.log("DEBUGGING API - POST /api/assets/[id]/link");
-    console.log("DEBUGGING API - Asset ID:", params.id);
+    console.log("DEBUGGING API - Asset ID:", id);
 
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -24,7 +25,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // Prevent linking an asset to itself
-    if (params.id === toAssetId) {
+    if (id === toAssetId) {
       console.log("DEBUGGING API - Cannot link an asset to itself");
       return new NextResponse('Cannot link an asset to itself', { status: 400 });
     }
@@ -32,7 +33,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     // Check if both assets exist
     const [fromAsset, toAsset] = await Promise.all([
       prisma.asset.findUnique({
-        where: { id: params.id },
+        where: { id },
         include: {
           linkedTo: true,
           linkedFrom: true
@@ -87,7 +88,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     // Check if the current asset is already a child of another asset
     const isCurrentAssetChild = await prisma.linkedAsset.findFirst({
       where: {
-        toAssetId: params.id
+        toAssetId: id
       }
     });
 
@@ -100,7 +101,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const existingLink = await prisma.linkedAsset.findUnique({
       where: {
         fromAssetId_toAssetId: {
-          fromAssetId: params.id,
+          fromAssetId: id,
           toAssetId: toAssetId
         }
       }
@@ -115,7 +116,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     console.log("DEBUGGING API - Creating link");
     const linkedAsset = await prisma.linkedAsset.create({
       data: {
-        fromAssetId: params.id,
+        fromAssetId: id,
         toAssetId: toAssetId
       }
     });
@@ -126,7 +127,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await Promise.all([
       prisma.assetHistory.create({
         data: {
-          assetId: params.id,
+          assetId: id,
           field: 'linkedAssets',
           oldValue: null,
           newValue: `Linked to ${toAsset.name}`,
@@ -149,7 +150,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const verifyLink = await prisma.linkedAsset.findUnique({
       where: {
         fromAssetId_toAssetId: {
-          fromAssetId: params.id,
+          fromAssetId: id,
           toAssetId: toAssetId
         }
       },

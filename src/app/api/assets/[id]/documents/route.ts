@@ -7,7 +7,7 @@ import { withRole } from '@/middleware/rbac';
 // GET /api/assets/[id]/documents - Get all documents for an asset
 export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,14 +16,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Extract the asset ID from the URL path
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    const assetId = pathParts[pathParts.indexOf('assets') + 1];
-
-    if (!assetId) {
-      return NextResponse.json({ error: 'Asset ID is required' }, { status: 400 });
-    }
+    const { id: assetId } = await context.params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
@@ -59,7 +52,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
 // POST /api/assets/[id]/documents - Create a new document for an asset
 export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -68,14 +61,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Extract the asset ID from the URL path
-    const url = new URL(request.url);
-    const pathParts = url.pathname.split('/');
-    const assetId = pathParts[pathParts.indexOf('assets') + 1];
-
-    if (!assetId) {
-      return NextResponse.json({ error: 'Asset ID is required' }, { status: 400 });
-    }
+    const { id: assetId } = await context.params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({

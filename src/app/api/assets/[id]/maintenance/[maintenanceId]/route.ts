@@ -6,9 +6,11 @@ import { prisma } from '@/lib/prisma';
 // GET a specific maintenance record
 export async function GET(
   request: Request,
-  { params }: { params: { id: string; maintenanceId: string } }
+  { params }: { params: Promise<{ id: string; maintenanceId: string }> }
 ) {
   try {
+    const { id, maintenanceId } = await params;
+
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
@@ -22,8 +24,8 @@ export async function GET(
     // Check if the maintenance record exists
     const maintenance = await prisma.maintenance.findUnique({
       where: {
-        id: params.maintenanceId,
-        assetId: params.id,
+        id: maintenanceId,
+        assetId: id,
       },
       include: {
         requester: {
@@ -52,9 +54,11 @@ export async function GET(
 // PUT (update) a specific maintenance record
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string; maintenanceId: string } }
+  { params }: { params: Promise<{ id: string; maintenanceId: string }> }
 ) {
   try {
+    const { id, maintenanceId } = await params;
+
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
@@ -68,8 +72,8 @@ export async function PUT(
     // Check if the maintenance record exists with all related data
     const existingMaintenance = await prisma.maintenance.findUnique({
       where: {
-        id: params.maintenanceId,
-        assetId: params.id,
+        id: maintenanceId,
+        assetId: id,
       },
       include: {
         asset: {
@@ -102,7 +106,7 @@ export async function PUT(
     // Get the asset
     const asset = await prisma.asset.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -135,7 +139,7 @@ export async function PUT(
     // Update the maintenance record
     const updatedMaintenance = await prisma.maintenance.update({
       where: {
-        id: params.maintenanceId,
+        id: maintenanceId,
       },
       data: updateData,
       include: {
@@ -172,7 +176,7 @@ export async function PUT(
 
       await prisma.asset.update({
         where: {
-          id: params.id,
+          id,
         },
         data: {
           lastMaintenance: completionDate,
@@ -184,14 +188,14 @@ export async function PUT(
       await prisma.assetHistory.createMany({
         data: [
           {
-            assetId: params.id,
+            assetId: id,
             field: 'lastMaintenance',
             oldValue: asset.lastMaintenance ? asset.lastMaintenance.toISOString() : null,
             newValue: completionDate.toISOString(),
             changedBy: session.user?.email || 'system',
           },
           {
-            assetId: params.id,
+            assetId: id,
             field: 'nextMaintenance',
             oldValue: asset.nextMaintenance ? asset.nextMaintenance.toISOString() : null,
             newValue: nextMaintenanceDate.toISOString(),
@@ -262,9 +266,11 @@ export async function PUT(
 // DELETE a specific maintenance record
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; maintenanceId: string } }
+  { params }: { params: Promise<{ id: string; maintenanceId: string }> }
 ) {
   try {
+    const { id, maintenanceId } = await params;
+
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
@@ -278,8 +284,8 @@ export async function DELETE(
     // Check if the maintenance record exists
     const maintenance = await prisma.maintenance.findUnique({
       where: {
-        id: params.maintenanceId,
-        assetId: params.id,
+        id: maintenanceId,
+        assetId: id,
       },
     });
 
@@ -290,7 +296,7 @@ export async function DELETE(
     // Delete the maintenance record
     await prisma.maintenance.delete({
       where: {
-        id: params.maintenanceId,
+        id: maintenanceId,
       },
     });
 

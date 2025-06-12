@@ -6,8 +6,8 @@ import { authOptions } from '@/lib/auth';
 // GET a specific capital improvement
 export async function GET(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
-) {
+  context: { params: Promise<{ id: string; improvementId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -17,8 +17,7 @@ export async function GET(
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const capitalImprovement = await prisma.capitalImprovement.findUnique({
@@ -45,8 +44,8 @@ export async function GET(
 // PUT (update) a specific capital improvement
 export async function PUT(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
-) {
+  context: { params: Promise<{ id: string; improvementId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -56,8 +55,7 @@ export async function PUT(
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({
@@ -185,8 +183,8 @@ export async function PUT(
 // DELETE a specific capital improvement
 export async function DELETE(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
-) {
+  context: { params: Promise<{ id: string; improvementId: string }> }
+): Promise<Response> {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -196,8 +194,7 @@ export async function DELETE(
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({

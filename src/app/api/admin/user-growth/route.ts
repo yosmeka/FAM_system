@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// import { NextResponse } from 'next/server'; // Using Response instead for Next.js 15 compatibility
 import { prisma } from '@/lib/prisma';
 
 // Returns user registration count per month for the last 12 months
@@ -23,5 +23,7 @@ export async function GET() {
     })
   );
 
-  return NextResponse.json({ userGrowth });
+  return new Response(JSON.stringify({ userGrowth }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
 }

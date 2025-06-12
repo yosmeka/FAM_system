@@ -119,9 +119,9 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
 
 export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -299,9 +299,9 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
 
 export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await context.params;
   try {
     const session = await getServerSession(authOptions);
 

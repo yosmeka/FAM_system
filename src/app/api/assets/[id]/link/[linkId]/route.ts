@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string; linkId: string } }
+  { params }: { params: Promise<{ id: string; linkId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,7 +13,7 @@ export async function DELETE(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { id, linkId } = params;
+    const { id, linkId } = await params;
 
     // Find the link to get information for history records
     const link = await prisma.linkedAsset.findUnique({
