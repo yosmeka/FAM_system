@@ -92,10 +92,10 @@ export const GET = withRole(['MANAGER'], async function GET() {
         null,
     }));
 
-    return NextResponse.json(formattedAudits);
+    return Response.json(formattedAudits);
   } catch (error) {
     console.error('Error fetching pending audits:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch pending audits' },
       { status: 500 }
     );

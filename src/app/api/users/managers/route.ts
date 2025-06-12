@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -10,7 +10,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Fetch all users with MANAGER role
@@ -28,10 +28,10 @@ export async function GET() {
       },
     });
     
-    return NextResponse.json(managers);
+    return Response.json(managers);
   } catch (error) {
     console.error('Error fetching managers:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch managers' },
       { status: 500 }
     );

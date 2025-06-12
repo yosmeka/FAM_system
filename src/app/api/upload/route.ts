@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+// import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { writeFile } from 'fs/promises';
@@ -33,13 +33,13 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if the request is multipart/form-data
     const contentType = request.headers.get('content-type');
     if (!contentType || !contentType.includes('multipart/form-data')) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Request must be multipart/form-data' },
         { status: 400 }
       );
@@ -51,7 +51,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     const documentType = formData.get('documentType') as string;
 
     if (!file || !assetId || !documentType) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: file, assetId, documentType' },
         { status: 400 }
       );
@@ -59,7 +59,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
 
     // Validate file
     if (file.size === 0) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'File is empty' },
         { status: 400 }
       );
@@ -68,7 +68,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     // Limit file size (10MB)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'File size exceeds the limit (10MB)' },
         { status: 400 }
       );
@@ -76,7 +76,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
 
     // ✅ MIME type check here
     if (!allowedMimeTypes.includes(file.type)) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unsupported file type. Only PDF, images, and text files are allowed.' },
         { status: 400 }
       );
@@ -100,7 +100,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     // Generate URL for the file
     const fileUrl = `/uploads/${assetId}/${fileName}`;
 
-    return NextResponse.json({
+    return Response.json({
       url: fileUrl,
       fileName: originalName,
       fileSize: file.size,
@@ -109,7 +109,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     });
   } catch (error) {
     console.error('Error uploading file:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to upload file' },
       { status: 500 }
     );

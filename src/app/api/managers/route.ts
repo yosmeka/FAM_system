@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(managers);
+    return Response.json(managers);
   } catch (error) {
     console.error('Error fetching managers:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

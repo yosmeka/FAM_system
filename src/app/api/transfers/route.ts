@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendNotification } from '@/lib/notifications';
 
@@ -12,14 +11,14 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
     if (session.user.role === 'ADMIN') {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
     let transfers;
     if (session.user.role === 'MANAGER') {
@@ -109,10 +108,10 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET() {
         requesterId: t.requesterId || requester?.id || null,
       };
     });
-    return NextResponse.json(withRequesterId);
+    return Response.json(withRequesterId);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch transfers' },
       { status: 500 }
     );
@@ -127,7 +126,7 @@ export const POST = withRole(['USER', 'MANAGER'], async function POST(request: R
 
     // Validate required fields
     if (!assetId || !fromLocation || !toLocation || !reason || !managerId) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
@@ -136,7 +135,7 @@ export const POST = withRole(['USER', 'MANAGER'], async function POST(request: R
     // Create new transfer
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -174,10 +173,10 @@ export const POST = withRole(['USER', 'MANAGER'], async function POST(request: R
       console.error('Failed to send notification to manager:', notifyError);
     }
 
-    return NextResponse.json(transfer);
+    return Response.json(transfer);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create transfer' },
       { status: 500 }
     );
