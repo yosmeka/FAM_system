@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { ChevronDown, Download } from 'lucide-react';
 import { generatePdf } from '@/lib/generatePdf';
 import { exportToExcel } from '@/lib/excelExport';
 import { toast } from 'react-hot-toast';
@@ -18,69 +18,45 @@ interface TableExportDropdownProps {
   title: string;
   type: 'summary' | 'detailed';
   filterSummary?: string;
+  onExportPDF?: () => void;
+  onExportExcel?: () => void;
+  onExportCSV?: () => void;
 }
 
-export function TableExportDropdown({ data, columns, title, type, filterSummary = '' }: TableExportDropdownProps) {
+export function TableExportDropdown({ 
+  data, 
+  columns, 
+  title, 
+  type, 
+  filterSummary = '',
+  onExportPDF,
+  onExportExcel,
+  onExportCSV 
+}: TableExportDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const exportOptions = [
-    {
-      id: 'excel',
-      label: 'Export to Excel',
-      icon: FileSpreadsheet,
-      action: () => handleExcelExport()
-    },
-    {
-      id: 'pdf',
-      label: 'Export to PDF',
-      icon: FileText,
-      action: () => handlePdfExport()
-    }
-  ];
 
   const handleExcelExport = async () => {
     try {
       setIsOpen(false);
       toast.loading('Generating Excel file...', { id: 'excel-export' });
 
-      // Create Excel workbook with table data
       const XLSX = await import('xlsx');
-
+      
       // Prepare headers
       const headers = columns.map(col => col.header);
 
       // Prepare data rows
       const rows = data.map(item => {
         return columns.map(col => {
+          if (col.key === 'averageValue') {
+            return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
+          }
           if (col.render) {
-            // If there's a render function, use it but extract text content
             const rendered = col.render(item[col.key], item);
             if (typeof rendered === 'string') return rendered;
             if (typeof rendered === 'number') return rendered;
-            // For complex renders, try to extract meaningful text
             return item[col.key] || '';
           }
-
-          // Handle special cases for calculated fields
-          if (col.key === 'averageValue' && item.value && item.count) {
-            return (Number(item.value) / Number(item.count)).toFixed(2);
-          }
-
-          // Handle date formatting
-          if (col.key === 'purchaseDate' || col.key === 'warrantyExpiry') {
-            return item[col.key] ? new Date(item[col.key]).toLocaleDateString() : '';
-          }
-
-          // Handle currency formatting
-          if (col.key === 'purchasePrice' || col.key === 'currentValue') {
-            return item[col.key] ? `$${Number(item[col.key]).toLocaleString()}` : '';
-          }
-
-          // Handle percentage formatting
-          if (col.key === 'depreciationRate') {
-            return item[col.key] ? `${item[col.key]}%` : '';
-          }
-
           return item[col.key] || '';
         });
       });
@@ -101,11 +77,9 @@ export function TableExportDropdown({ data, columns, title, type, filterSummary 
 
       // Generate filename
       const filename = `${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.xlsx`;
-
-      // Download file
       XLSX.writeFile(workbook, filename);
-
-      toast.success('Excel file downloaded successfully!', { id: 'excel-export' });
+      
+      toast.success('Excel file exported successfully!', { id: 'excel-export' });
     } catch (error) {
       console.error('Excel export error:', error);
       toast.error('Failed to export Excel file', { id: 'excel-export' });
@@ -117,228 +91,137 @@ export function TableExportDropdown({ data, columns, title, type, filterSummary 
       setIsOpen(false);
       toast.loading('Generating PDF...', { id: 'pdf-export' });
 
-      // Create a hidden iframe for PDF generation and local download
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute';
-      iframe.style.left = '-9999px';
-      iframe.style.top = '-9999px';
-      iframe.style.width = '800px';
-      iframe.style.height = '600px';
-      document.body.appendChild(iframe);
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const doc = new jsPDF(type === 'detailed' ? 'l' : 'p', 'mm', 'a4');
+
+      // Add title
+      doc.setFontSize(16);
+      doc.text(title, 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
 
       // Prepare table data
       const tableData = data.map(item => {
         return columns.map(col => {
+          if (col.key === 'averageValue') {
+            return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
+          }
           if (col.render) {
             const rendered = col.render(item[col.key], item);
             if (typeof rendered === 'string') return rendered;
             if (typeof rendered === 'number') return rendered.toString();
             return item[col.key]?.toString() || '';
           }
-
-          // Handle special cases for calculated fields
-          if (col.key === 'averageValue' && item.value && item.count) {
-            return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
-          }
-
-          // Handle date formatting
-          if (col.key === 'purchaseDate' || col.key === 'warrantyExpiry') {
-            return item[col.key] ? new Date(item[col.key]).toLocaleDateString() : '';
-          }
-
-          // Handle currency formatting
-          if (col.key === 'purchasePrice' || col.key === 'currentValue') {
-            return item[col.key] ? `$${Number(item[col.key]).toLocaleString()}` : '';
-          }
-
-          // Handle percentage formatting
-          if (col.key === 'depreciationRate') {
-            return item[col.key] ? `${item[col.key]}%` : '';
-          }
-
-          // Handle age formatting
-          if (col.key === 'age') {
-            return item[col.key] ? `${item[col.key]} years` : '';
-          }
-
           return item[col.key]?.toString() || '';
         });
       });
 
-      // Create HTML content with RED theme
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${title}${filterSummary}</title>
-          <style>
-            @page {
-              size: ${type === 'detailed' ? 'A4 landscape' : 'A4 portrait'};
-              margin: 15mm;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 20px;
-              color: #333;
-              background: white;
-            }
-            .header {
-              background: #dc2626;
-              color: white;
-              padding: 20px;
-              margin: -20px -20px 30px -20px;
-              text-align: center;
-              border-radius: 0;
-            }
-            .title {
-              font-size: 24px;
-              font-weight: bold;
-              margin: 0 0 8px 0;
-            }
-            .subtitle {
-              font-size: 12px;
-              margin: 0;
-              opacity: 0.9;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-              font-size: ${type === 'detailed' ? '8px' : '10px'};
-            }
-            th {
-              background-color: #dc2626;
-              color: white;
-              padding: 12px 8px;
-              text-align: left;
-              border: 1px solid #b91c1c;
-              font-weight: bold;
-              font-size: ${type === 'detailed' ? '9px' : '11px'};
-            }
-            td {
-              padding: 8px;
-              border: 1px solid #e5e7eb;
-              text-align: left;
-              vertical-align: top;
-            }
-            tr:nth-child(even) {
-              background-color: #fef2f2;
-            }
-            tr:hover {
-              background-color: #fee2e2;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              font-size: 10px;
-              color: #6b7280;
-              border-top: 2px solid #dc2626;
-              padding-top: 15px;
-            }
-            @media print {
-              body {
-                margin: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              .header {
-                background: #dc2626 !important;
-                color: white !important;
-              }
-              th {
-                background-color: #dc2626 !important;
-                color: white !important;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="title">${title}${filterSummary}</div>
-            <div class="subtitle">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()} | Total Records: ${data.length}</div>
-          </div>
+      // Add table
+      autoTable(doc, {
+        head: [columns.map(col => col.header)],
+        body: tableData,
+        startY: 30,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [220, 38, 38],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
 
-          <table>
-            <thead>
-              <tr>
-                ${columns.map(col => `<th>${col.header}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${tableData.map(row =>
-                `<tr>${row.map(cell => `<td>${cell || ''}</td>`).join('')}</tr>`
-              ).join('')}
-            </tbody>
-          </table>
-
-          <div class="footer">
-            <p><strong>Asset Management System</strong> | Zemen Bank | Report Generated: ${new Date().toLocaleDateString()}</p>
-          </div>
-        </body>
-        </html>
-      `;
-
-      // Write HTML to iframe and trigger download
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        iframeDoc.open();
-        iframeDoc.write(htmlContent);
-        iframeDoc.close();
-
-        // Wait for content to load, then trigger print/save
-        setTimeout(() => {
-          try {
-            // Focus the iframe and trigger print dialog
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-
-            // Clean up after a delay
-            setTimeout(() => {
-              document.body.removeChild(iframe);
-            }, 2000);
-
-            toast.success('PDF save dialog opened! Choose "Save as PDF" in the print dialog.', {
-              id: 'pdf-export',
-              duration: 5000
-            });
-          } catch (error) {
-            console.error('Print error:', error);
-            // Fallback: open in new window
-            const newWindow = window.open('', '_blank');
-            if (newWindow) {
-              newWindow.document.write(htmlContent);
-              newWindow.document.close();
-              newWindow.print();
-            }
-            document.body.removeChild(iframe);
-            toast.success('PDF opened in new window. Use Ctrl+P to save as PDF.', {
-              id: 'pdf-export',
-              duration: 5000
-            });
-          }
-        }, 1000);
-      } else {
-        // Fallback: open in new window
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(htmlContent);
-          newWindow.document.close();
-          setTimeout(() => {
-            newWindow.print();
-          }, 500);
-        }
-        document.body.removeChild(iframe);
-        toast.success('PDF opened in new window. Use Ctrl+P to save as PDF.', {
-          id: 'pdf-export',
-          duration: 5000
-        });
-      }
+      doc.save(`${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`);
+      toast.success('PDF exported successfully!', { id: 'pdf-export' });
     } catch (error) {
       console.error('PDF export error:', error);
-      toast.error('Failed to export PDF. Please try again.', { id: 'pdf-export' });
+      toast.error('Failed to export PDF', { id: 'pdf-export' });
     }
   };
+
+  const handleCsvExport = () => {
+    try {
+      setIsOpen(false);
+      
+      // Prepare headers
+      const headers = columns.map(col => col.header);
+
+      // Prepare data rows
+      const rows = data.map(item => {
+        return columns.map(col => {
+          if (col.key === 'averageValue') {
+            return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
+          }
+          if (col.render) {
+            const rendered = col.render(item[col.key], item);
+            if (typeof rendered === 'string') return rendered;
+            if (typeof rendered === 'number') return rendered.toString();
+            return item[col.key]?.toString() || '';
+          }
+          return item[col.key]?.toString() || '';
+        }).join(',');
+      });
+
+      // Create CSV content
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      
+      toast.success('CSV exported successfully!');
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast.error('Failed to export CSV');
+    }
+  };
+
+  const exportOptions = [
+    {
+      id: 'excel',
+      label: 'Export to Excel',
+      icon: Download,
+      action: () => {
+        setIsOpen(false);
+        if (onExportExcel) {
+          onExportExcel();
+        } else {
+          handleExcelExport();
+        }
+      }
+    },
+    {
+      id: 'pdf',
+      label: 'Export to PDF',
+      icon: Download,
+      action: () => {
+        setIsOpen(false);
+        if (onExportPDF) {
+          onExportPDF();
+        } else {
+          handlePdfExport();
+        }
+      }
+    },
+    {
+      id: 'csv',
+      label: 'Export to CSV',
+      icon: Download,
+      action: () => {
+        setIsOpen(false);
+        if (onExportCSV) {
+          onExportCSV();
+        } else {
+          handleCsvExport();
+        }
+      }
+    }
+  ];
 
   if (!data || data.length === 0) {
     return null; // Don't show export button if no data

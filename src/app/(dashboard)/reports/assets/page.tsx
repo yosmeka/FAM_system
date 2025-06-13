@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
 import { TableExportDropdown } from '@/components/reports/TableExportDropdown';
-
+import { usePDF } from 'react-to-pdf';
+import { Download, Settings, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'react-hot-toast';
 import type {
@@ -19,6 +20,10 @@ import { useSession } from 'next-auth/react';
 
 export default function AssetReportsPage() {
   const { data: session, status } = useSession();
+  const { toPDF, targetRef } = usePDF({
+    filename: `asset-report-${new Date().toISOString().split('T')[0]}.pdf`,
+  });
+  const [showExportMenu, setShowExportMenu] = useState(false);
   if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
@@ -83,13 +88,11 @@ export default function AssetReportsPage() {
       const queryString = filters ? buildQueryString(filters) : '';
       const url = `/api/reports/assets${queryString ? `?${queryString}` : ''}`;
 
-
       console.log('🔍 Debug: Full URL:', url);
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch asset reports');
       const data = await response.json();
-
 
       console.log('🔍 Debug: Categories returned:', data.byCategory?.length);
       console.log('🔍 Debug: Depreciation data points:', data.depreciation?.length);
@@ -122,7 +125,7 @@ export default function AssetReportsPage() {
   };
 
   const handleRefresh = () => {
-    fetchAssetReports(currentFilters, true);
+    fetchAssetReports(currentFilters);
   };
 
   // Helper function to check if any filters are active
@@ -158,6 +161,230 @@ export default function AssetReportsPage() {
     return activeFilters.length > 0 ? ` (${activeFilters.join(', ')})` : '';
   };
 
+  const exportToPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.text('Asset Report', 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+      // Add summary statistics
+      doc.setFontSize(12);
+      doc.text('Summary Statistics', 14, 35);
+      
+      const statsData: string[][] = [
+        ['Total Assets', (assetStats?.totalAssets || 0).toString()],
+        ['Active Assets', (assetStats?.activeAssets || 0).toString()],
+        ['Transferred Assets', (assetStats?.transferredAssets || 0).toString()],
+        ['Disposed Assets', (assetStats?.disposedAssets || 0).toString()]
+      ];
+
+      autoTable(doc, {
+        startY: 40,
+        head: [['Metric', 'Value']],
+        body: statsData,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
+      // Add category distribution
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Category Distribution', 14, 20);
+
+      const categoryData: string[][] = assetsByCategory.map(item => [
+        item.category || '',
+        item.status || '',
+        String(item.count || 0),
+        String(Number(item.value || 0).toFixed(2))
+      ]);
+
+      autoTable(doc, {
+        startY: 25,
+        head: [['Category', 'Status', 'Count', 'Total Value']],
+        body: categoryData,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
+      // Add detailed assets table
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Detailed Asset List', 14, 20);
+
+      const tableHeaders: string[] = ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'];
+      const tableRows: string[][] = detailedAssets.map(asset => [
+        asset.name || '',
+        asset.serialNumber || '',
+        asset.category || '',
+        asset.status || '',
+        asset.location || 'Not specified',
+        new Date(asset.purchaseDate).toLocaleDateString(),
+        `$${Number(asset.purchasePrice).toFixed(2)}`,
+        asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
+      ]);
+
+      autoTable(doc, {
+        startY: 25,
+        head: [tableHeaders],
+        body: tableRows,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
+      doc.save(`asset-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+
+      // Summary Statistics Sheet
+      const statsData: (string | number)[][] = [
+        ['Summary Statistics', ''],
+        ['Metric', 'Value'],
+        ['Total Assets', assetStats?.totalAssets || 0],
+        ['Active Assets', assetStats?.activeAssets || 0],
+        ['Transferred Assets', assetStats?.transferredAssets || 0],
+        ['Disposed Assets', assetStats?.disposedAssets || 0]
+      ];
+      const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
+      XLSX.utils.book_append_sheet(workbook, statsSheet, 'Summary');
+
+      // Category Distribution Sheet
+      const categoryData: (string | number)[][] = [
+        ['Category Distribution', '', '', ''],
+        ['Category', 'Status', 'Count', 'Total Value'],
+        ...assetsByCategory.map(item => [
+          item.category || '',
+          item.status || '',
+          item.count || 0,
+          Number(item.value || 0).toFixed(2)
+        ])
+      ];
+      const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
+      XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
+
+      // Detailed Assets Sheet
+      const assetsData: (string | number)[][] = [
+        ['Detailed Asset List', '', '', '', '', '', '', ''],
+        ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'],
+        ...detailedAssets.map(asset => [
+          asset.name || '',
+          asset.serialNumber || '',
+          asset.category || '',
+          asset.status || '',
+          asset.location || 'Not specified',
+          new Date(asset.purchaseDate).toLocaleDateString(),
+          `$${Number(asset.purchasePrice).toFixed(2)}`,
+          asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
+        ])
+      ];
+      const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
+      XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
+
+      XLSX.writeFile(workbook, `asset-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
+  };
+
+  const exportToCSV = () => {
+    try {
+      // Export summary statistics
+      const statsHeaders = ['Metric', 'Value'];
+      const statsRows = [
+        ['Total Assets', assetStats?.totalAssets || 0],
+        ['Active Assets', assetStats?.activeAssets || 0],
+        ['Transferred Assets', assetStats?.transferredAssets || 0],
+        ['Disposed Assets', assetStats?.disposedAssets || 0]
+      ];
+      const statsContent = [statsHeaders, ...statsRows].map(row => row.join(',')).join('\n');
+      const statsBlob = new Blob([statsContent], { type: 'text/csv;charset=utf-8;' });
+      const statsLink = document.createElement('a');
+      statsLink.href = URL.createObjectURL(statsBlob);
+      statsLink.download = `asset-report-summary-${new Date().toISOString().split('T')[0]}.csv`;
+      statsLink.click();
+
+      // Export category distribution
+      const categoryHeaders = ['Category', 'Status', 'Count', 'Total Value'];
+      const categoryRows = assetsByCategory.map(item => [
+        item.category || '',
+        item.status || '',
+        item.count || 0,
+        Number(item.value || 0).toFixed(2)
+      ]);
+      const categoryContent = [categoryHeaders, ...categoryRows].map(row => row.join(',')).join('\n');
+      const categoryBlob = new Blob([categoryContent], { type: 'text/csv;charset=utf-8;' });
+      const categoryLink = document.createElement('a');
+      categoryLink.href = URL.createObjectURL(categoryBlob);
+      categoryLink.download = `asset-report-categories-${new Date().toISOString().split('T')[0]}.csv`;
+      categoryLink.click();
+
+      // Export detailed assets
+      const assetHeaders = ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'];
+      const assetRows = detailedAssets.map(asset => [
+        asset.name || '',
+        asset.serialNumber || '',
+        asset.category || '',
+        asset.status || '',
+        asset.location || 'Not specified',
+        new Date(asset.purchaseDate).toLocaleDateString(),
+        `$${Number(asset.purchasePrice).toFixed(2)}`,
+        asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
+      ]);
+      const assetContent = [assetHeaders, ...assetRows].map(row => row.join(',')).join('\n');
+      const assetBlob = new Blob([assetContent], { type: 'text/csv;charset=utf-8;' });
+      const assetLink = document.createElement('a');
+      assetLink.href = URL.createObjectURL(assetBlob);
+      assetLink.download = `asset-report-detailed-${new Date().toISOString().split('T')[0]}.csv`;
+      assetLink.click();
+
+      toast.success('CSV reports exported successfully!');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export CSV files');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[400px] bg-white dark:bg-gray-900">
@@ -174,7 +401,58 @@ export default function AssetReportsPage() {
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Advanced Asset Reports</h1>
 
         </div>
-
+        <div className="flex gap-2">
+          <button
+            onClick={() => fetchAssetReports(currentFilters, true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+            disabled={refreshing}
+          >
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              <Download size={16} />
+              Export
+              <ChevronDown size={16} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 dark:bg-gray-800">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      exportToPDF();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToExcel();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as Excel
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToCSV();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as CSV
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Advanced Filters */}
@@ -403,11 +681,6 @@ export default function AssetReportsPage() {
                   { header: 'Location', key: 'location' },
                   { header: 'Purchase Date', key: 'purchaseDate' },
                   { header: 'Purchase Price', key: 'purchasePrice' },
-                  { header: 'Current Value', key: 'currentValue' },
-                  { header: 'Age (Years)', key: 'age' },
-                  { header: 'Depreciation Rate', key: 'depreciationRate' },
-                  { header: 'Depreciation Method', key: 'depreciationMethod' },
-                  { header: 'Supplier', key: 'supplier' },
                   { header: 'Warranty Expiry', key: 'warrantyExpiry' }
                 ]}
                 title="Detailed Asset List"
@@ -460,7 +733,7 @@ export default function AssetReportsPage() {
                   {
                     header: 'Location',
                     key: 'location',
-                    render: (_, item) => item.location,
+                    render: (_, item) => item.location || 'Not specified',
                   },
                   {
                     header: 'Purchase Date',
@@ -470,42 +743,13 @@ export default function AssetReportsPage() {
                   {
                     header: 'Purchase Price',
                     key: 'purchasePrice',
-                    render: (_, item) => `$${Number(item.purchasePrice).toLocaleString()}`,
+                    render: (_, item) => `$${Number(item.purchasePrice).toFixed(2)}`,
                   },
                   {
-                    header: 'Current Value',
-                    key: 'currentValue',
-                    render: (_, item) => `$${Number(item.currentValue).toLocaleString()}`,
-                  },
-                  {
-                    header: 'Age',
-                    key: 'age',
-                    render: (_, item) => `${item.age} years`,
-                  },
-                  {
-                    header: 'Depreciation',
-                    key: 'depreciationRate',
-                    render: (_, item) => (
-                      <div className="text-right">
-                        <div className="font-medium">{item.depreciationRate}%</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{item.depreciationMethod}</div>
-                      </div>
-                    ),
-                  },
-                  {
-                    header: 'Supplier',
-                    key: 'supplier',
-                    render: (_, item) => (
-                      <div className="text-sm">
-                        <div>{item.supplier}</div>
-                        {item.warrantyExpiry && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Warranty: {new Date(item.warrantyExpiry).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                    ),
-                  },
+                    header: 'Warranty Expiry',
+                    key: 'warrantyExpiry',
+                    render: (_, item) => item.warrantyExpiry ? new Date(item.warrantyExpiry).toLocaleDateString() : 'Not specified',
+                  }
                 ]}
                 className="bg-white dark:bg-gray-800"
               />

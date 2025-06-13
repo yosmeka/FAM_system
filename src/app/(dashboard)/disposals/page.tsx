@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
@@ -128,9 +128,14 @@ export default function DisposalsPage() {
     assetName: ''
   });
   const [rejectReason, setRejectReason] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 7;
+  const totalPages = Math.ceil(filteredDisposals.length / pageSize);
+  const paginatedDisposals = filteredDisposals.slice((page - 1) * pageSize, page * pageSize);
 
- // Show nothing until session is loaded
-  //if (status === 'loading') return null;
+  useEffect(() => {
+    setPage(1);
+  }, [filteredDisposals]);
 
   // If not allowed, show access denied
   if (session?.user?.role === 'AUDITOR') {
@@ -314,11 +319,6 @@ export default function DisposalsPage() {
       render: (value) => `$${(value as number).toFixed(2)}`,
     },
     {
-      key: 'actualValue',
-      header: 'Actual Value',
-      render: (value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : 'N/A'),
-    },
-    {
       key: 'status',
       header: 'Status',
       render: (value) => (
@@ -468,11 +468,34 @@ export default function DisposalsPage() {
       </div>
 
       <RoleBasedTable
-        data={filteredDisposals}
+        data={paginatedDisposals}
         columns={columns}
         loading={loading}
         onRowClick={(value) => router.push(`/disposals/${value}`)}
       />
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4 dark:bg-gray-900 border-t">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}

@@ -269,7 +269,7 @@ export default function AssetsPage() {
       ) : (
         <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredAssets.map((asset) => (
+            {paginatedAssets.map((asset) => (
               <li key={asset.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${isAssetDisposed(asset) ? 'bg-gray-50 dark:bg-gray-700' : ''}`}>
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
