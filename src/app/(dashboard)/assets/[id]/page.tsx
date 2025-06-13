@@ -11,6 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { CapitalImprovementsTab } from '@/components/CapitalImprovementsTab';
 import { DocumentsTab } from '@/components/DocumentsTab';
+import { PhotosTab } from '@/components/PhotosTab';
 import { ArrowLeft, Download, Settings } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePDF } from 'react-to-pdf';
@@ -92,6 +93,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
   const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [firstPhoto, setFirstPhoto] = useState<{id: string, filePath: string, description?: string} | null>(null);
+  const [isPhotoLoading, setIsPhotoLoading] = useState(true);
   const { toPDF, targetRef } = usePDF({
     filename: `depreciation-report-${asset?.name || 'asset'}.pdf`,
   });
@@ -220,6 +223,39 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
     fetchDepreciationData();
   }, [activeTab, resolvedParams.id, asset]);
+
+  // Function to fetch first photo
+  const fetchFirstPhoto = async () => {
+    if (asset) {
+      setIsPhotoLoading(true);
+      try {
+        const response = await fetch(`/api/assets/${resolvedParams.id}/photos`);
+        if (response.ok) {
+          const photos = await response.json();
+          if (photos.length > 0) {
+            // Get the first photo (most recent by default from API)
+            const firstPhotoData = photos[photos.length - 1]; // Get the oldest photo (first uploaded)
+            setFirstPhoto({
+              id: firstPhotoData.id,
+              filePath: firstPhotoData.filePath,
+              description: firstPhotoData.description
+            });
+          } else {
+            setFirstPhoto(null);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching first photo:', error);
+      } finally {
+        setIsPhotoLoading(false);
+      }
+    }
+  };
+
+  // Add useEffect for fetching first photo
+  useEffect(() => {
+    fetchFirstPhoto();
+  }, [asset, resolvedParams.id]);
 
   // Check permissions first
   if (!checkPermission('Asset view (list and detail)')) {
@@ -670,17 +706,11 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         );
       case 'photos':
         return (
-          <div className="p-8 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">Photos Tab</h3>
-            <p className="mt-2 text-sm text-gray-500">
-              The photos feature is currently under development and will be available soon.
-            </p>
-          </div>
+          <PhotosTab
+            assetId={resolvedParams.id}
+            assetName={asset?.name || 'Asset'}
+            onPhotosChange={fetchFirstPhoto}
+          />
         );
       default:
         return (
@@ -778,8 +808,32 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       {/* Asset Info Section */}
       <div className="flex flex-col md:flex-row gap-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
-        <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 border rounded flex items-center justify-center">
-          <span className="text-gray-400">No image</span>
+        <div className="w-48 h-48 bg-gray-100 dark:bg-gray-800 border rounded flex items-center justify-center overflow-hidden">
+          {isPhotoLoading ? (
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#FF0000]"></div>
+          ) : firstPhoto ? (
+            <img
+              src={firstPhoto.filePath}
+              alt={firstPhoto.description || asset.name}
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+              onClick={() => setActiveTab('photos')}
+              title="Click to view all photos"
+              onError={(e) => {
+                // If image fails to load, show placeholder
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.innerHTML = '<span class="text-gray-400">Image not available</span>';
+                }
+              }}
+            />
+          ) : (
+            <div className="text-center">
+              <div className="text-4xl text-gray-400 dark:text-gray-500 mb-2">📷</div>
+              <span className="text-gray-400 text-sm">No photos</span>
+            </div>
+          )}
         </div>
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           <div>

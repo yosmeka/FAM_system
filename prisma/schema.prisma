@@ -95,6 +95,7 @@ model Asset {
   depreciations       Depreciation[]
   disposalRequests    Disposal[]
   documents           Document[]
+  photos              AssetPhoto[]
   maintenanceRequests Maintenance[]
   maintenanceSchedules MaintenanceSchedule[]
   transferRequests    Transfer[]
@@ -255,6 +256,24 @@ model AssetHistory {
   asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@index([assetId])
+}
+
+model AssetPhoto {
+  id          String   @id @default(cuid())
+  assetId     String
+  fileName    String
+  originalName String?
+  filePath    String
+  fileSize    Int?
+  mimeType    String?
+  description String?
+  uploadedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("asset_photos")
 }
 
 
