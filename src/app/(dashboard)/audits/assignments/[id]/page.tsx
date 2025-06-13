@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Calendar,
+  CalendarDays,
   Clock,
   User,
   CheckCircle,
@@ -450,7 +450,7 @@ export default function AssignmentDetailPage({
 
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-400" />
+                <CalendarDays className="h-5 w-5 text-blue-400" />
                 <div>
                   <p className="text-gray-600 dark:text-white font-medium">
                     Due Date
