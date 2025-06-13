@@ -24,6 +24,9 @@ export default function AssetReportsPage() {
     filename: `asset-report-${new Date().toISOString().split('T')[0]}.pdf`,
   });
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState('assetDetails');
+  const [linkedAssets, setLinkedAssets] = useState<any[]>([]);
+  const [loadingLinkedAssets, setLoadingLinkedAssets] = useState(false);
   if (status === 'loading') return null;
   if (!session || !session.user) return null;
   if (session.user.role === 'ADMIN') {
@@ -65,6 +68,12 @@ export default function AssetReportsPage() {
     fetchAssetReports();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'linkedAssets') {
+      fetchLinkedAssets();
+    }
+  }, [activeTab]);
+
   const buildQueryString = (filters: FilterValues) => {
     const params = new URLSearchParams();
 
@@ -101,6 +110,7 @@ export default function AssetReportsPage() {
       setAssetsByCategory(data.byCategory);
       setStatusDistribution(data.statusDistribution);
       setDetailedAssets(data.assets || []);
+      setLinkedAssets(data.linkedAssets || []);
 
       if (data.filterOptions) {
         setFilterOptions(data.filterOptions);
@@ -116,6 +126,40 @@ export default function AssetReportsPage() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchLinkedAssets = async () => {
+    try {
+      setLoadingLinkedAssets(true);
+      console.log('Fetching linked assets...');
+      const response = await fetch('/api/test/linked-assets', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Linked assets response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch linked assets');
+      }
+
+      if (!data.linkedAssets || data.linkedAssets.length === 0) {
+        console.log('No linked assets found in response');
+      } else {
+        console.log(`Found ${data.linkedAssets.length} linked assets`);
+      }
+
+      setLinkedAssets(data.linkedAssets || []);
+    } catch (error) {
+      console.error('Error fetching linked assets:', error);
+      toast.error('Failed to fetch linked assets');
+    } finally {
+      setLoadingLinkedAssets(false);
     }
   };
 
@@ -262,6 +306,36 @@ export default function AssetReportsPage() {
         },
       });
 
+      // Add linked assets table
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Linked Assets', 14, 20);
+
+      const linkedAssetsHeaders: string[] = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
+      const linkedAssetsRows: string[][] = linkedAssets.map(asset => [
+        asset.fromAsset.name || '',
+        asset.fromAsset.serialNumber || '',
+        asset.toAsset.name || '',
+        asset.toAsset.serialNumber || '',
+        new Date(asset.createdAt).toLocaleDateString()
+      ]);
+
+      autoTable(doc, {
+        startY: 25,
+        head: [linkedAssetsHeaders],
+        body: linkedAssetsRows,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
       doc.save(`asset-report-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error exporting to PDF:', error);
@@ -320,6 +394,21 @@ export default function AssetReportsPage() {
       const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
       XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
 
+      // Linked Assets Sheet
+      const linkedAssetsData: (string | number)[][] = [
+        ['Linked Assets', '', '', '', ''],
+        ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'],
+        ...linkedAssets.map(asset => [
+          asset.fromAsset.name || '',
+          asset.fromAsset.serialNumber || '',
+          asset.toAsset.name || '',
+          asset.toAsset.serialNumber || '',
+          new Date(asset.createdAt).toLocaleDateString()
+        ])
+      ];
+      const linkedAssetsSheet = XLSX.utils.aoa_to_sheet(linkedAssetsData);
+      XLSX.utils.book_append_sheet(workbook, linkedAssetsSheet, 'Linked Assets');
+
       XLSX.writeFile(workbook, `asset-report-${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error exporting to Excel:', error);
@@ -377,6 +466,22 @@ export default function AssetReportsPage() {
       assetLink.href = URL.createObjectURL(assetBlob);
       assetLink.download = `asset-report-detailed-${new Date().toISOString().split('T')[0]}.csv`;
       assetLink.click();
+
+      // Export linked assets
+      const linkedAssetsHeaders = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
+      const linkedAssetsRows = linkedAssets.map(asset => [
+        asset.fromAsset.name || '',
+        asset.fromAsset.serialNumber || '',
+        asset.toAsset.name || '',
+        asset.toAsset.serialNumber || '',
+        new Date(asset.createdAt).toLocaleDateString()
+      ]);
+      const linkedAssetsContent = [linkedAssetsHeaders, ...linkedAssetsRows].map(row => row.join(',')).join('\n');
+      const linkedAssetsBlob = new Blob([linkedAssetsContent], { type: 'text/csv;charset=utf-8;' });
+      const linkedAssetsLink = document.createElement('a');
+      linkedAssetsLink.href = URL.createObjectURL(linkedAssetsBlob);
+      linkedAssetsLink.download = `asset-report-linked-${new Date().toISOString().split('T')[0]}.csv`;
+      linkedAssetsLink.click();
 
       toast.success('CSV reports exported successfully!');
     } catch (error) {
@@ -546,221 +651,329 @@ export default function AssetReportsPage() {
           variant="warning"
           className="bg-white dark:bg-gray-800"
         />
-
       </div>
 
-
-
-      {/* Asset Distribution Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Assets by Category Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Assets by Category{getFilterDisplayText()}
-            </h2>
-          </div>
-          {assetsByCategory.length > 0 ? (
-            <RoleBasedChart
-              type="pie"
-              data={assetsByCategory}
-              options={{
-                labels: assetsByCategory.map((item) => item.category),
-                values: assetsByCategory.map((item) => item.count),
-                customColors: ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899']
-              }}
-            />
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400">No data available for current filters</div>
-          )}
-        </div>
-
-        {/* Status Distribution */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Asset Status Distribution</h2>
-          </div>
-          {statusDistribution.length > 0 ? (
-            <RoleBasedChart
-              type="pie"
-              data={statusDistribution}
-              options={{
-                labels: statusDistribution.map((item) => 
-                  item.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' : 
-                  item.status.charAt(0) + item.status.slice(1).toLowerCase()
-                ),
-                values: statusDistribution.map((item) => item.count),
-                customColors: ['#22C55E', '#F97316', '#A855F7', '#06B6D4', '#EAB308', '#F43F5E', '#84CC16']
-              }}
-            />
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
-          )}
+      {/* Tabs */}
+      <div className="mb-6">
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('assetDetails')}
+              className={`${
+                activeTab === 'assetDetails'
+                  ? 'border-red-500 text-red-600 dark:text-red-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Asset Details
+            </button>
+            <button
+              onClick={() => setActiveTab('linkedAssets')}
+              className={`${
+                activeTab === 'linkedAssets'
+                  ? 'border-red-500 text-red-600 dark:text-red-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Linked Assets
+            </button>
+          </nav>
         </div>
       </div>
 
+      {/* Asset Details Tab Content */}
+      {activeTab === 'assetDetails' && (
+        <>
+          {/* Asset Distribution Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {/* Assets by Category Chart */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Assets by Category{getFilterDisplayText()}
+                </h2>
+              </div>
+              {assetsByCategory.length > 0 ? (
+                <RoleBasedChart
+                  type="pie"
+                  data={assetsByCategory}
+                  options={{
+                    labels: assetsByCategory.map((item) => item.category),
+                    values: assetsByCategory.map((item) => item.count),
+                    customColors: ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899']
+                  }}
+                />
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">No data available for current filters</div>
+              )}
+            </div>
 
-
-      {/* Asset Value Table */}
-      <div className="bg-white rounded-lg shadow dark:bg-gray-900">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-black dark:text-white">
-              Asset Value Details by Category{getFilterDisplayText()}
-            </h2>
-            <TableExportDropdown
-              data={assetsByCategory}
-              columns={[
-                { header: 'Category', key: 'category' },
-                { header: 'Status', key: 'status' },
-                { header: 'Total Assets', key: 'count' },
-                { header: 'Total Value', key: 'value' },
-                { header: 'Average Value', key: 'averageValue' }
-              ]}
-              title="Asset Value Details by Category"
-              type="summary"
-              filterSummary={getFilterDisplayText()}
-            />
-          </div>
-          {assetsByCategory.length > 0 ? (
-            <RoleBasedTable
-              data={assetsByCategory}
-              columns={[
-                {
-                  header: 'Category',
-                  key: 'category',
-                  render: (_, item) => item.category,
-                },
-                {
-                  header: 'Status',
-                  key: 'status',
-                  render: (_, item) => item.status,
-                },
-                {
-                  header: 'Total Assets',
-                  key: 'count',
-                  render: (_, item) => item.count,
-                },
-                {
-                  header: 'Total Value',
-                  key: 'value',
-                  render: (_, item) => `$${Number(item.value).toFixed(2)}`,
-                },
-                {
-                  header: 'Average Value',
-                  key: 'value',
-                  render: (_, item) => `$${(Number(item.value) / Number(item.count)).toFixed(2)}`,
-                },
-              ]}
-              className="bg-white dark:bg-gray-800"
-            />
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400">No data available for current filters</div>
-          )}
-        </div>
-      </div>
-
-      {/* Detailed Asset List Table */}
-      <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-black dark:text-white">
-              Detailed Asset List{getFilterDisplayText()}
-            </h2>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {detailedAssets.length} assets found
-              </span>
-              <TableExportDropdown
-                data={detailedAssets}
-                columns={[
-                  { header: 'Asset Name', key: 'name' },
-                  { header: 'Serial Number', key: 'serialNumber' },
-                  { header: 'Category', key: 'category' },
-                  { header: 'Status', key: 'status' },
-                  { header: 'Location', key: 'location' },
-                  { header: 'Purchase Date', key: 'purchaseDate' },
-                  { header: 'Purchase Price', key: 'purchasePrice' },
-                  { header: 'Warranty Expiry', key: 'warrantyExpiry' }
-                ]}
-                title="Detailed Asset List"
-                type="detailed"
-                filterSummary={getFilterDisplayText()}
-              />
+            {/* Status Distribution */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Asset Status Distribution</h2>
+              </div>
+              {statusDistribution.length > 0 ? (
+                <RoleBasedChart
+                  type="pie"
+                  data={statusDistribution}
+                  options={{
+                    labels: statusDistribution.map((item) => 
+                      item.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' : 
+                      item.status.charAt(0) + item.status.slice(1).toLowerCase()
+                    ),
+                    values: statusDistribution.map((item) => item.count),
+                    customColors: ['#22C55E', '#F97316', '#A855F7', '#06B6D4', '#EAB308', '#F43F5E', '#84CC16']
+                  }}
+                />
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">No data available</div>
+              )}
             </div>
           </div>
-          {detailedAssets.length > 0 ? (
-            <div className="overflow-x-auto">
-              <RoleBasedTable
-                data={detailedAssets}
-                columns={[
-                  {
-                    header: 'Asset Name',
-                    key: 'name',
-                    render: (_, item) => (
-                      <div>
-                        <div className="font-medium text-gray-900 dark:text-gray-100">{item.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{item.serialNumber}</div>
-                      </div>
-                    ),
-                  },
-                  {
-                    header: 'Category',
-                    key: 'category',
-                    render: (_, item) => (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                        {item.category}
-                      </span>
-                    ),
-                  },
-                  {
-                    header: 'Status',
-                    key: 'status',
-                    render: (_, item) => (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.status === 'ACTIVE'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          : item.status === 'TRANSFERRED'
-                          ? 'bg-black text-white dark:bg-gray-800 dark:text-white'
-                          : item.status === 'DISPOSED'
-                          ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white'
-                          : 'bg-gray-100 text-black dark:bg-gray-700 dark:text-white'
-                      }`}>
-                        {item.status}
-                      </span>
-                    ),
-                  },
-                  {
-                    header: 'Location',
-                    key: 'location',
-                    render: (_, item) => item.location || 'Not specified',
-                  },
-                  {
-                    header: 'Purchase Date',
-                    key: 'purchaseDate',
-                    render: (_, item) => new Date(item.purchaseDate).toLocaleDateString(),
-                  },
-                  {
-                    header: 'Purchase Price',
-                    key: 'purchasePrice',
-                    render: (_, item) => `$${Number(item.purchasePrice).toFixed(2)}`,
-                  },
-                  {
-                    header: 'Warranty Expiry',
-                    key: 'warrantyExpiry',
-                    render: (_, item) => item.warrantyExpiry ? new Date(item.warrantyExpiry).toLocaleDateString() : 'Not specified',
-                  }
-                ]}
-                className="bg-white dark:bg-gray-800"
-              />
+
+          {/* Asset Value Table */}
+          <div className="bg-white rounded-lg shadow dark:bg-gray-900">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-black dark:text-white">
+                  Asset Value Details by Category{getFilterDisplayText()}
+                </h2>
+                <TableExportDropdown
+                  data={assetsByCategory}
+                  columns={[
+                    { header: 'Category', key: 'category' },
+                    { header: 'Status', key: 'status' },
+                    { header: 'Total Assets', key: 'count' },
+                    { header: 'Total Value', key: 'value' },
+                    { header: 'Average Value', key: 'averageValue' }
+                  ]}
+                  title="Asset Value Details by Category"
+                  type="summary"
+                  filterSummary={getFilterDisplayText()}
+                />
+              </div>
+              {assetsByCategory.length > 0 ? (
+                <RoleBasedTable
+                  data={assetsByCategory}
+                  columns={[
+                    {
+                      header: 'Category',
+                      key: 'category',
+                      render: (_, item) => item.category,
+                    },
+                    {
+                      header: 'Status',
+                      key: 'status',
+                      render: (_, item) => item.status,
+                    },
+                    {
+                      header: 'Total Assets',
+                      key: 'count',
+                      render: (_, item) => item.count,
+                    },
+                    {
+                      header: 'Total Value',
+                      key: 'value',
+                      render: (_, item) => `$${Number(item.value).toFixed(2)}`,
+                    },
+                    {
+                      header: 'Average Value',
+                      key: 'value',
+                      render: (_, item) => `$${(Number(item.value) / Number(item.count)).toFixed(2)}`,
+                    },
+                  ]}
+                  className="bg-white dark:bg-gray-800"
+                />
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">No data available for current filters</div>
+              )}
             </div>
-          ) : (
-            <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-              No assets found for current filters
+          </div>
+
+          {/* Detailed Asset List Table */}
+          <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-black dark:text-white">
+                  Detailed Asset List{getFilterDisplayText()}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {detailedAssets.length} assets found
+                  </span>
+                  <TableExportDropdown
+                    data={detailedAssets}
+                    columns={[
+                      { header: 'Asset Name', key: 'name' },
+                      { header: 'Serial Number', key: 'serialNumber' },
+                      { header: 'Category', key: 'category' },
+                      { header: 'Status', key: 'status' },
+                      { header: 'Location', key: 'location' },
+                      { header: 'Purchase Date', key: 'purchaseDate' },
+                      { header: 'Purchase Price', key: 'purchasePrice' },
+                      { header: 'Warranty Expiry', key: 'warrantyExpiry' }
+                    ]}
+                    title="Detailed Asset List"
+                    type="detailed"
+                    filterSummary={getFilterDisplayText()}
+                  />
+                </div>
+              </div>
+              {detailedAssets.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <RoleBasedTable
+                    data={detailedAssets}
+                    columns={[
+                      {
+                        header: 'Asset Name',
+                        key: 'name',
+                        render: (_, item) => (
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{item.name}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{item.serialNumber}</div>
+                          </div>
+                        ),
+                      },
+                      {
+                        header: 'Category',
+                        key: 'category',
+                        render: (_, item) => (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                            {item.category}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Status',
+                        key: 'status',
+                        render: (_, item) => (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            item.status === 'ACTIVE'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : item.status === 'TRANSFERRED'
+                              ? 'bg-black text-white dark:bg-gray-800 dark:text-white'
+                              : item.status === 'DISPOSED'
+                              ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white'
+                              : 'bg-gray-100 text-black dark:bg-gray-700 dark:text-white'
+                          }`}>
+                            {item.status}
+                          </span>
+                        ),
+                      },
+                      {
+                        header: 'Location',
+                        key: 'location',
+                        render: (_, item) => item.location || 'Not specified',
+                      },
+                      {
+                        header: 'Purchase Date',
+                        key: 'purchaseDate',
+                        render: (_, item) => new Date(item.purchaseDate).toLocaleDateString(),
+                      },
+                      {
+                        header: 'Purchase Price',
+                        key: 'purchasePrice',
+                        render: (_, item) => `$${Number(item.purchasePrice).toFixed(2)}`,
+                      },
+                      {
+                        header: 'Warranty Expiry',
+                        key: 'warrantyExpiry',
+                        render: (_, item) => item.warrantyExpiry ? new Date(item.warrantyExpiry).toLocaleDateString() : 'Not specified',
+                      }
+                    ]}
+                    className="bg-white dark:bg-gray-800"
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  No assets found for current filters
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </>
+      )}
+
+      {/* Linked Assets Tab Content */}
+      {activeTab === 'linkedAssets' && (
+        <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-black dark:text-white">
+                Linked Assets Report{getFilterDisplayText()}
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {linkedAssets.length} linked assets found
+                </span>
+                <TableExportDropdown
+                  data={linkedAssets.map(asset => ({
+                    'Parent Asset': asset.fromAsset.name,
+                    'Parent Serial': asset.fromAsset.serialNumber,
+                    'Child Asset': asset.toAsset.name,
+                    'Child Serial': asset.toAsset.serialNumber,
+                    'Linked Date': new Date(asset.createdAt).toLocaleDateString()
+                  }))}
+                  columns={[
+                    { header: 'Parent Asset', key: 'Parent Asset' },
+                    { header: 'Parent Serial', key: 'Parent Serial' },
+                    { header: 'Child Asset', key: 'Child Asset' },
+                    { header: 'Child Serial', key: 'Child Serial' },
+                    { header: 'Linked Date', key: 'Linked Date' }
+                  ]}
+                  title="Linked Assets Report"
+                  type="linked"
+                  filterSummary={getFilterDisplayText()}
+                />
+              </div>
+            </div>
+            {loadingLinkedAssets ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+              </div>
+            ) : linkedAssets.length > 0 ? (
+              <div className="overflow-x-auto">
+                <RoleBasedTable
+                  data={linkedAssets}
+                  columns={[
+                    {
+                      header: 'Parent Asset',
+                      key: 'fromAsset.name',
+                      render: (_, item) => (
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{item.fromAsset.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{item.fromAsset.serialNumber}</div>
+                        </div>
+                      ),
+                    },
+                    {
+                      header: 'Child Asset',
+                      key: 'toAsset.name',
+                      render: (_, item) => (
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{item.toAsset.name}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{item.toAsset.serialNumber}</div>
+                        </div>
+                      ),
+                    },
+                    {
+                      header: 'Linked Date',
+                      key: 'createdAt',
+                      render: (_, item) => new Date(item.createdAt).toLocaleDateString(),
+                    }
+                  ]}
+                  className="bg-white dark:bg-gray-800"
+                />
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                No linked assets found
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
 
     </div>

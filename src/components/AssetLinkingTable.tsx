@@ -99,7 +99,7 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Asset Linking</h2>
 
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <div className="flex items-center mb-2">
           <input
             type="checkbox"
@@ -111,7 +111,7 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
         <p className="text-sm text-gray-600 dark:text-gray-400 ml-7">
           Select this checkbox to indicate that this asset and its linking assets should be audited/check-out/checked-in, etc., as a group.
         </p>
-      </div>
+      </div> */}
 
       {/* Only show the Link Child Asset button if this is not a child asset */}
       {!isChildAsset && (
