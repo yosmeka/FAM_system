@@ -12,8 +12,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:setup": "ts-node scripts/setup-db.ts",
-    "db:seed": "ts-node scripts/seed.ts",
-    "db:test": "ts-node scripts/test-db.ts",
+    "db:seed": "cd prisma && ts-node seed.ts",
+    "db:test": "cd scripts && ts-node test-db.ts",
     "seed:maintenance": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed-maintenance.ts"
   },
   "dependencies": {
@@ -47,7 +47,7 @@
     "date-fns": "^3.0.0",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
-    "lucide-react": "^0.513.0",
+    "lucide-react": "^0.515.0",
     "mime-types": "^3.0.1",
     "next": "^15.3.1",
     "next-auth": "^4.24.5",
@@ -87,6 +87,6 @@
     "typescript": "^5.8.3"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "cd prisma && ts-node seed.ts"
   }
 }

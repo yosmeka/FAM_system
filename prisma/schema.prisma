@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  
 }
 
 datasource db {
@@ -84,7 +85,7 @@ model Asset {
   depreciableCost     Float?
   salvageValue        Float?
   usefulLifeMonths    Int?
-  depreciationMethod  DepreciationMethod?
+  depreciationMethod  DepreciationMethodEnum?
   depreciationStartDate DateTime?
   lastAuditDate       DateTime?
   nextAuditDate       DateTime?
@@ -328,7 +329,7 @@ enum DisposalMethod {
   SCRAP
 }
 
-enum DepreciationMethod {
+enum DepreciationMethodEnum {
   STRAIGHT_LINE
   DECLINING_BALANCE
   DOUBLE_DECLINING
@@ -403,7 +404,7 @@ model CapitalImprovement {
   improvementDate   DateTime
   cost              Float
   usefulLifeMonths  Int?
-  depreciationMethod DepreciationMethod?
+  depreciationMethod DepreciationMethodEnum?
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
+import { PrismaClient } from '@prisma/client';
 import { withRole } from '@/middleware/rbac';
 import { withPermission } from '@/middleware/permission';
 
