@@ -399,18 +399,14 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    // Get URL to parse query parameters
+    const { id } = params;
     const url = new URL(request.url);
 
-    // Fetch the asset with its depreciation settings and capital improvements
     const asset = await prisma.asset.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -429,9 +425,7 @@ export async function GET(
             improvementDate: true,
             cost: true,
           },
-          orderBy: {
-            improvementDate: 'asc',
-          },
+          orderBy: { improvementDate: 'asc' },
         },
       },
     });
@@ -440,30 +434,100 @@ export async function GET(
       return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    // Check if we have query parameters for recalculation
     const queryUsefulLife = url.searchParams.get('usefulLife');
     const querySalvageValue = url.searchParams.get('salvageValue');
     const queryMethod = url.searchParams.get('method');
     const queryDepreciationRate = url.searchParams.get('depreciationRate');
-    const queryDepreciableCost = url.searchParams.get('depreciableCost');
-    const queryDateAcquired = url.searchParams.get('dateAcquired');
 
-    // Use query parameters if provided, otherwise use asset's settings
-    const depreciableCost = queryDepreciableCost
-      ? parseFloat(queryDepreciableCost)
-      : (asset.depreciableCost || asset.purchasePrice);
+    const depreciableCost = asset.depreciableCost || asset.purchasePrice;
+    const salvageValue = querySalvageValue ? parseFloat(querySalvageValue) : (asset.salvageValue || 0);
+    const usefulLifeYears = queryUsefulLife ? parseInt(queryUsefulLife) : (asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : 5);
+    const depreciationMethod = queryMethod || asset.depreciationMethod || 'STRAIGHT_LINE';
+    const depreciationRate = queryDepreciationRate ? parseFloat(queryDepreciationRate) : undefined;
 
-    const salvageValue = querySalvageValue
-      ? parseFloat(querySalvageValue)
-      : (asset.salvageValue || 0); // Use 0 as default if not set
+    const depreciationResults = calculateDepreciation({
+      purchasePrice: depreciableCost,
+      purchaseDate: (asset.depreciationStartDate || asset.purchaseDate).toISOString(),
+      usefulLife: usefulLifeYears,
+      salvageValue: salvageValue,
+      method: depreciationMethod,
+      depreciationRate: depreciationRate,
+    });
 
-    const usefulLifeYears = queryUsefulLife
-      ? parseInt(queryUsefulLife)
-      : (asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : 5); // Default to 5 years
+    const chartData = generateChartData(depreciationResults);
 
-    const depreciationMethod = queryMethod
-      ? queryMethod
-      : (asset.depreciationMethod || 'STRAIGHT_LINE');
+    return Response.json({
+      asset,
+      depreciationSettings: {
+        depreciableCost,
+        salvageValue,
+        usefulLifeYears,
+        usefulLifeMonths: asset.usefulLifeMonths || usefulLifeYears * 12,
+        depreciationMethod,
+        depreciationRate,
+        startDate: asset.depreciationStartDate || asset.purchaseDate,
+      },
+      depreciationResults,
+      chartData,
+    });
+  } catch (error) {
+    console.error('Error fetching depreciation data:', error);
+    return Response.json(
+      { error: 'Failed to fetch depreciation data', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { id } = params;
+    const body = await request.json();
+
+    const { 
+      depreciableCost, 
+      salvageValue, 
+      usefulLifeMonths, 
+      depreciationMethod, 
+      depreciationStartDate 
+    } = body;
+
+    const asset = await prisma.asset.findUnique({ where: { id } });
+    if (!asset) {
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
+    }
+
+    const updatedAsset = await prisma.asset.update({
+      where: { id },
+      data: {
+        depreciableCost,
+        salvageValue,
+        usefulLifeMonths,
+        depreciationMethod,
+        depreciationStartDate: depreciationStartDate ? new Date(depreciationStartDate) : asset.depreciationStartDate,
+      },
+    });
+
+    // Not creating asset history for now to keep it simple
+
+    return Response.json(updatedAsset);
+  } catch (error) {
+    console.error('Error updating depreciation settings:', error);
+    return Response.json(
+      { error: 'Failed to update depreciation settings', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
 
     const depreciationRate = queryDepreciationRate
       ? parseInt(queryDepreciationRate)
