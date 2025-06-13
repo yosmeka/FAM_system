@@ -19,4 +19,17 @@ declare module 'lucide-react' {
   export const ArrowUp: ComponentType<IconProps>;
   export const ChevronDown: ComponentType<IconProps>;
   export const ChevronUp: ComponentType<IconProps>;
+
+  // Additional icons needed for the project
+  export const Calendar: ComponentType<IconProps>;
+  export const Clock: ComponentType<IconProps>;
+  export const User: ComponentType<IconProps>;
+  export const XCircle: ComponentType<IconProps>;
+  export const AlertTriangle: ComponentType<IconProps>;
+  export const FileText: ComponentType<IconProps>;
+  export const Play: ComponentType<IconProps>;
+  export const MessageSquare: ComponentType<IconProps>;
+  export const Filter: ComponentType<IconProps>;
+  export const Search: ComponentType<IconProps>;
+  export const Eye: ComponentType<IconProps>;
 }

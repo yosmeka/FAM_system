@@ -21,4 +21,9 @@ declare module '@heroicons/react/24/outline' {
   export const CheckCircleIcon: React.FC<IconProps>;
   export const InformationCircleIcon: React.FC<IconProps>;
   export const XCircleIcon: React.FC<IconProps>;
-} 
+
+  // Additional icons needed for the project
+  export const ClockIcon: React.FC<IconProps>;
+  export const CalendarIcon: React.FC<IconProps>;
+  export const ExclamationCircleIcon: React.FC<IconProps>;
+}
