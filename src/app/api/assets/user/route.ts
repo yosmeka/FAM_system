@@ -12,17 +12,11 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const userId = session.user.id;
-    
-    // Get assets assigned to the user
-    // This is a simplified example - you may need to adjust based on your data model
+    // Get assets for the current user
+    // Since the current schema doesn't have direct user-asset assignment,
+    // we'll return all assets for now. You may need to adjust this based on your business logic.
+    // const userId = session.user.id; // Uncomment when implementing user-specific filtering
     const assets = await prisma.asset.findMany({
-      where: {
-        OR: [
-          { assignedToId: userId },
-          { departmentId: { in: await getUserDepartmentIds(userId) } }
-        ]
-      },
       orderBy: {
         name: 'asc'
       },
@@ -33,6 +27,7 @@ export async function GET() {
         status: true,
         category: true,
         location: true,
+        department: true,
       }
     });
     
@@ -46,17 +41,6 @@ export async function GET() {
   }
 }
 
-// Helper function to get department IDs for a user
-async function getUserDepartmentIds(userId: string): Promise<string[]> {
-  try {
-    const userDepartments = await prisma.userDepartment.findMany({
-      where: { userId },
-      select: { departmentId: true }
-    });
-    
-    return userDepartments.map(ud => ud.departmentId);
-  } catch (error) {
-    console.error('Error fetching user departments:', error);
-    return [];
-  }
-}
+// Note: The getUserDepartmentIds function has been removed as the UserDepartment model
+// doesn't exist in the current schema. If you need user-department relationships,
+// you'll need to add the appropriate models to your Prisma schema.
