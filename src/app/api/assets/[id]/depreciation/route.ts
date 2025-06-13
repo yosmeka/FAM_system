@@ -612,14 +612,14 @@ export async function PUT(
     console.log("API PUT: Query parameter value:", url.searchParams.get('calculateAsGroup'));
 
     // Map the method to handle special cases like DOUBLE_DECLINING
-    let depreciationMethodValue = null;
+    let depreciationMethodValue: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY' | null = null;
     let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
     if (method) {
       if (method === 'DOUBLE_DECLINING') {
         depreciationMethodValue = 'DOUBLE_DECLINING'; // Store as DOUBLE_DECLINING
         effectivePutDepreciationRate = 40; // Always use 40% for double declining
       } else {
-        depreciationMethodValue = method;
+        depreciationMethodValue = method as 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
       }
     }
 

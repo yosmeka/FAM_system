@@ -11,8 +11,7 @@ export async function GET() {
     });
     // Fetch recent permission updates
     const permissions = await prisma.permission.findMany({
-      orderBy: { updatedAt: 'desc' },
-      select: { id: true, name: true, description: true, updatedAt: true, createdAt: true }
+      select: { id: true, name: true, description: true }
     });
     // Fetch true role change logs (audit)
     const roleChanges = await prisma.roleChangeLog.findMany({

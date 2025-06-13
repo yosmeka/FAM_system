@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import {
   CheckCircleIcon,
-  clearClockIcon,
+  ClockIcon,
   ExclamationTriangleIcon,
   XCircleIcon,
   ChartBarIcon,

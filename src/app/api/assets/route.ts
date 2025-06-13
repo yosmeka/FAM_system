@@ -86,7 +86,7 @@ export const POST = withPermission(async function POST(request: Request) {
       assetId: asset.id,
       field,
       oldValue: null,
-      newValue: asset[field]?.toString() || null,
+      newValue: (asset as any)[field]?.toString() || null,
       changedBy: session.user?.email || 'system',
     }));
 
