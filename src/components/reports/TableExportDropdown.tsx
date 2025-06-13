@@ -16,7 +16,7 @@ interface TableExportDropdownProps {
   data: any[];
   columns: TableColumn[];
   title: string;
-  type: 'summary' | 'detailed';
+  type: 'summary' | 'detailed' | 'linked';
   filterSummary?: string;
   onExportPDF?: () => void;
   onExportExcel?: () => void;
@@ -35,13 +35,17 @@ export function TableExportDropdown({
 }: TableExportDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const getNestedValue = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : ''), obj);
+  };
+
   const handleExcelExport = async () => {
     try {
       setIsOpen(false);
       toast.loading('Generating Excel file...', { id: 'excel-export' });
 
       const XLSX = await import('xlsx');
-      
+
       // Prepare headers
       const headers = columns.map(col => col.header);
 
@@ -52,12 +56,12 @@ export function TableExportDropdown({
             return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
           }
           if (col.render) {
-            const rendered = col.render(item[col.key], item);
+            const rendered = col.render(getNestedValue(item, col.key), item);
             if (typeof rendered === 'string') return rendered;
             if (typeof rendered === 'number') return rendered;
-            return item[col.key] || '';
+            return getNestedValue(item, col.key) || '';
           }
-          return item[col.key] || '';
+          return getNestedValue(item, col.key) || '';
         });
       });
 
@@ -78,7 +82,7 @@ export function TableExportDropdown({
       // Generate filename
       const filename = `${title.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(workbook, filename);
-      
+
       toast.success('Excel file exported successfully!', { id: 'excel-export' });
     } catch (error) {
       console.error('Excel export error:', error);
@@ -109,12 +113,12 @@ export function TableExportDropdown({
             return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
           }
           if (col.render) {
-            const rendered = col.render(item[col.key], item);
+            const rendered = col.render(getNestedValue(item, col.key), item);
             if (typeof rendered === 'string') return rendered;
             if (typeof rendered === 'number') return rendered.toString();
-            return item[col.key]?.toString() || '';
+            return getNestedValue(item, col.key)?.toString() || '';
           }
-          return item[col.key]?.toString() || '';
+          return getNestedValue(item, col.key)?.toString() || '';
         });
       });
 
@@ -157,12 +161,12 @@ export function TableExportDropdown({
             return `$${(Number(item.value) / Number(item.count)).toFixed(2)}`;
           }
           if (col.render) {
-            const rendered = col.render(item[col.key], item);
+            const rendered = col.render(getNestedValue(item, col.key), item);
             if (typeof rendered === 'string') return rendered;
             if (typeof rendered === 'number') return rendered.toString();
-            return item[col.key]?.toString() || '';
+            return getNestedValue(item, col.key)?.toString() || '';
           }
-          return item[col.key]?.toString() || '';
+          return getNestedValue(item, col.key)?.toString() || '';
         }).join(',');
       });
 
@@ -216,7 +220,7 @@ export function TableExportDropdown({
         setIsOpen(false);
         if (onExportCSV) {
           onExportCSV();
-        } else {
+      } else {
           handleCsvExport();
         }
       }
