@@ -1,19 +1,25 @@
 // Enhanced Role-Based Access Control (RBAC) middleware for Next.js API routes
 // Supports both session and JWT authentication
 import { NextRequest } from 'next/server';
-import { apiMiddleware, AuthContext } from './api';
+import { apiMiddleware } from './api';
+import { Role } from '@/types/auth';
 
-export function withRole(allowedRoles: string[], handler: Function) {
-  return async function (req: NextRequest, ...args: any[]) {
-    const authResult = await apiMiddleware(req, allowedRoles as any);
+// Define AuthContext type if needed (adjust as per your actual context)
+type AuthContext = {
+  user: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
+  authMethod?: string;
+};
 
-    if ('error' in authResult) {
-      return authResult.error;
+export function withRole(allowedRoles: Role[], handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>) {
+  return async function (req: NextRequest, ...args: unknown[]) {
+    const authResult = await apiMiddleware(req, allowedRoles);
+    if (authResult) {
+      return authResult;
     }
-
-    // Add auth context to request for handler access
-    (req as any).auth = authResult.auth;
-
     return handler(req, ...args);
   };
 }
@@ -21,15 +27,13 @@ export function withRole(allowedRoles: string[], handler: Function) {
 /**
  * Enhanced middleware with explicit auth context passing
  */
-export function withAuth(handler: (req: NextRequest, auth: AuthContext, ...args: any[]) => Promise<Response>) {
-  return async function (req: NextRequest, ...args: any[]) {
+export function withAuth(handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>) {
+  return async function (req: NextRequest, ...args: unknown[]) {
     const authResult = await apiMiddleware(req);
-
-    if ('error' in authResult) {
-      return authResult.error;
+    if (authResult) {
+      return authResult;
     }
-
-    return handler(req, authResult.auth, ...args);
+    return handler(req, ...args);
   };
 }
 
@@ -37,17 +41,15 @@ export function withAuth(handler: (req: NextRequest, auth: AuthContext, ...args:
  * Middleware for specific role with auth context
  */
 export function withRoleAndAuth(
-  allowedRoles: string[],
-  handler: (req: NextRequest, auth: AuthContext, ...args: any[]) => Promise<Response>
+  allowedRoles: Role[],
+  handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>
 ) {
-  return async function (req: NextRequest, ...args: any[]) {
-    const authResult = await apiMiddleware(req, allowedRoles as any);
-
-    if ('error' in authResult) {
-      return authResult.error;
+  return async function (req: NextRequest, ...args: unknown[]) {
+    const authResult = await apiMiddleware(req, allowedRoles);
+    if (authResult) {
+      return authResult;
     }
-
-    return handler(req, authResult.auth, ...args);
+    return handler(req, ...args);
   };
 }
 
