@@ -191,7 +191,7 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
       id: auditRequest.id,
       title: auditRequest.title,
       requesterId: auditRequest.requesterId,
-      managerId: auditRequest.managerId,
+      managerId: auditRequest.managerId || undefined,
       asset: {
         name: auditRequest.asset.name,
         serialNumber: auditRequest.asset.serialNumber,

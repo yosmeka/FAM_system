@@ -27,7 +27,7 @@ async function ensureUploadDir(dir: string) {
 
 // POST /api/upload - Upload a file
 export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
-  request: Request
+  req: Request
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -37,7 +37,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     }
 
     // Check if the request is multipart/form-data
-    const contentType = request.headers.get('content-type');
+    const contentType = req.headers.get('content-type');
     if (!contentType || !contentType.includes('multipart/form-data')) {
       return Response.json(
         { error: 'Request must be multipart/form-data' },
@@ -45,7 +45,7 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
       );
     }
 
-    const formData = await request.formData();
+    const formData = await req.formData();
     const file = formData.get('file') as File;
     const assetId = formData.get('assetId') as string;
     const documentType = formData.get('documentType') as string;

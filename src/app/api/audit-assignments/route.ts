@@ -5,14 +5,14 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-assignments - Get audit assignments
-export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(request: Request) {
+export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const role = searchParams.get('role') || session.user.role;
     const userId = session.user.id;
 

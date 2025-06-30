@@ -1,14 +1,14 @@
-
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
-  const { id } = await context.params;
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -118,10 +118,11 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
 });
 
 export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
-  const { id } = await context.params;
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -137,7 +138,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
 
     // First get the current asset to compare changes
     const currentAsset = await prisma.asset.findUnique({
@@ -252,56 +253,42 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     console.log('Changes to be recorded:', changes);
 
     if (changes.length > 0) {
+      console.log('Creating history records:', changes);
       try {
-        // Ensure the model name is correct based on your schema
-        const result = await (prisma as any).assetHistory.createMany({
-          data: changes,
-        });
-        console.log('History records created:', result);
+        // Create history records one by one to avoid potential issues with `createMany`
+        for (const change of changes) {
+          await prisma.assetHistory.create({ data: change as any });
+        }
+        console.log('History records created successfully');
       } catch (error) {
         console.error('Error creating history records:', error);
-        // Decide if history saving failure should prevent asset update success
-        // Currently, it just logs an error.
       }
     }
 
     return Response.json(updatedAsset);
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error updating asset:', error.message);
-      // Return a more specific error response for invalid data
-      if (error.message.startsWith('Invalid number format') || error.message.startsWith('Invalid date format') || error.message.startsWith('Missing required date field')) {
-        return Response.json({ error: error.message }, { status: 400 });
-      }
-    } else {
-      console.error('Unknown error updating asset:', error);
+  } catch (error: any) {
+    if (error.code === 'P2002' && error.meta?.target?.includes('serialNumber')) {
+      return Response.json(
+        {
+          error: 'Serial number already exists',
+          field: 'serialNumber'
+        },
+        { status: 409 }
+      );
     }
-    // Check for Prisma unique constraint error (P2002)
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
-      // This block seems to be duplicated, the one below is more detailed.
-      // Keep the more detailed handling below.
-    }
-
-    // More detailed handling for Prisma unique constraint error (P2002)
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2002') {
-      // Assuming the unique constraint is on the serialNumber field
-      return Response.json({
-        error: 'Serial number must be unique',
-        code: 'P2002',
-        field: 'serialNumber',
-        message: 'This serial number is already in use. Please enter a unique serial number.',
-      }, { status: 409 }); // Use 409 Conflict for unique constraint errors
-    }
-
-    return Response.json({ error: 'Failed to update asset' }, { status: 500 });
+    console.error('Error updating asset:', error);
+    return Response.json({
+      error: error.message || 'Internal Server Error',
+    }, { status: 500 });
   }
 });
 
 export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DELETE(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
-  const { id } = await context.params;
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
 
@@ -309,99 +296,75 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // First check if the asset exists
+    // Check if user has permission
+    const { id: userId, role } = session.user;
+    const { hasPermission } = await import('@/lib/permissions');
+    const permitted = await hasPermission({ id: userId, role }, 'Asset delete');
+
+    if (!permitted) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Check if asset exists
     const asset = await prisma.asset.findUnique({
-      where: { id: id }
+      where: { id: id },
+      include: {
+        // Include linked assets to check for relationships
+        linkedTo: true,
+        linkedFrom: true,
+      }
     });
 
     if (!asset) {
       return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
-    // First delete all related records manually to avoid foreign key constraint issues
-    console.log(`Deleting all related records for asset ${id}`);
-
-    // Delete asset depreciations
-    await prisma.assetDepreciation.deleteMany({
-      where: { assetId: id }
+    // Check for active audits by looking at the status of related audit assignments
+    const activeAudits = await prisma.auditAssignment.count({
+      where: {
+        assetId: id,
+        status: {
+          in: ['PENDING', 'IN_PROGRESS', 'ACCEPTED']
+        }
+      }
     });
 
-    // Delete depreciation records
-    await prisma.depreciation.deleteMany({
-      where: { assetId: id }
-    });
+    if (activeAudits > 0) {
+      return Response.json(
+        { error: 'Cannot delete asset with active audits' },
+        { status: 400 }
+      );
+    }
 
-    // Delete linked assets (both directions)
+    // Clean up all linked asset records associated with this asset
     await prisma.linkedAsset.deleteMany({
       where: {
         OR: [
           { fromAssetId: id },
-          { toAssetId: id }
-        ]
-      }
+          { toAssetId: id },
+        ],
+      },
     });
 
-    // Delete history records
+    // Clean up asset history
     await prisma.assetHistory.deleteMany({
       where: { assetId: id }
     });
 
-    // Delete maintenance records
-    await prisma.maintenance.deleteMany({
-      where: { assetId: id }
-    });
-
-    // Delete transfer records
-    await prisma.transfer.deleteMany({
-      where: { assetId: id }
-    });
-
-    // Delete disposal records
-    await prisma.disposal.deleteMany({
-      where: { assetId: id }
-    });
-
-    // Delete document records
-    await prisma.document.deleteMany({
-      where: { assetId: id }
-    });
-
-    // Finally delete the asset itself
+    // Proceed to delete the asset
     await prisma.asset.delete({
       where: {
         id: id,
       },
     });
 
-    return Response.json({ success: true }, { status: 200 });
+    return Response.json({ message: 'Asset deleted successfully' });
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error deleting asset:', error.message);
     } else {
       console.error('Unknown error deleting asset:', error);
     }
-
-    // Check for specific Prisma errors
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'P2003') {
-      return Response.json(
-        {
-          error: 'Failed to delete asset',
-          code: 'P2003',
-          details: 'This asset has related records that need to be deleted first. Please contact support.',
-          technicalDetails: error instanceof Error ? error.message : 'Unknown error'
-        },
-        { status: 500 }
-      );
-    }
-
-    return Response.json(
-      {
-        error: 'Failed to delete asset',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
-      },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-}
-)
+});

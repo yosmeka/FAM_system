@@ -6,14 +6,14 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // POST /api/audits/workflow - Create audit from assignment or request
-export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const {
       assetId,
       assignmentId,
@@ -56,6 +56,11 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
           id: true,
           assignedToId: true,
           status: true,
+          assignedBy: {
+            select: {
+              id: true,
+            },
+          },
         },
       });
 
@@ -191,8 +196,8 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
       if (managerId) {
         await AuditNotificationService.notifyAuditCompleted({
           id: audit.id,
-          assignmentId: audit.assignmentId,
-          requestId: audit.requestId,
+          assignmentId: audit.assignmentId || undefined,
+          requestId: audit.requestId || undefined,
           auditorId: audit.auditorId,
           asset: {
             name: audit.asset.name,
@@ -215,14 +220,14 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
 });
 
 // PUT /api/audits/workflow - Submit audit for review
-export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: Request) {
+export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const { auditId, action, ...updateData } = body;
 
     if (!auditId) {
@@ -415,8 +420,8 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
       if (managerId) {
         await AuditNotificationService.notifyAuditCompleted({
           id: updatedAudit.id,
-          assignmentId: updatedAudit.assignmentId,
-          requestId: updatedAudit.requestId,
+          assignmentId: updatedAudit.assignmentId || undefined,
+          requestId: updatedAudit.requestId || undefined,
           auditorId: updatedAudit.auditorId,
           asset: {
             name: updatedAudit.asset.name,

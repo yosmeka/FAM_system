@@ -6,9 +6,11 @@ import { withRole } from '@/middleware/rbac';
 
 // GET /api/assets/[id]/documents - Get all documents for an asset
 export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -16,7 +18,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: assetId } = await context.params;
+    const { id: assetId } = await params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
@@ -51,9 +53,11 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET(
 
 // POST /api/assets/[id]/documents - Create a new document for an asset
 export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -61,7 +65,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: assetId } = await context.params;
+    const { id: assetId } = await params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
@@ -75,7 +79,7 @@ export const POST = withRole(['AUDITOR', 'MANAGER', 'USER'], async function POST
     }
 
     // Parse the request body
-    const body = await request.json();
+    const body = await req.json();
 
     // Validate required fields
     if (!body.type || !body.url) {

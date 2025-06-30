@@ -22,9 +22,11 @@ function extractIdsFromUrl(url: string) {
 
 // GET /api/assets/[id]/documents/[documentId] - Get a specific document
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
-  request: Request,
-  context: { params: Promise<{ id: string; documentId: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string; documentId: string }> };
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -32,7 +34,7 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: assetId, documentId } = await context.params;
+    const { id: assetId, documentId } = await params;
 
     // Check if the document exists and belongs to the specified asset
     const document = await prisma.document.findFirst({
@@ -58,9 +60,11 @@ export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
 
 // PUT /api/assets/[id]/documents/[documentId] - Update a specific document
 export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
-  request: Request,
-  context: { params: Promise<{ id: string; documentId: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string; documentId: string }> };
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -68,7 +72,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: assetId, documentId } = await context.params;
+    const { id: assetId, documentId } = await params;
 
     // Check if the document exists and belongs to the specified asset
     const existingDocument = await prisma.document.findFirst({
@@ -83,7 +87,7 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
     }
 
     // Parse the request body
-    const body = await request.json();
+    const body = await req.json();
 
     // Update the document
     const updatedDocument = await prisma.document.update({
@@ -108,9 +112,11 @@ export const PUT = withRole(['ADMIN', 'MANAGER'], async function PUT(
 
 // DELETE /api/assets/[id]/documents/[documentId] - Delete a specific document
 export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELETE(
-  request: Request,
-  context: { params: Promise<{ id: string; documentId: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string; documentId: string }> };
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -118,7 +124,7 @@ export const DELETE = withRole(['ADMIN', 'MANAGER', 'USER'], async function DELE
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: assetId, documentId } = await context.params;
+    const { id: assetId, documentId } = await params;
 
     // Check if the document exists and belongs to the specified asset
     const existingDocument = await prisma.document.findFirst({

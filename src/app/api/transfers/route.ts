@@ -119,9 +119,9 @@ export const GET = withRole(['USER', 'MANAGER'], async function GET() {
 });
 
 // POST /api/transfers
-export const POST = withRole(['USER', 'MANAGER'], async function POST(request: Request) {
+export const POST = withRole(['USER', 'MANAGER'], async function POST(req: Request) {
   try {
-    const body = await request.json();
+    const body = await req.json();
     const { assetId, fromLocation, toLocation, reason, managerId } = body;
 
     // Validate required fields

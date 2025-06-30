@@ -5,9 +5,10 @@ import { withRole } from '@/middleware/rbac';
 
 // GET /api/audit-assignments/[id] - Get specific audit assignment
 export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -90,16 +91,17 @@ export const GET = withRole([ 'MANAGER', 'AUDITOR'], async function GET(
 
 // PUT /api/audit-assignments/[id] - Update audit assignment
 export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const { action, ...updateData } = body;
 
     const { id } = await params;
@@ -224,9 +226,10 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(
 
 // DELETE /api/audit-assignments/[id] - Delete audit assignment (Manager/Admin only)
 export const DELETE = withRole([ 'MANAGER'], async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  req: Request,
+  ...args: unknown[]
 ) {
+  const { params } = (args[0] || {}) as { params: Promise<{ id: string }> };
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
