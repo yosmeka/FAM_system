@@ -46,6 +46,7 @@ model User {
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
   refreshTokens      RefreshToken[]
+  sessions           Session[]
 
   // Audit relations
   auditsPerformed     AssetAudit[]       @relation("AuditPerformedBy")
@@ -666,4 +667,15 @@ model AuditRequest {
   @@index([managerId])
   @@index([status])
   @@index([requestedDate])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
 }

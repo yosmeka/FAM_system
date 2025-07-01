@@ -11,7 +11,6 @@ import {
   XCircle,
   Eye,
   Calendar,
-  Wrench,
   AlertCircle
 } from 'lucide-react';
 
@@ -183,7 +182,6 @@ export default function ManagerRequestDashboard({ onRequestApproved, onRequestSe
       {/* Requests Grid */}
       {requests.length === 0 ? (
         <div className="text-center py-12">
-          <Wrench className="w-16 h-16 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold dark:text-white mb-2">No Corrective Maintenance Requests</h3>
           <p className="text-gray-500 dark:text-gray-400">
             {filter === 'PENDING_APPROVAL'

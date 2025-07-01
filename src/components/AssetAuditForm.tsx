@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Define the schema for audit validation
@@ -74,7 +74,7 @@ export function AssetAuditForm({
 
   // Watch for changes to discrepancyResolved
   const discrepancyResolved = watch('discrepancyResolved');
-  const hasDiscrepancies = watch('discrepancies')?.trim().length > 0;
+  const hasDiscrepancies = (watch('discrepancies') || '').trim().length > 0;
 
   // Update resolution fields visibility when discrepancyResolved changes
   React.useEffect(() => {
@@ -136,7 +136,7 @@ export function AssetAuditForm({
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Calendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
             <input
               id="auditDate"
@@ -157,7 +157,7 @@ export function AssetAuditForm({
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Calendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
             <input
               id="nextAuditDate"

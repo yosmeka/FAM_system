@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Role } from '@prisma/client';
 // Fallback: hardcode roles if Prisma enum import fails
 const roles = ['ADMIN', 'MANAGER', 'USER', 'AUDITOR']; // Added AUDITOR
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
     // @ts-ignore: Prisma client may not be up to date
     const rolePermissions = await prisma.rolePermission.findMany({
-      where: { role },
+      where: { role: role as Role },
       include: { permission: true },
     });
 
@@ -54,11 +55,11 @@ export async function PUT(req: NextRequest) {
     }
 
     // @ts-ignore: Prisma client may not be up to date
-    await prisma.rolePermission.deleteMany({ where: { role } });
+    await prisma.rolePermission.deleteMany({ where: { role: role as Role } });
 
     // @ts-ignore: Prisma client may not be up to date
     await prisma.rolePermission.createMany({
-      data: permissionIds.map((permissionId: string) => ({ role, permissionId })),
+      data: permissionIds.map((permissionId: string) => ({ role: role as Role, permissionId })),
     });
 
     return Response.json({ success: true });

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, Camera, MapPin, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

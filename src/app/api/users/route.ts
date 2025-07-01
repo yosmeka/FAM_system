@@ -1,6 +1,7 @@
 //import { Response } from 'next/server';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/server/prisma';
+import { Role } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { hash } from 'bcryptjs'; // Import hash function
@@ -26,13 +27,13 @@ export async function GET(request: NextRequest) {
     const role = url.searchParams.get('role');
 
     // Build the query
-    const query: { role?: string } = {};
+    const query: { role?: Role } = {};
     if (role) {
-      query.role = role; // Role will be a string, Prisma handles enum conversion if field is enum
+      query.role = role as Role;
     }
 
     const users = await prisma.user.findMany({
-      where: query, // Let Prisma handle the type for 'where' based on the User model
+      where: query,
       select: {
         id: true,
         name: true,
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword, // Store hashed password
-        role,
+        role: role as Role,
       },
     });
 

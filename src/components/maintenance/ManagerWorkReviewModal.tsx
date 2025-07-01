@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { X, CheckCircle, XCircle, DollarSign, Clock, User, Calendar, Wrench } from 'lucide-react';
+import { X, CheckCircle, XCircle, Clock, User, Calendar } from 'lucide-react';
 
 interface ManagerWorkReviewModalProps {
   open: boolean;

@@ -23,6 +23,7 @@ export async function POST(
       include: {
         asset: {
           select: {
+            id: true,
             name: true,
             serialNumber: true,
             purchasePrice: true,

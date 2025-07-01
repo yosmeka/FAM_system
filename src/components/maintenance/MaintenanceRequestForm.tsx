@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
-import { AlertTriangle, Camera, Clock, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Clock, X } from 'lucide-react';
 
 interface Asset {
   id: string;
@@ -184,7 +184,6 @@ export default function MaintenanceRequestForm({
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <Wrench className="w-6 h-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Report Maintenance Issue
             </h2>
@@ -359,11 +358,11 @@ export default function MaintenanceRequestForm({
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex gap-3 justify-end">
+          <div className="bg-gray-50 dark:bg-gray-700 px-6 py-4 flex justify-end items-center gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </button>
@@ -372,7 +371,6 @@ export default function MaintenanceRequestForm({
               disabled={submitting}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
-              <Wrench className="w-4 h-4" />
               {submitting ? 'Submitting...' : 'Submit Request'}
             </button>
           </div>

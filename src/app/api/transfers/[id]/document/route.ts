@@ -7,6 +7,7 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { DocumentMeta, PrismaDocumentClient } from '@/types/document';
+import { DocumentType } from '@prisma/client';
 //import crypto from 'crypto';
 
 // GET /api/transfers/[id]/document
@@ -57,11 +58,10 @@ export async function GET(
     console.log(`Searching for document with assetId: ${transfer.assetId}, type: ${transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'}, transferId: ${id}`);
 
     // Always search for both approval and rejection documents for this transfer
-    const documents = await (prisma as unknown as { document: PrismaDocumentClient }).document.findMany({
+    const documents = await prisma.document.findMany({
       where: {
         assetId: transfer.assetId,
-        // Find both approval and rejection documents for this transfer
-        type: { in: ['TRANSFER_APPROVAL', 'TRANSFER_REJECTION'] },
+        type: { in: [DocumentType.TRANSFER_APPROVAL, DocumentType.TRANSFER_REJECTION] },
       }
     });
 
@@ -228,10 +228,10 @@ export async function POST(
     console.log(`Checking for existing document for transfer ${id}`);
 
     // First, get all documents for this asset with the right type
-    const existingDocuments = await (prisma as unknown as { document: PrismaDocumentClient }).document.findMany({
+    const existingDocuments = await prisma.document.findMany({
       where: {
         assetId: transfer.assetId,
-        type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION',
+        type: transfer.status === 'APPROVED' ? DocumentType.TRANSFER_APPROVAL : DocumentType.TRANSFER_REJECTION,
       }
     });
 
@@ -269,7 +269,7 @@ export async function POST(
       };
       console.log('Update data:', updateData);
 
-      document = await (prisma as unknown as { document: PrismaDocumentClient }).document.update({
+      document = await prisma.document.update({
         where: { id: existingDocument.id },
         data: updateData,
       });
@@ -280,7 +280,7 @@ export async function POST(
       console.log(`Creating new document for transfer ${id}`);
       const documentData = {
         assetId: transfer.assetId,
-        type: transfer.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION',
+        type: transfer.status === 'APPROVED' ? DocumentType.TRANSFER_APPROVAL : DocumentType.TRANSFER_REJECTION,
         url: documentUrl,
         fileName,
         fileSize: arrayBuffer.byteLength,
@@ -293,7 +293,7 @@ export async function POST(
       };
       console.log('Document data:', documentData);
 
-      document = await (prisma as unknown as { document: PrismaDocumentClient }).document.create({
+      document = await prisma.document.create({
         data: documentData,
       });
 

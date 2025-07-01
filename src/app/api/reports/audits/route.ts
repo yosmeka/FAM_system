@@ -1,4 +1,3 @@
-
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -187,7 +186,8 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
 
     // Condition distribution
     const conditionCounts = allAudits.reduce((acc, audit) => {
-      acc[audit.condition] = (acc[audit.condition] || 0) + 1;
+      const condition = audit.condition || 'Unknown';
+      acc[condition] = (acc[condition] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 

@@ -198,12 +198,12 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(req: Re
           id: audit.id,
           assignmentId: audit.assignmentId || undefined,
           requestId: audit.requestId || undefined,
-          auditorId: audit.auditorId,
+          auditorId: audit.auditorId || '',
           asset: {
             name: audit.asset.name,
             serialNumber: audit.asset.serialNumber,
           },
-          condition: audit.condition,
+          condition: audit.condition || '',
           managerId: managerId,
         });
       }
@@ -422,12 +422,12 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(req: Requ
           id: updatedAudit.id,
           assignmentId: updatedAudit.assignmentId || undefined,
           requestId: updatedAudit.requestId || undefined,
-          auditorId: updatedAudit.auditorId,
+          auditorId: updatedAudit.auditorId || '',
           asset: {
             name: updatedAudit.asset.name,
             serialNumber: updatedAudit.asset.serialNumber,
           },
-          condition: updatedAudit.condition,
+          condition: updatedAudit.condition || '',
           managerId: managerId,
         });
       }
@@ -435,26 +435,26 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(req: Requ
       // Notify auditor that audit was approved
       await AuditNotificationService.notifyAuditApproved({
         id: updatedAudit.id,
-        auditorId: updatedAudit.auditorId,
+        auditorId: updatedAudit.auditorId || '',
         managerId: userId,
         asset: {
           name: updatedAudit.asset.name,
           serialNumber: updatedAudit.asset.serialNumber,
         },
-        reviewNotes: updatedAudit.reviewNotes,
+        reviewNotes: updatedAudit.reviewNotes || undefined,
       });
     } else if (action === 'reject') {
       // Notify auditor that audit was rejected
       await AuditNotificationService.notifyAuditRejected({
         id: updatedAudit.id,
-        auditorId: updatedAudit.auditorId,
+        auditorId: updatedAudit.auditorId || '',
         managerId: userId,
         asset: {
           name: updatedAudit.asset.name,
           serialNumber: updatedAudit.asset.serialNumber,
         },
         rejectionReason: updateData.rejectionReason || 'Audit requires revision',
-        reviewNotes: updatedAudit.reviewNotes,
+        reviewNotes: updatedAudit.reviewNotes || undefined,
       });
     }
 
