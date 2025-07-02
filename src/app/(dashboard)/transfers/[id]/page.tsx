@@ -37,31 +37,35 @@ interface TransferDetails {
   };
 }
 
-export default function TransferDetailsPage({ params }: { params: { id: string } }) {
-  const { data: session } = useSession();
-  const id = params.id;
+export default function TransferDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const [transfer, setTransfer] = useState<TransferDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleted, setDeleted] = useState(false);
-
+  const { data: session } = useSession();
   const router = useRouter();
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    params.then(({ id }) => setResolvedId(id));
+  }, [params]);
 
   const fetchTransferDetails = useCallback(async () => {
+    if (!resolvedId) return;
     try {
       // Fetch transfer details
-      const response = await fetch(`/api/transfers/${id}`);
+      const response = await fetch(`/api/transfers/${resolvedId}`);
       if (!response.ok) throw new Error('Failed to fetch transfer details');
       const data = await response.json();
 
       // If transfer is approved or rejected, check for document
       if (data.status === 'APPROVED' || data.status === 'REJECTED') {
         try {
-          console.log(`Fetching document for transfer ${id}`);
-          const docResponse = await fetch(`/api/transfers/${id}/document`);
+          console.log(`Fetching document for transfer ${resolvedId}`);
+          const docResponse = await fetch(`/api/transfers/${resolvedId}/document`);
 
           if (docResponse.ok) {
             const docData = await docResponse.json();
-            console.log(`Document data for transfer ${id}:`, docData);
+            console.log(`Document data for transfer ${resolvedId}:`, docData);
 
             if (docData.documentUrl) {
               data.document = {
@@ -70,12 +74,12 @@ export default function TransferDetailsPage({ params }: { params: { id: string }
                 fileName: `transfer_${data.status.toLowerCase()}_${data.id}.pdf`,
                 type: data.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'
               };
-              console.log(`Document found and set for transfer ${id}`);
+              console.log(`Document found and set for transfer ${resolvedId}`);
             } else {
               console.log('Document URL not found in response:', docData);
             }
           } else {
-            console.log(`Document not found for transfer ${id}, status: ${docResponse.status}`);
+            console.log(`Document not found for transfer ${resolvedId}, status: ${docResponse.status}`);
             // Try to get the error message
             try {
               const errorData = await docResponse.json();
@@ -97,13 +101,13 @@ export default function TransferDetailsPage({ params }: { params: { id: string }
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [resolvedId]);
 
   useEffect(() => {
     if (!deleted) {
       fetchTransferDetails();
     }
-  }, [id, deleted, fetchTransferDetails]);
+  }, [resolvedId, deleted, fetchTransferDetails]);
 
   useEffect(() => {
     if (deleted) {
@@ -133,7 +137,7 @@ export default function TransferDetailsPage({ params }: { params: { id: string }
     if (!window.confirm('Are you sure you want to delete this transfer request?')) return;
     try {
       setLoading(true);
-      const response = await fetch(`/api/transfers/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/transfers/${resolvedId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete transfer');
       toast.success('Transfer request deleted');
       setDeleted(true);
@@ -148,7 +152,7 @@ export default function TransferDetailsPage({ params }: { params: { id: string }
   async function handleCompleteTransfer() {
     try {
       setLoading(true);
-      const response = await fetch(`/api/transfers/${id}/complete`, { method: 'POST' });
+      const response = await fetch(`/api/transfers/${resolvedId}/complete`, { method: 'POST' });
       if (!response.ok) throw new Error('Failed to complete transfer');
       toast.success('Transfer marked as completed.');
       fetchTransferDetails();

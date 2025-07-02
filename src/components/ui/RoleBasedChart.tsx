@@ -17,7 +17,7 @@ const ClientChart = dynamic(() => import("./ClientChart").then(mod => mod.Client
 
 import { ChartType } from '@/types/chart';
 
-interface ChartDataItem {
+export interface ChartDataItem {
   category?: string;
   status?: string;
   year?: string;
