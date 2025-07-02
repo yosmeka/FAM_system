@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface ChecklistItem {
@@ -12,10 +12,25 @@ interface ChecklistItem {
   completedAt?: string;
 }
 
+type ChecklistRawItem = ChecklistItem | string | Record<string, string>;
+
+interface TemplateChecklistTask {
+  id: string;
+  checklistItems?: ChecklistRawItem[] | string | object;
+  asset?: {
+    name?: string;
+    serialNumber?: string;
+    location?: string;
+  };
+  description?: string;
+  priority?: string;
+  estimatedHours?: number;
+}
+
 interface TemplateChecklistModalProps {
   open: boolean;
   onClose: () => void;
-  task: unknown;
+  task: TemplateChecklistTask;
   onTaskCompleted: () => void;
 }
 
@@ -34,7 +49,7 @@ export default function TemplateChecklistModal({
       try {
 
         // Handle multiple data formats
-        let items: any[] = [];
+        let items: ChecklistRawItem[] = [];
 
         if (typeof task.checklistItems === 'string') {
           // String format - needs parsing
@@ -57,7 +72,11 @@ export default function TemplateChecklistModal({
 
           if (numericKeys.length > 0) {
             // Extract values from numeric keys
-            items = numericKeys.map(key => (task.checklistItems as any)[key]);
+            items = numericKeys.map(key => {
+              const value = (task.checklistItems as Record<string, unknown>)[key];
+              // If value is an object, return as is, else treat as string
+              return typeof value === 'object' && value !== null ? value as Record<string, string> : String(value);
+            });
           } else {
             console.error('Cannot extract array from object:', task.checklistItems);
             setChecklistItems([]);
@@ -77,7 +96,7 @@ export default function TemplateChecklistModal({
         }
 
         // Process each item to ensure proper structure
-        const processedItems = items.map((item: any, index: number) => {
+        const processedItems = items.map((item, index) => {
           if (typeof item === 'string') {
             // String format: "check oil"
             return {
@@ -93,23 +112,24 @@ export default function TemplateChecklistModal({
 
             if (numericKeys.length > 0) {
               // Reconstruct string from character objects
-              const reconstructedString = numericKeys.map(key => item[key]).join('');
+              const reconstructedString = numericKeys.map(key => (item as Record<string, string>)[key]).join('');
 
               return {
-                id: item.id || `item-${index}`,
+                id: (item as any).id || `item-${index}`,
                 task: reconstructedString,
-                completed: Boolean(item.completed),
-                notes: item.notes || '',
-                completedAt: item.completedAt || undefined
+                completed: Boolean((item as any).completed),
+                notes: (item as any).notes || '',
+                completedAt: (item as any).completedAt || undefined
               };
             } else {
               // Normal object format: {id, task, completed, notes}
+              const obj = item as Partial<ChecklistItem> & { name?: string };
               return {
-                id: item.id || `item-${index}`,
-                task: item.task || item.name || `Task ${index + 1}`,
-                completed: Boolean(item.completed),
-                notes: item.notes || '',
-                completedAt: item.completedAt || undefined
+                id: obj.id || `item-${index}`,
+                task: obj.task || obj.name || `Task ${index + 1}`,
+                completed: Boolean(obj.completed),
+                notes: obj.notes || '',
+                completedAt: obj.completedAt || undefined
               };
             }
           } else {

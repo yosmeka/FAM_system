@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { X, Plus, Trash2, DollarSign, Clock, Wrench, FileText } from 'lucide-react';
+import { X, Plus, Trash2, DollarSign, Clock, FileText } from 'lucide-react';
 
 interface Part {
   id: string;
@@ -12,10 +12,22 @@ interface Part {
   totalCost: number;
 }
 
+interface WorkDocumentationTask {
+  id: string;
+  workPerformed?: string;
+  technicianNotes?: string;
+  laborHours?: number;
+  partsUsed?: string;
+  asset?: {
+    name?: string;
+    serialNumber?: string;
+  };
+}
+
 interface WorkDocumentationModalProps {
   open: boolean;
   onClose: () => void;
-  task: unknown;
+  task: WorkDocumentationTask;
   onWorkCompleted: () => void;
 }
 
@@ -43,7 +55,7 @@ export default function WorkDocumentationModal({
         try {
           const existingParts = JSON.parse(task.partsUsed);
           setParts(existingParts);
-        } catch (e) {
+        } catch {
           setParts([]);
         }
       }
