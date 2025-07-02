@@ -9,10 +9,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import type {
   DisposalStats,
   DisposalMethodData,
-  DisposalTrendData,
-  ValueRecoveryData,
   Column,
-  RoleBasedStatsProps
 } from '@/types/reports';
 
 import { useSession } from 'next-auth/react';

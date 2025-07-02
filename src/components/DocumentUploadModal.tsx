@@ -27,13 +27,13 @@ interface DocumentUploadModalProps {
 
 export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: DocumentUploadModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadMethod] = useState<'url' | 'file'>('file');
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<DocumentUploadFormValues>({
     resolver: zodResolver(documentUploadSchema.refine(

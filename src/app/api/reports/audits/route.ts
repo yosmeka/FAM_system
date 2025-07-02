@@ -281,7 +281,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
           totalAudits: 0,
           lastAuditDate: null as string | null,
           nextAuditDate: audit.asset?.nextAuditDate?.toISOString() || null,
-          condition: audit.condition,
+          condition: audit.condition || 'Unknown',
           discrepancies: 0,
           isOverdue: false,
         };
@@ -292,7 +292,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
       // Update last audit date if this audit is more recent
       if (!acc[assetId].lastAuditDate || new Date(audit.auditDate) > new Date(acc[assetId].lastAuditDate!)) {
         acc[assetId].lastAuditDate = audit.auditDate.toISOString();
-        acc[assetId].condition = audit.condition;
+        acc[assetId].condition = audit.condition || 'Unknown';
       }
 
       return acc;

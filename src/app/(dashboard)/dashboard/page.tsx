@@ -69,6 +69,24 @@ import { useState, useEffect } from 'react';
 import { AdminRecentActivity } from '@/components/ui/AdminRecentActivity';
 import { AdminCharts } from '@/components/ui/AdminCharts';
 
+interface RecentActivity {
+  users: Array<{ id: string; name: string; email: string; role: string; updatedAt: string; createdAt: string }>;
+  permissions: Array<{ id: string; name: string; description: string }>;
+  roleChanges: Array<{ id: string; user: { id: string; name: string; email: string }; changedByUser: { id: string; name: string; email: string }; changedAt: string }>;
+}
+
+interface UserGrowth {
+  year: number;
+  month: number;
+  count: number;
+}
+
+interface PermissionAssignment {
+  year: number;
+  month: number;
+  count: number;
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const user = session?.user as CustomUser | undefined;
@@ -127,9 +145,9 @@ export default function DashboardPage() {
   };
 
   // Fetch recent activity, charts, and notifications for admin
-  const [recentActivity, setRecentActivity] = useState<any>(null);
-  const [userGrowth, setUserGrowth] = useState<any[]>([]);
-  const [permissionAssignments, setPermissionAssignments] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity | null>(null);
+  const [userGrowth, setUserGrowth] = useState<UserGrowth[]>([]);
+  const [permissionAssignments, setPermissionAssignments] = useState<PermissionAssignment[]>([]);
 
   useEffect(() => {
     if (isAdmin) {

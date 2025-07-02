@@ -6,7 +6,6 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
 import { TableExportDropdown } from '@/components/reports/TableExportDropdown';
-import { usePDF } from 'react-to-pdf';
 import { Download, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'react-hot-toast';
@@ -20,9 +19,6 @@ import { useSession } from 'next-auth/react';
 
 export default function AssetReportsPage() {
   const { data: session, status } = useSession();
-  const { toPDF, targetRef } = usePDF({
-    filename: `asset-report-${new Date().toISOString().split('T')[0]}.pdf`,
-  });
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [activeTab, setActiveTab] = useState('assetDetails');
   const [linkedAssets, setLinkedAssets] = useState<LinkedAsset[]>([]);
