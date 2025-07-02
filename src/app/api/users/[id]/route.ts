@@ -3,6 +3,7 @@ import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
+import { Role } from '@prisma/client';
 
 // PUT /api/users/[id] -- update user info
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +11,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
 
-  if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User edit/update'))) {
+  if (!user || !(await hasPermission({ id: user.id, role: user.role as Role }, 'User edit/update'))) {
     return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -50,7 +51,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
-  if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User delete'))) {
+  if (!user || !(await hasPermission({ id: user.id, role: user.role as Role }, 'User delete'))) {
     return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
   try {

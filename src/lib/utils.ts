@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Role } from "@/types/auth";
+import { Role } from "@prisma/client";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -23,6 +23,11 @@ export function getRoleColor(role: Role) {
       text: "text-green-800",
       border: "border-green-300",
     },
+    'AUDITOR': {
+      bg: "bg-yellow-100",
+      text: "text-yellow-800",
+      border: "border-yellow-300",
+    },
   } as const;
 
   return colors[role];
@@ -33,6 +38,7 @@ export function getRoleLabel(role: Role) {
     'ADMIN': "Administrator",
     'MANAGER': "Manager",
     'USER': "User",
+    'AUDITOR': "Auditor",
   } as const;
 
   return labels[role];

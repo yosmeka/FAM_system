@@ -21,7 +21,7 @@ export class AuditNotificationService {
           userId: data.userId,
           message: data.message,
           type: data.type,
-          meta: data.meta ? JSON.stringify(data.meta) : null,
+          meta: data.meta ? JSON.stringify(data.meta) : undefined,
           read: false,
         },
       });

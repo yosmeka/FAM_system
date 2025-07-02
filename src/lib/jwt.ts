@@ -119,7 +119,7 @@ export async function refreshAccessToken(
     });
 
     // Generate new token pair
-    return await generateTokenPair(storedToken.user, storedToken.sessionId);
+    return await generateTokenPair(storedToken.user, storedToken.sessionId ?? undefined);
   } catch (error) {
     console.error('Error refreshing access token:', error);
     return null;

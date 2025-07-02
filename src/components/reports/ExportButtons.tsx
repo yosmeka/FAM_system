@@ -97,7 +97,7 @@ export function ExportButtons({ data, isLoading = false, onEmailReport }: Export
     if (onEmailReport) {
       onEmailReport();
     } else {
-      toast.info('Email functionality not implemented yet');
+      toast.success('Email functionality not implemented yet');
     }
   };
 
@@ -270,7 +270,7 @@ export async function generateEnhancedPdf(data: ExcelExportData) {
     });
 
     // Footer on all pages
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = (doc as any).internal.pages.length;
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);

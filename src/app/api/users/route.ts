@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
   // Allow managers to view users for assignment purposes, and admins for user management
+  const userWithRole = session?.user ? { ...session.user, role: session.user.role as Role } : undefined;
   const canViewUsers = session?.user?.role === 'ADMIN' ||
     session?.user?.role === 'MANAGER' ||
-    (session?.user && await hasPermission(session.user, 'User view (list and detail)'));
+    (userWithRole && await hasPermission(userWithRole, 'User view (list and detail)'));
 
   if (!session?.user || !canViewUsers) {
     return Response.json({ error: 'Unauthorized' }, { status: 403 });
@@ -54,7 +55,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user || !(await hasPermission(session.user, 'User create'))) {
+  const userWithRolePost = session?.user ? { ...session.user, role: session.user.role as Role } : undefined;
+  if (!session?.user || !(userWithRolePost && await hasPermission(userWithRolePost, 'User create'))) {
     return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

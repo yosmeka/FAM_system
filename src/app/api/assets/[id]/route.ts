@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { Role } from '@prisma/client';
 
 export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(
   req: Request,
@@ -133,7 +134,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     // Check if user has 'Asset edit' permission (user-specific or role-based)
     const { id: userId, role } = session.user;
     const { hasPermission } = await import('@/lib/permissions');
-    const permitted = await hasPermission({ id: userId, role }, 'Asset edit');
+    const permitted = await hasPermission({ id: userId, role: role as Role }, 'Asset edit');
     if (!permitted) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -299,7 +300,7 @@ export const DELETE = withRole(['MANAGER', 'USER', 'AUDITOR'], async function DE
     // Check if user has permission
     const { id: userId, role } = session.user;
     const { hasPermission } = await import('@/lib/permissions');
-    const permitted = await hasPermission({ id: userId, role }, 'Asset delete');
+    const permitted = await hasPermission({ id: userId, role: role as Role }, 'Asset delete');
 
     if (!permitted) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });

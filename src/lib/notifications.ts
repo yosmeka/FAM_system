@@ -17,7 +17,7 @@ export async function sendNotification({
       userId,
       message,
       type,
-      meta,
+      meta: meta === null ? undefined : meta,
     },
   });
 }

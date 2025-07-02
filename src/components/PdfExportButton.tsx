@@ -6,11 +6,9 @@ import { useEffect, useState } from 'react';
 import { TransferReportData } from '@/utils/pdfUtils';
 
 // Define the type for jspdf-autotable
+import type { jsPDF } from 'jspdf';
 declare module 'jspdf-autotable' {
-  import { jsPDF } from 'jspdf';
-
   function autoTable(doc: jsPDF, options: any): void;
-  export default autoTable;
 }
 
 interface PdfExportButtonProps {
@@ -58,14 +56,9 @@ export function PdfExportButton({ reportData }: PdfExportButtonProps) {
       doc.setFontSize(10);
       const stats = [
         ['Total Transfers', reportData.stats.totalTransfers.toString()],
-        ['Completed Transfers', (reportData.stats.completedTransfers || 0).toString()],
         ['Pending Transfers', reportData.stats.pendingTransfers.toString()],
-        ['Rejected Transfers', (reportData.stats.rejectedTransfers || 0).toString()],
         ['Average Processing Time', `${reportData.stats.avgProcessingDays.toFixed(1)} days`],
         ['Approval Rate', `${reportData.stats.approvalRate}%`],
-        ['Rejection Rate', `${reportData.stats.rejectionRate || 0}%`],
-        ['Transfer Efficiency', `${reportData.stats.transferEfficiency || 0}%`],
-        ['Transfer Velocity', `${reportData.stats.transferVelocity || 0}/day`],
         ['Transfer Growth', `${reportData.stats.transferGrowth}%`],
       ];
 
@@ -113,14 +106,13 @@ export function PdfExportButton({ reportData }: PdfExportButtonProps) {
         month.month,
         month.count.toString(),
         month.approved.toString(),
-        (month.rejected || 0).toString(),
-        `${month.approvalRate || 0}%`,
+        `${Math.round((month.approved / (month.count || 1)) * 100)}%`,
       ]);
 
       // Add monthly trends table
       autoTable(doc, {
         startY: finalY2 + 20,
-        head: [['Month', 'Total Transfers', 'Approved', 'Rejected', 'Approval Rate']],
+        head: [['Month', 'Total Transfers', 'Approved', 'Approval Rate']],
         body: monthlyData,
         theme: 'grid',
         headStyles: { fillColor: [66, 139, 202] },
@@ -149,7 +141,7 @@ export function PdfExportButton({ reportData }: PdfExportButtonProps) {
       });
 
       // Footer on all pages
-      const pageCount = doc.internal.getNumberOfPages();
+      const pageCount = (doc as any).internal.pages.length;
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);

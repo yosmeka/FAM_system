@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/server/prisma';
+import { Role } from '@prisma/client';
 
 // Permission check helper
-export async function hasPermission(user: { id: string, role: string }, permissionName: string): Promise<boolean> {
+export async function hasPermission(user: { id: string, role: Role }, permissionName: string): Promise<boolean> {
   // ADMIN can only access user and role/permission management endpoints
   if (user.role === 'ADMIN') {
     if (permissionName.startsWith('User ') || permissionName.startsWith('Role ') || permissionName.startsWith('Permission ')) {
@@ -22,7 +23,7 @@ export async function hasPermission(user: { id: string, role: string }, permissi
 
   // Fallback to role-based permission
   const rolePermission = await prisma.rolePermission.findFirst({
-    where: { role: user.role, permissionId: permission.id },
+    where: { role: user.role as Role, permissionId: permission.id },
   });
   return !!rolePermission;
 }
