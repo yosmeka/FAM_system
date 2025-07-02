@@ -84,7 +84,7 @@ export default function AssignmentDetailPage({
     if (assignmentId) {
       fetchAssignment();
     }
-  }, [assignmentId]);
+  }, [assignmentId, fetchAssignment]);
 
   const fetchAssignment = async () => {
     if (!assignmentId) return;
@@ -106,7 +106,7 @@ export default function AssignmentDetailPage({
     }
   };
 
-  const handleAction = async (action: string, additionalData?: any) => {
+  const handleAction = async (action: string, additionalData?: Record<string, unknown>) => {
     if (!assignment) return;
 
     setActionLoading(true);

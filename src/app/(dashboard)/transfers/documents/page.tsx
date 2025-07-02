@@ -115,7 +115,7 @@ export default function TransferDocumentsPage() {
           </svg>
           <h2 className="text-xl font-medium text-gray-600 dark:text-gray-500 mb-2">No Documents Found</h2>
           <p className="text-gray-500 mb-4">
-            You don't have any transfer documents yet. Documents are automatically generated when your transfer requests are approved or rejected by a manager.
+            You don&apos;t have any transfer documents yet. Documents are automatically generated when your transfer requests are approved or rejected by a manager.
           </p>
           <RoleBasedButton
             variant="primary"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -71,21 +71,7 @@ export default function RequestDetailPage({
   );
   const [requestId, setRequestId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initializeParams = async () => {
-      const { id } = await params;
-      setRequestId(id);
-    };
-    initializeParams();
-  }, [params]);
-
-  useEffect(() => {
-    if (requestId) {
-      fetchRequest();
-    }
-  }, [requestId]);
-
-  const fetchRequest = async () => {
+  const fetchRequest = useCallback(async () => {
     if (!requestId) return;
 
     try {
@@ -103,7 +89,19 @@ export default function RequestDetailPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestId, router]);
+
+  useEffect(() => {
+    const initializeParams = async () => {
+      const { id } = await params;
+      setRequestId(id);
+    };
+    initializeParams();
+  }, [params]);
+
+  useEffect(() => {
+    fetchRequest();
+  }, [fetchRequest]);
 
   const handleReview = async () => {
     if (!request) return;

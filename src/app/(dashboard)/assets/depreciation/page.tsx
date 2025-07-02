@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Settings } from "lucide-react";
@@ -61,7 +61,7 @@ export default function AssetDepreciationPage() {
       dateAcquired: new Date().toISOString().split("T")[0],
     });
 
-  const fetchAssetAndDepreciation = async () => {
+  const fetchAssetAndDepreciation = useCallback(async () => {
     try {
       // First fetch the asset
       if (!assetId) return;
@@ -122,39 +122,9 @@ export default function AssetDepreciationPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [assetId]);
 
-  // Suppress exhaustive-deps warning for fetchAssetAndDepreciation
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    function fetchAssetAndDepreciationEffect() {
-      if (assetId) {
-        fetchAssetAndDepreciation();
-      }
-    },
-    [assetId]
-  );
-
-  // Suppress exhaustive-deps warning for calculateDepreciation
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(
-    function calculateDepreciationEffect() {
-      if (asset && !isLoading) {
-        calculateDepreciation();
-      }
-    },
-    [
-      asset,
-      isLoading,
-      usefulLife,
-      salvageValue,
-      depreciationMethod,
-      depreciationRate,
-      assetId,
-    ]
-  );
-
-  const calculateDepreciation = async () => {
+  const calculateDepreciation = useCallback(async () => {
     if (!asset) return;
 
     try {
@@ -215,7 +185,25 @@ export default function AssetDepreciationPage() {
 
       setDepreciationResults(results);
     }
-  };
+  }, [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, assetId]);
+
+  useEffect(
+    function fetchAssetAndDepreciationEffect() {
+      if (assetId) {
+        fetchAssetAndDepreciation();
+      }
+    },
+    [assetId, fetchAssetAndDepreciation]
+  );
+
+  useEffect(
+    function calculateDepreciationEffect() {
+      if (asset && !isLoading) {
+        calculateDepreciation();
+      }
+    },
+    [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, assetId, calculateDepreciation]
+  );
 
   const handleSaveDepreciationSettings = async (
     settings: DepreciationSettings

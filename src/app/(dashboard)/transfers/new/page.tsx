@@ -35,11 +35,7 @@ export default function NewTransferPage() {
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [selectedManager, setSelectedManager] = useState<string>('');
 
-
-
-
-
-// Show nothing until session is loaded
+  // Show nothing until session is loaded
   if (status === 'loading'){
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -59,11 +55,6 @@ export default function NewTransferPage() {
       </div>
     );
   }
-
-
-
-
-
 
   useEffect(() => {
     const fetchManagers = async () => {

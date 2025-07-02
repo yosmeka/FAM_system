@@ -20,19 +20,19 @@ export default function MaintenanceReportsPage() {
   // All hooks must be at the top, before any early returns!
   const [loading, setLoading] = useState(true);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
+  const [maintenanceStats, setMaintenanceStats] = useState<unknown>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
+  const [statusDistribution, setStatusDistribution] = useState<unknown[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [priorityDistribution, setPriorityDistribution] = useState<any[]>([]);
+  const [priorityDistribution, setPriorityDistribution] = useState<unknown[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [departmentDistribution, setDepartmentDistribution] = useState<any[]>([]);
+  const [departmentDistribution, setDepartmentDistribution] = useState<unknown[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
+  const [monthlyTrends, setMonthlyTrends] = useState<unknown[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [topAssets, setTopAssets] = useState<any[]>([]);
+  const [topAssets, setTopAssets] = useState<unknown[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<unknown[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState('12months');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [generatedOn, setGeneratedOn] = useState<string>("");

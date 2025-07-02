@@ -11,24 +11,9 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
   const router = useRouter();
   const { checkPermission } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
-  const [assetData, setAssetData] = useState<any>(null);
+  const [assetData, setAssetData] = useState<unknown>(null);
   const [isDisposed, setIsDisposed] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    serialNumber: '',
-    purchaseDate: '',
-    purchasePrice: '',
-    currentValue: '',
-    status: 'ACTIVE',
-    location: '',
-    department: '',
-    category: '',
-    supplier: '',
-    warrantyExpiry: '',
-    lastMaintenance: '',
-    nextMaintenance: '',
-  });
+
   useEffect(() => {
     const fetchAsset = async () => {
       try {
@@ -59,7 +44,7 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
     return (
       <div className="p-4">
         <h1 className="text-2xl font-semibold text-gray-900">Access Denied</h1>
-        <p className="mt-2 text-gray-600">You don't have permission to edit assets.</p>
+        <p className="mt-2 text-gray-600">You don&apos;t have permission to edit assets.</p>
       </div>
     );
   }

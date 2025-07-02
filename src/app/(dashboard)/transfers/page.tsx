@@ -32,7 +32,7 @@ function DeleteConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
         <p className="mb-4 dark:text-white">
-          Are you sure you want to delete the transfer request for asset "{assetName}"? 
+          Are you sure you want to delete the transfer request for asset &quot;{assetName}"? 
           This action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">

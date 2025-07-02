@@ -30,7 +30,7 @@ function DeleteConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
         <p className="mb-4 dark:text-white">
-          Are you sure you want to delete the disposal request for asset "{assetName}"? 
+          Are you sure you want to delete the disposal request for asset &quot;{assetName}"? 
           This action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
@@ -75,7 +75,7 @@ function RejectConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Reject Disposal Request</h3>
         <p className="mb-4 dark:text-white">
-          Please provide a reason for rejecting the disposal request for asset "{assetName}".
+          Please provide a reason for rejecting the disposal request for asset &quot;{assetName}".
         </p>
         <textarea
           value={reason}

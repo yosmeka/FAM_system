@@ -43,7 +43,7 @@ export function MaintenanceFormSimple({
   const isApproved = initialData?.status === 'APPROVED';
   const canEditStatus = isManager() || isAdmin() || (isUser() && isApproved);
   const [cost, setCost] = useState(initialData?.cost !== undefined ? initialData.cost.toString() : '');
-  const [scheduledDate, setScheduledDate] = useState(
+  const [scheduledDate] = useState(
     initialData?.scheduledDate !== undefined && initialData?.scheduledDate !== null
       ? new Date(initialData.scheduledDate).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0]

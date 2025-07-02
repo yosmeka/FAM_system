@@ -16,6 +16,7 @@ import {
 } from 'chart.js/auto';
 import { useQuery } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
+import Image from 'next/image';
 
 interface CustomUser {
   id: string;

@@ -11,7 +11,6 @@ import {
   User,
   FileText,
   Plus,
-  Filter,
   Search
 } from 'lucide-react';
 import CreateAssignmentModal from '@/components/audit/CreateAssignmentModal';
