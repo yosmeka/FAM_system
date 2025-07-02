@@ -1,12 +1,11 @@
 'use client';
 
-import React from 'react';
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 
 interface TransferDetails {
   id: string;
@@ -38,24 +37,16 @@ interface TransferDetails {
   };
 }
 
-import { useSession } from 'next-auth/react';
-
 export default function TransferDetailsPage({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
-  const { id } = React.use(params) as { id: string };
+  const id = params.id;
   const [transfer, setTransfer] = useState<TransferDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleted, setDeleted] = useState(false);
 
   const router = useRouter();
 
-  useEffect(() => {
-    if (!deleted) {
-      fetchTransferDetails();
-    }
-  }, [id, deleted, fetchTransferDetails]);
-
-  const fetchTransferDetails = async () => {
+  const fetchTransferDetails = useCallback(async () => {
     try {
       // Fetch transfer details
       const response = await fetch(`/api/transfers/${id}`);
@@ -100,13 +91,19 @@ export default function TransferDetailsPage({ params }: { params: { id: string }
       }
 
       setTransfer(data);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      console.error('Error:', err);
       toast.error('Failed to load transfer details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (!deleted) {
+      fetchTransferDetails();
+    }
+  }, [id, deleted, fetchTransferDetails]);
 
   useEffect(() => {
     if (deleted) {

@@ -16,15 +16,6 @@ const documentUploadSchema = z.object({
   file: z.instanceof(File, { message: 'Please select a file' }).optional(),
 });
 
-// Ensure either URL or file is provided
-const documentUploadFormSchema = documentUploadSchema.refine(
-  (data) => data.url || data.file,
-  {
-    message: 'Either a URL or a file must be provided',
-    path: ['file'],
-  }
-);
-
 type DocumentUploadFormValues = z.infer<typeof documentUploadSchema>;
 
 interface DocumentUploadModalProps {
@@ -36,7 +27,6 @@ interface DocumentUploadModalProps {
 
 export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: DocumentUploadModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('file');
 
   const {
     register,
@@ -66,28 +56,6 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
       url: '',
     },
   });
-
-  // Watch the file input
-  const selectedFile = watch('file');
-
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setValue('file', file);
-    }
-  };
-
-  // Toggle between URL and file upload
-  const toggleUploadMethod = () => {
-    setUploadMethod(prev => prev === 'url' ? 'file' : 'url');
-    // Reset the form values for the other method
-    if (uploadMethod === 'url') {
-      setValue('file', undefined);
-    } else {
-      setValue('url', '');
-    }
-  };
 
   // Handle form submission
   const onSubmit = async (data: DocumentUploadFormValues) => {
@@ -211,83 +179,53 @@ export function DocumentUploadModal({ open, onClose, assetId, onSuccess }: Docum
             )}
           </div>
 
-          {/* Upload Method Toggle */}
-          <div className="flex border border-gray-300 dark:border-gray-700 rounded-md overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setUploadMethod('file')}
-              className={`flex-1 py-2 text-sm font-medium ${
-                uploadMethod === 'file'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Upload File
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadMethod('url')}
-              className={`flex-1 py-2 text-sm font-medium ${
-                uploadMethod === 'url'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}
-            >
-              Enter URL
-            </button>
+          {/* File Upload */}
+          <div>
+            <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Upload Document
+            </label>
+            <input
+              id="file"
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setValue('file', file);
+                }
+              }}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              accept=".pdf,.gif,.jpg,.jpeg,.png,.txt"
+            />
+            {errors.file && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
+                <span className="mr-1">⚠️</span>
+                {errors.file.message}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Accepted file types: PDF, Images, Text (Max: 10MB)
+            </p>
           </div>
 
-          {/* File Upload */}
-          {uploadMethod === 'file' && (
-            <div>
-              <label htmlFor="file" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Upload Document
-              </label>
-              <input
-                id="file"
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setValue('file', file);
-                  }
-                }}
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                accept=".pdf,.gif,.jpg,.jpeg,.png,.txt"
-              />
-              {errors.file && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                  <span className="mr-1">⚠️</span>
-                  {errors.file.message}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Accepted file types: PDF, Images, Text (Max: 10MB)
-              </p>
-            </div>
-          )}
-
           {/* Document URL */}
-          {uploadMethod === 'url' && (
-            <div>
-              <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Document URL
-              </label>
-              <input
-                id="url"
-                type="text"
-                {...register('url')}
-                placeholder="https://example.com/document.pdf"
-                className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {errors.url && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
-                  <span className="mr-1">⚠️</span>
-                  {errors.url.message}
-                </p>
-              )}
-            </div>
-          )}
+          <div>
+            <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Document URL
+            </label>
+            <input
+              id="url"
+              type="text"
+              {...register('url')}
+              placeholder="https://example.com/document.pdf"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {errors.url && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center">
+                <span className="mr-1">⚠️</span>
+                {errors.url.message}
+              </p>
+            )}
+          </div>
 
           <div className="pt-4 flex justify-end space-x-3">
             <button

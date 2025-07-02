@@ -288,7 +288,7 @@ export async function GET() {
             const completedDate = new Date(request.completedAt!);
             const duration = Math.max(0, completedDate.getTime() - scheduledDate.getTime());
             return sum + (duration / (1000 * 60 * 60 * 24)); // Convert to days
-          } catch (e) {
+          } catch {
             return sum;
           }
         }, 0) / completedRequests.length
@@ -325,7 +325,7 @@ export async function GET() {
             const updatedDate = new Date(record.updatedAt);
             const timeDiff = Math.max(0, updatedDate.getTime() - createdDate.getTime());
             return sum + (timeDiff / (1000 * 60 * 60 * 24));
-          } catch (e) {
+          } catch {
             return sum;
           }
         }, 0) / approvedRequests.length
@@ -353,7 +353,7 @@ export async function GET() {
           completionRate: item.count > 0 ? (item.completed / item.count) * 100 : 0,
           avgCost: item.count > 0 ? item.totalCost / item.count : 0,
         };
-      } catch (e) {
+      } catch {
         return {
           ...item,
           monthDisplay: item.month,

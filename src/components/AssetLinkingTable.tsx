@@ -10,6 +10,14 @@ interface Asset {
   linkedFrom?: unknown[];
 }
 
+interface LinkedAsset {
+  id: string;
+  fromAssetId: string;
+  toAssetId: string;
+  fromAsset: Asset;
+  toAsset: Asset;
+}
+
 interface AssetLinkingTableProps {
   asset: Asset;
   onLinkClick: () => void;
@@ -18,8 +26,8 @@ interface AssetLinkingTableProps {
 
 export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: AssetLinkingTableProps) {
   const [isChildAsset, setIsChildAsset] = useState(false);
-  const [validChildLinks, setValidChildLinks] = useState<any[]>([]);
-  const [validParentLinks, setValidParentLinks] = useState<any[]>([]);
+  const [validChildLinks, setValidChildLinks] = useState<LinkedAsset[]>([]);
+  const [validParentLinks, setValidParentLinks] = useState<LinkedAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to trigger re-fetching
 
@@ -59,11 +67,11 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
         console.log("DIRECT FETCH - All linked assets:", data.linkedAssets);
 
         // Filter linked assets for this specific asset
-        const childLinks = data.linkedAssets.filter((link: any) =>
+        const childLinks = data.linkedAssets.filter((link: LinkedAsset) =>
           link.fromAssetId === asset.id
         );
 
-        const parentLinks = data.linkedAssets.filter((link: any) =>
+        const parentLinks = data.linkedAssets.filter((link: LinkedAsset) =>
           link.toAssetId === asset.id
         );
 

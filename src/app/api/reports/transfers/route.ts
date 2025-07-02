@@ -1,6 +1,23 @@
 //import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface DepartmentMatrixTransfer {
+  fromDepartment: string | null;
+  toDepartment: string | null;
+  _count: { id: number };
+}
+interface MonthlyTransfer {
+  createdAt: Date;
+  status: string;
+}
+interface DepartmentTransfer {
+  fromDepartment: string | null;
+  toDepartment: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // GET /api/reports/transfers
 export async function GET() {
   try {
@@ -140,7 +157,7 @@ export async function GET() {
 
     // Process monthly trends
     const monthlyTrends = new Map();
-    monthlyData.forEach((transfer: any) => {
+    monthlyData.forEach((transfer: MonthlyTransfer) => {
       const monthKey = transfer.createdAt.toISOString().slice(0, 7);
       const existing = monthlyTrends.get(monthKey) || {
         count: 0,
@@ -155,7 +172,7 @@ export async function GET() {
 
     // Process location transfers
     const locationStats = new Map();
-    departmentTransferData.forEach((transfer: any) => {
+    departmentTransferData.forEach((transfer: DepartmentTransfer) => {
       if (transfer.fromDepartment) {
         const fromLocation = locationStats.get(transfer.fromDepartment) || {
           outgoing: 0,
@@ -239,7 +256,7 @@ export async function GET() {
         rejected: data.count - data.approved,
         approvalRate: data.count > 0 ? Math.round((data.approved / data.count) * 100) : 0,
       })),
-      departmentTransferMatrix: departmentMatrixData.map((transfer: any) => ({
+      departmentTransferMatrix: departmentMatrixData.map((transfer: DepartmentMatrixTransfer) => ({
         fromDepartment: transfer.fromDepartment || 'Unknown',
         toDepartment: transfer.toDepartment || 'Unknown',
         count: transfer._count.id,

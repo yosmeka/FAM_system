@@ -13,7 +13,7 @@ export async function GET() {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  const notifications = await (prisma as any).notification.findMany({
+  const notifications = await prisma.notification.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
     // No limit - show all notifications
@@ -53,7 +53,7 @@ export async function PATCH(request: Request) {
       });
     }
 
-    const notification = await (prisma as any).notification.findUnique({
+    const notification = await prisma.notification.findUnique({
       where: { id }
     });
 
@@ -64,7 +64,7 @@ export async function PATCH(request: Request) {
       });
     }
 
-    const updated = await (prisma as any).notification.update({
+    const updated = await prisma.notification.update({
       where: { id },
       data: { read: true }
     });
@@ -102,7 +102,7 @@ export async function DELETE(request: Request) {
       });
     }
 
-    const notification = await (prisma as any).notification.findUnique({
+    const notification = await prisma.notification.findUnique({
       where: { id }
     });
 
@@ -113,7 +113,7 @@ export async function DELETE(request: Request) {
       });
     }
 
-    await (prisma as any).notification.delete({
+    await prisma.notification.delete({
       where: { id }
     });
 
