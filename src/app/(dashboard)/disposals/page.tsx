@@ -30,7 +30,7 @@ function DeleteConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
         <p className="mb-4 dark:text-white">
-          Are you sure you want to delete the disposal request for asset &quot;{assetName}"? 
+          Are you sure you want to delete the disposal request for asset &quot;{assetName}&quot;? 
           This action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
@@ -75,7 +75,7 @@ function RejectConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Reject Disposal Request</h3>
         <p className="mb-4 dark:text-white">
-          Please provide a reason for rejecting the disposal request for asset &quot;{assetName}".
+          Please provide a reason for rejecting the disposal request for asset &quot;{assetName}&quot;.
         </p>
         <textarea
           value={reason}
@@ -110,11 +110,6 @@ export default function DisposalsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (status === 'loading') return null;
-  if (status !== 'authenticated' || !session) {
-    return null;
-  }
-
   const [loading, setLoading] = useState(true);
   const [disposals, setDisposals] = useState<DisposalRequest[]>([]);
   const [filteredDisposals, setFilteredDisposals] = useState<DisposalRequest[]>([]);
@@ -136,18 +131,6 @@ export default function DisposalsPage() {
   useEffect(() => {
     setPage(1);
   }, [filteredDisposals]);
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   useEffect(() => {
     fetchDisposals();
@@ -192,6 +175,21 @@ export default function DisposalsPage() {
     setFilteredDisposals(filtered);
   }, [searchQuery, searchField, disposals]);
 
+  if (status === 'loading') return null;
+
+  const showAccessDenied = status !== 'authenticated' || !session || session?.user?.role === 'AUDITOR';
+
+  if (showAccessDenied) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   const fetchDisposals = async () => {
     try {
       const response = await fetch('/api/disposals');
@@ -201,9 +199,10 @@ export default function DisposalsPage() {
       }
       const data = await response.json();
       setDisposals(data);
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to fetch disposals');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to fetch disposals');
     } finally {
       setLoading(false);
     }
@@ -229,9 +228,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request deleted successfully');
       fetchDisposals(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to delete disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to delete disposal request');
     } finally {
       setDeleteModalOpen(false);
       setDisposalToDelete(null);
@@ -251,9 +251,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request approved successfully');
       fetchDisposals(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to approve disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to approve disposal request');
     }
   };
 
@@ -280,9 +281,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request rejected successfully');
       fetchDisposals();
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to reject disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to reject disposal request');
     } finally {
       setRejectModal({ open: false, disposalId: null, assetName: '' });
       setRejectReason('');

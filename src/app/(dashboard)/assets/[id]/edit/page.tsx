@@ -5,13 +5,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { AssetForm } from '@/components/AssetForm';
 import { useRouter } from 'next/navigation'
+import type { AssetFormValues } from '@/components/AssetForm';
 
 export default function EditAssetPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const router = useRouter();
   const { checkPermission } = usePermissions();
   const [isLoading, setIsLoading] = useState(true);
-  const [assetData, setAssetData] = useState<unknown>(null);
+  const [assetData, setAssetData] = useState<Partial<AssetFormValues> | undefined>(undefined);
   const [isDisposed, setIsDisposed] = useState(false);
 
   useEffect(() => {

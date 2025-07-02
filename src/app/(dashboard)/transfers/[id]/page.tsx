@@ -40,7 +40,7 @@ interface TransferDetails {
 
 import { useSession } from 'next-auth/react';
 
-export default function TransferDetailsPage({ params }: { params: any }) {
+export default function TransferDetailsPage({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
   const { id } = React.use(params) as { id: string };
   const [transfer, setTransfer] = useState<TransferDetails | null>(null);
@@ -53,7 +53,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
     if (!deleted) {
       fetchTransferDetails();
     }
-  }, [id, deleted]);
+  }, [id, deleted, fetchTransferDetails]);
 
   const fetchTransferDetails = async () => {
     try {
@@ -89,7 +89,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
             try {
               const errorData = await docResponse.json();
               console.log(`Error details:`, errorData);
-            } catch (e) {
+            } catch {
               console.log(`Could not parse error response`);
             }
           }
@@ -107,9 +107,6 @@ export default function TransferDetailsPage({ params }: { params: any }) {
       setLoading(false);
     }
   };
-
-
-
 
   useEffect(() => {
     if (deleted) {

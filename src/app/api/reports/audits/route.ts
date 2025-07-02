@@ -1,5 +1,3 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
@@ -298,23 +296,35 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
       }
 
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, {
+      assetId: string;
+      assetName: string;
+      serialNumber: string;
+      department: string;
+      category: string;
+      totalAudits: number;
+      lastAuditDate: string | null;
+      nextAuditDate: string | null;
+      condition: string;
+      discrepancies: number;
+      isOverdue: boolean;
+    }>);
 
     // Check for overdue status
-    Object.values(assetAuditCounts).forEach((asset: any) => {
+    Object.values(assetAuditCounts).forEach((asset) => {
       if (asset.nextAuditDate) {
         asset.isOverdue = new Date(asset.nextAuditDate) < now;
       }
     });
 
     const topAssets = Object.values(assetAuditCounts)
-      .sort((a: any, b: any) => b.totalAudits - a.totalAudits)
+      .sort((a, b) => b.totalAudits - a.totalAudits)
       .slice(0, 10);
 
     // Overdue assets
     const overdueAssetsList = Object.values(assetAuditCounts)
-      .filter((asset: any) => asset.isOverdue)
-      .sort((a: any, b: any) => new Date(a.nextAuditDate).getTime() - new Date(b.nextAuditDate).getTime())
+      .filter((asset) => asset.isOverdue)
+      .sort((a, b) => new Date(a.nextAuditDate!).getTime() - new Date(b.nextAuditDate!).getTime())
       .slice(0, 10);
 
     // Recent unresolved discrepancies

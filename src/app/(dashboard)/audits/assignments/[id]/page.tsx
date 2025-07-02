@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -72,21 +72,7 @@ export default function AssignmentDetailPage({
   const [showPerformAuditModal, setShowPerformAuditModal] = useState(false);
   const [assignmentId, setAssignmentId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initializeParams = async () => {
-      const { id } = await params;
-      setAssignmentId(id);
-    };
-    initializeParams();
-  }, [params]);
-
-  useEffect(() => {
-    if (assignmentId) {
-      fetchAssignment();
-    }
-  }, [assignmentId, fetchAssignment]);
-
-  const fetchAssignment = async () => {
+  const fetchAssignment = useCallback(async () => {
     if (!assignmentId) return;
 
     try {
@@ -104,7 +90,21 @@ export default function AssignmentDetailPage({
     } finally {
       setLoading(false);
     }
-  };
+  }, [assignmentId, router]);
+
+  useEffect(() => {
+    const initializeParams = async () => {
+      const { id } = await params;
+      setAssignmentId(id);
+    };
+    initializeParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (assignmentId) {
+      fetchAssignment();
+    }
+  }, [assignmentId, fetchAssignment]);
 
   const handleAction = async (action: string, additionalData?: Record<string, unknown>) => {
     if (!assignment) return;

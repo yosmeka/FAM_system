@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
@@ -14,6 +14,7 @@ import type {
   AssetStatusData,
   AssetCategoryData
 } from '@/types/reports';
+import type { Asset, LinkedAsset } from '@/types/index';
 
 import { useSession } from 'next-auth/react';
 
@@ -24,25 +25,14 @@ export default function AssetReportsPage() {
   });
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [activeTab, setActiveTab] = useState('assetDetails');
-  const [linkedAssets, setLinkedAssets] = useState<any[]>([]);
+  const [linkedAssets, setLinkedAssets] = useState<LinkedAsset[]>([]);
   const [loadingLinkedAssets, setLoadingLinkedAssets] = useState(false);
-  if (status === 'loading') return null;
-  if (!session || !session.user) return null;
-  if (session.user.role === 'ADMIN') {
-    return (
-      <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-        <h1 className="text-2xl font-semibold text-center text-red-600 dark:text-red-400">Access Denied</h1>
-        <p className="text-center text-gray-700 dark:text-gray-300">You do not have permission to view asset reports.</p>
-      </div>
-    );
-  }
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [assetStats, setAssetStats] = useState<any>(null);
+  const [assetStats, setAssetStats] = useState<Record<string, number> | null>(null);
   const [assetsByCategory, setAssetsByCategory] = useState<AssetCategoryData[]>([]);
   const [statusDistribution, setStatusDistribution] = useState<AssetStatusData[]>([]);
-  const [detailedAssets, setDetailedAssets] = useState<any[]>([]);
-  // Removed old filter states - now using currentFilters only
+  const [detailedAssets, setDetailedAssets] = useState<Asset[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     categories: [],
     departments: [],
@@ -61,11 +51,57 @@ export default function AssetReportsPage() {
     depreciationMethod: 'all'
   });
 
+  if (status === 'loading') return null;
+  if (!session || !session.user) return null;
+  if (session.user.role === 'ADMIN') {
+    return (
+      <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <h1 className="text-2xl font-semibold text-center text-red-600 dark:text-red-400">Access Denied</h1>
+        <p className="text-center text-gray-700 dark:text-gray-300">You do not have permission to view asset reports.</p>
+      </div>
+    );
+  }
 
+  const fetchAssetReports = useCallback(async (filters?: FilterValues, isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const queryString = filters ? buildQueryString(filters) : '';
+      const url = `/api/reports/assets${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch asset reports');
+      const data = await response.json();
+
+      setAssetStats(data.stats);
+      setAssetsByCategory(data.byCategory);
+      setStatusDistribution(data.statusDistribution);
+      setDetailedAssets(data.assets || []);
+      setLinkedAssets(data.linkedAssets || []);
+
+      if (data.filterOptions) {
+        setFilterOptions(data.filterOptions);
+      }
+
+      if (isRefresh) {
+        toast.success('Report data refreshed successfully!');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching asset reports:', error);
+      toast.error('Failed to fetch asset reports');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchAssetReports();
-  }, []);
+  }, [fetchAssetReports]);
 
   useEffect(() => {
     if (activeTab === 'linkedAssets') {
@@ -83,49 +119,6 @@ export default function AssetReportsPage() {
     });
 
     return params.toString();
-  };
-
-  const fetchAssetReports = async (filters?: FilterValues, isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const queryString = filters ? buildQueryString(filters) : '';
-      const url = `/api/reports/assets${queryString ? `?${queryString}` : ''}`;
-
-      console.log('🔍 Debug: Full URL:', url);
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch asset reports');
-      const data = await response.json();
-
-      console.log('🔍 Debug: Categories returned:', data.byCategory?.length);
-      console.log('🔍 Debug: Depreciation data points:', data.depreciation?.length);
-
-      setAssetStats(data.stats);
-      setAssetsByCategory(data.byCategory);
-      setStatusDistribution(data.statusDistribution);
-      setDetailedAssets(data.assets || []);
-      setLinkedAssets(data.linkedAssets || []);
-
-      if (data.filterOptions) {
-        setFilterOptions(data.filterOptions);
-        console.log('🔍 Debug: Filter options updated:', data.filterOptions);
-      }
-
-      if (isRefresh) {
-        toast.success('Report data refreshed successfully!');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching asset reports:', error);
-      toast.error('Failed to fetch asset reports');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
   };
 
   const fetchLinkedAssets = async () => {
@@ -171,12 +164,10 @@ export default function AssetReportsPage() {
     fetchAssetReports(currentFilters);
   };
 
-  // Helper function to check if any filters are active
   const hasActiveFilters = Object.values(currentFilters).some(value =>
     value !== '' && value !== 'all'
   );
 
-  // Helper function to get current filter display text
   const getFilterDisplayText = () => {
     const activeFilters = [];
 
@@ -211,13 +202,11 @@ export default function AssetReportsPage() {
       
       const doc = new jsPDF();
       
-      // Add title
       doc.setFontSize(16);
       doc.text('Asset Report', 14, 15);
       doc.setFontSize(10);
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
 
-      // Add summary statistics
       doc.setFontSize(12);
       doc.text('Summary Statistics', 14, 35);
       
@@ -244,7 +233,6 @@ export default function AssetReportsPage() {
         },
       });
 
-      // Add category distribution
       doc.addPage();
       doc.setFontSize(12);
       doc.text('Category Distribution', 14, 20);
@@ -272,7 +260,6 @@ export default function AssetReportsPage() {
         },
       });
 
-      // Add detailed assets table
       doc.addPage();
       doc.setFontSize(12);
       doc.text('Detailed Asset List', 14, 20);
@@ -305,7 +292,6 @@ export default function AssetReportsPage() {
         },
       });
 
-      // Add linked assets table
       doc.addPage();
       doc.setFontSize(12);
       doc.text('Linked Assets', 14, 20);
@@ -346,10 +332,8 @@ export default function AssetReportsPage() {
     try {
       const XLSX = await import('xlsx');
       
-      // Create workbook
       const workbook = XLSX.utils.book_new();
 
-      // Summary Statistics Sheet
       const statsData: (string | number)[][] = [
         ['Summary Statistics', ''],
         ['Metric', 'Value'],
@@ -361,7 +345,6 @@ export default function AssetReportsPage() {
       const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
       XLSX.utils.book_append_sheet(workbook, statsSheet, 'Summary');
 
-      // Category Distribution Sheet
       const categoryData: (string | number)[][] = [
         ['Category Distribution', '', '', ''],
         ['Category', 'Status', 'Count', 'Total Value'],
@@ -375,7 +358,6 @@ export default function AssetReportsPage() {
       const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
 
-      // Detailed Assets Sheet
       const assetsData: (string | number)[][] = [
         ['Detailed Asset List', '', '', '', '', '', '', ''],
         ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'],
@@ -393,7 +375,6 @@ export default function AssetReportsPage() {
       const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
       XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
 
-      // Linked Assets Sheet
       const linkedAssetsData: (string | number)[][] = [
         ['Linked Assets', '', '', '', ''],
         ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'],
@@ -417,7 +398,6 @@ export default function AssetReportsPage() {
 
   const exportToCSV = () => {
     try {
-      // Export summary statistics
       const statsHeaders = ['Metric', 'Value'];
       const statsRows = [
         ['Total Assets', assetStats?.totalAssets || 0],
@@ -432,7 +412,6 @@ export default function AssetReportsPage() {
       statsLink.download = `asset-report-summary-${new Date().toISOString().split('T')[0]}.csv`;
       statsLink.click();
 
-      // Export category distribution
       const categoryHeaders = ['Category', 'Status', 'Count', 'Total Value'];
       const categoryRows = assetsByCategory.map(item => [
         item.category || '',
@@ -447,7 +426,6 @@ export default function AssetReportsPage() {
       categoryLink.download = `asset-report-categories-${new Date().toISOString().split('T')[0]}.csv`;
       categoryLink.click();
 
-      // Export detailed assets
       const assetHeaders = ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'];
       const assetRows = detailedAssets.map(asset => [
         asset.name || '',
@@ -466,7 +444,6 @@ export default function AssetReportsPage() {
       assetLink.download = `asset-report-detailed-${new Date().toISOString().split('T')[0]}.csv`;
       assetLink.click();
 
-      // Export linked assets
       const linkedAssetsHeaders = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
       const linkedAssetsRows = linkedAssets.map(asset => [
         asset.fromAsset.name || '',
@@ -559,7 +536,6 @@ export default function AssetReportsPage() {
         </div>
       </div>
 
-      {/* Advanced Filters */}
       <AdvancedFilters
         filterOptions={filterOptions}
         onFiltersChange={handleFiltersChange}
@@ -567,7 +543,6 @@ export default function AssetReportsPage() {
         isLoading={loading || refreshing}
       />
 
-      {/* Filter Results Summary */}
       {hasActiveFilters && (
         <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-2 border-red-600 dark:border-red-500 rounded-lg shadow-lg">
           <div className="flex items-center justify-between">
@@ -608,7 +583,6 @@ export default function AssetReportsPage() {
         </div>
       )}
 
-      {/* Enhanced Summary Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-6 mb-8">
         <RoleBasedStats
           name="Total Assets"
@@ -652,7 +626,6 @@ export default function AssetReportsPage() {
         />
       </div>
 
-      {/* Tabs */}
       <div className="mb-6">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -680,12 +653,9 @@ export default function AssetReportsPage() {
         </div>
       </div>
 
-      {/* Asset Details Tab Content */}
       {activeTab === 'assetDetails' && (
         <>
-          {/* Asset Distribution Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Assets by Category Chart */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -707,7 +677,6 @@ export default function AssetReportsPage() {
               )}
             </div>
 
-            {/* Status Distribution */}
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Asset Status Distribution</h2>
@@ -731,7 +700,6 @@ export default function AssetReportsPage() {
             </div>
           </div>
 
-          {/* Asset Value Table */}
           <div className="bg-white rounded-lg shadow dark:bg-gray-900">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
@@ -790,7 +758,6 @@ export default function AssetReportsPage() {
             </div>
           </div>
 
-          {/* Detailed Asset List Table */}
           <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
@@ -894,7 +861,6 @@ export default function AssetReportsPage() {
         </>
       )}
 
-      {/* Linked Assets Tab Content */}
       {activeTab === 'linkedAssets' && (
         <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
           <div className="p-6">
@@ -907,7 +873,7 @@ export default function AssetReportsPage() {
                   {linkedAssets.length} linked assets found
                 </span>
                 <TableExportDropdown
-                  data={linkedAssets.map(asset => ({
+                  data={linkedAssets.map((asset: LinkedAsset) => ({
                     'Parent Asset': asset.fromAsset.name,
                     'Parent Serial': asset.fromAsset.serialNumber,
                     'Child Asset': asset.toAsset.name,
@@ -938,8 +904,8 @@ export default function AssetReportsPage() {
                   columns={[
                     {
                       header: 'Parent Asset',
-                      key: 'fromAsset.name',
-                      render: (_, item) => (
+                      key: 'fromAsset',
+                      render: (_: unknown, item: LinkedAsset) => (
                         <div>
                           <div className="font-medium text-gray-900 dark:text-gray-100">{item.fromAsset.name}</div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">{item.fromAsset.serialNumber}</div>
@@ -948,8 +914,8 @@ export default function AssetReportsPage() {
                     },
                     {
                       header: 'Child Asset',
-                      key: 'toAsset.name',
-                      render: (_, item) => (
+                      key: 'toAsset',
+                      render: (_: unknown, item: LinkedAsset) => (
                         <div>
                           <div className="font-medium text-gray-900 dark:text-gray-100">{item.toAsset.name}</div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">{item.toAsset.serialNumber}</div>
@@ -959,7 +925,7 @@ export default function AssetReportsPage() {
                     {
                       header: 'Linked Date',
                       key: 'createdAt',
-                      render: (_, item) => new Date(item.createdAt).toLocaleDateString(),
+                      render: (_: unknown, item: LinkedAsset) => new Date(item.createdAt).toLocaleDateString(),
                     }
                   ]}
                   className="bg-white dark:bg-gray-800"

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import {
   BarChart,
   Bar,
@@ -17,18 +16,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  XCircleIcon,
-  ChartBarIcon,
-  CalendarIcon,
-  DocumentTextIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
-import { RoleBasedStats } from "@/components/ui/RoleBasedStats";
-import { RoleBasedChart } from "@/components/ui/RoleBasedChart";
+import { BackButton } from "@/components/ui/BackButton";
+import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import type {
   AuditStats,
   AuditStatusData,
@@ -36,9 +25,8 @@ import type {
   AuditDepartmentData,
   AuditTrendData,
   AuditAssetData,
-  AuditDiscrepancyData,
-} from "@/types/reports";
-import { BackButton } from "@/components/ui/BackButton";
+  AuditDiscrepancyData
+} from '@/types/reports';
 
 interface AuditReportsData {
   stats: AuditStats;
@@ -54,13 +42,8 @@ interface AuditReportsData {
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 export default function AuditReportsPage() {
-  const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [auditData, setAuditData] = useState<AuditReportsData | null>(null);
-  const [filterType, setFilterType] = useState<"department" | "category">(
-    "department"
-  );
-  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
   useEffect(() => {
     fetchAuditReports();
@@ -81,21 +64,6 @@ export default function AuditReportsPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case "PENDING":
-        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
-      case "FAILED":
-        return <XCircleIcon className="h-4 w-4 text-red-500" />;
-      case "NEEDS_REVIEW":
-        return <ExclamationTriangleIcon className="h-4 w-4 text-orange-500" />;
-      default:
-        return <DocumentTextIcon className="h-4 w-4 text-gray-500" />;
-    }
   };
 
   const getConditionColor = (condition: string) => {
@@ -174,7 +142,6 @@ export default function AuditReportsPage() {
                 {auditData.stats.auditGrowth}% vs last month
               </p>
             </div>
-            <DocumentTextIcon className="h-8 w-8 text-blue-500" />
           </div>
         </div>
 
@@ -192,7 +159,6 @@ export default function AuditReportsPage() {
                 {auditData.stats.totalAudits} completed
               </p>
             </div>
-            <CheckCircleIcon className="h-8 w-8 text-green-500" />
           </div>
         </div>
 
@@ -209,7 +175,6 @@ export default function AuditReportsPage() {
                 Require immediate attention
               </p>
             </div>
-            <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
           </div>
         </div>
 
@@ -226,7 +191,6 @@ export default function AuditReportsPage() {
                 Avg resolution: {auditData.stats.avgResolutionTime} days
               </p>
             </div>
-            <ExclamationCircleIcon className="h-8 w-8 text-orange-500" />
           </div>
         </div>
       </div>
@@ -400,7 +364,7 @@ export default function AuditReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {auditData.topAssets.slice(0, 8).map((asset, index) => (
+                {auditData.topAssets.slice(0, 8).map((asset) => (
                   <tr
                     key={asset.assetId}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -461,7 +425,7 @@ export default function AuditReportsPage() {
                 </tr>
               </thead>
               <tbody>
-                {auditData.overdueAssets.slice(0, 8).map((asset, index) => (
+                {auditData.overdueAssets.slice(0, 8).map((asset) => (
                   <tr
                     key={asset.assetId}
                     className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -524,7 +488,7 @@ export default function AuditReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {auditData.recentDiscrepancies.map((discrepancy, index) => (
+              {auditData.recentDiscrepancies.map((discrepancy) => (
                 <tr
                   key={discrepancy.id}
                   className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

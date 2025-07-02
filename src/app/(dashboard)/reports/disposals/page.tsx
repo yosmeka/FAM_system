@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
-import { usePDF } from 'react-to-pdf';
 import { Download, Settings, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import type {
@@ -13,7 +12,6 @@ import type {
   DisposalTrendData,
   ValueRecoveryData,
   Column,
-  ChartType,
   RoleBasedStatsProps
 } from '@/types/reports';
 
@@ -38,25 +36,16 @@ interface DisposedAsset {
 
 export default function DisposalReportsPage() {
   const { data: session, status } = useSession();
-  const { toPDF, targetRef } = usePDF({
-    filename: `disposal-report-${new Date().toISOString().split('T')[0]}.pdf`,
-  });
-  const { toPDF: toPDFTable, targetRef: tableTargetRef } = usePDF({
-    filename: `disposal-assets-table-${new Date().toISOString().split('T')[0]}.pdf`,
-  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
   const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);
-  const [monthlyTrends, setMonthlyTrends] = useState<DisposalTrendData[]>([]);
-  const [valueRecovery, setValueRecovery] = useState<ValueRecoveryData[]>([]);
   const [disposedAssets, setDisposedAssets] = useState<DisposedAsset[]>([]);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [statusDistribution, setStatusDistribution] = useState<{ status: string; count: number }[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Show nothing until session is loaded
@@ -109,7 +98,6 @@ export default function DisposalReportsPage() {
       
       setDisposalStats(data.stats);
       setMethodDistribution(data.methodDistribution);
-      setStatusDistribution(data.statusDistribution);
       setDisposedAssets(data.disposedAssets || []);
 
       if (isRefresh) {
@@ -352,7 +340,7 @@ export default function DisposalReportsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6" ref={targetRef}>
+    <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <BackButton href="/reports" className='text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300' />
