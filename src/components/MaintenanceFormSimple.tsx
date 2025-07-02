@@ -90,13 +90,11 @@ export function MaintenanceFormSimple({
         notes,
         assetId,
         managerId: managerId || null, // Include the manager ID
+        ...(shouldNotifyManager && {
+          notifyManager: true,
+          previousStatus: originalStatus,
+        }),
       };
-
-      // Add notification flags if needed
-      if (shouldNotifyManager) {
-        payload.notifyManager = true;
-        payload.previousStatus = originalStatus;
-      }
 
       const url = isEditing
         ? `/api/assets/${assetId}/maintenance/${initialData.id}`
