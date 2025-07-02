@@ -4,22 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
-// Helper function to extract IDs from URL
-function extractIdsFromUrl(url: string) {
-  const pathParts = url.split('/');
-  const assetsIndex = pathParts.indexOf('assets');
-  const documentsIndex = pathParts.indexOf('documents');
-
-  if (assetsIndex === -1 || documentsIndex === -1) {
-    return { assetId: null, documentId: null };
-  }
-
-  return {
-    assetId: pathParts[assetsIndex + 1],
-    documentId: pathParts[documentsIndex + 1]
-  };
-}
-
 // GET /api/assets/[id]/documents/[documentId] - Get a specific document
 export const GET = withRole(['ADMIN', 'MANAGER', 'USER'], async function GET(
   req: Request,

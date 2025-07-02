@@ -12,8 +12,6 @@ import {
   XCircle,
   AlertTriangle,
   FileText,
-  Edit,
-  Trash2,
   Play,
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
@@ -558,7 +556,7 @@ export default function AssignmentDetailPage({
                       disabled={actionLoading}
                       className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Play className="h-4 w-4" />
                       {actionLoading ? "Deleting..." : "Delete Assignment"}
                     </button>
                   )}

@@ -5,7 +5,6 @@ import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
 import { withRole } from '@/middleware/rbac';
-import mime from 'mime-types';
 
 const allowedMimeTypes = [
   'application/pdf',
@@ -89,7 +88,6 @@ export const POST = withRole(['ADMIN', 'MANAGER', 'USER'], async function POST(
     // Generate a unique filename
     const timestamp = Date.now();
     const originalName = file.name;
-    const fileExtension = originalName.split('.').pop();
     const fileName = `${timestamp}-${originalName}`;
     const filePath = join(uploadDir, fileName);
 

@@ -5,14 +5,11 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'react-hot-toast';
 import { AssetForm } from '@/components/AssetForm';
 import { useRouter } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 
 export default function EditAssetPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const router = useRouter();
-  const { data: session } = useSession();
   const { checkPermission } = usePermissions();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [assetData, setAssetData] = useState<any>(null);
   const [isDisposed, setIsDisposed] = useState(false);
@@ -57,46 +54,6 @@ export default function EditAssetPage({ params }: { params: Promise<{ id: string
 
     fetchAsset();
   }, [resolvedParams.id, router]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/assets/${resolvedParams.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          purchasePrice: parseFloat(formData.purchasePrice),
-          currentValue: parseFloat(formData.currentValue),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update asset');
-      }
-
-      toast.success('Asset updated successfully');
-      router.push('/assets');
-      router.refresh();
-    } catch (error) {
-      toast.error('Failed to update asset');
-      console.error('Error updating asset:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
 
   if (!checkPermission('Asset edit')) {
     return (

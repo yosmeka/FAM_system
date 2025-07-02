@@ -14,9 +14,8 @@ import {
   PointElement,
   LineElement,
 } from 'chart.js/auto';
-import { Bar, Line, Pie } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
-import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
+import { Toaster } from 'react-hot-toast';
 
 interface CustomUser {
   id: string;
@@ -68,8 +67,6 @@ interface DashboardData {
 import { useState, useEffect } from 'react';
 import { AdminRecentActivity } from '@/components/ui/AdminRecentActivity';
 import { AdminCharts } from '@/components/ui/AdminCharts';
-import { Toaster, toast } from 'react-hot-toast';
-import { NotificationBell } from '@/components/ui/NotificationBell';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -132,7 +129,6 @@ export default function DashboardPage() {
   const [recentActivity, setRecentActivity] = useState<any>(null);
   const [userGrowth, setUserGrowth] = useState<any[]>([]);
   const [permissionAssignments, setPermissionAssignments] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -168,17 +164,6 @@ export default function DashboardPage() {
           }
           const data = await res.json();
           setPermissionAssignments(data.permissionAssignments || []);
-        });
-      fetch('/api/admin/notifications')
-        .then(async res => {
-          if (!res.ok) return setNotifications([]);
-          const contentType = res.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            setNotifications([]);
-            return;
-          }
-          const data = await res.json();
-          setNotifications(data.notifications || []);
         });
     }
   }, [isAdmin]);

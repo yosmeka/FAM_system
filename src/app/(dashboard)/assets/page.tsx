@@ -29,7 +29,6 @@ export default function AssetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
   // Pagination state
   const [page, setPage] = useState(1);
@@ -51,7 +50,6 @@ export default function AssetsPage() {
   });
   // Get unique categories and departments
   const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));
-  const departments = Array.from(new Set(assets.map(asset => asset.department).filter(Boolean)));
   // Filtered and paginated assets
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
@@ -65,17 +63,14 @@ export default function AssetsPage() {
     const matchesCategory =
       categoryFilter === "ALL" || asset.category === categoryFilter;
 
-    const matchesDepartment =
-      departmentFilter === "ALL" || asset.department === departmentFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
   const totalPages = Math.ceil(filteredAssets.length / pageSize);
   const paginatedAssets = filteredAssets.slice((page - 1) * pageSize, page * pageSize);
   // Reset page to 1 when filters/search change
   React.useEffect(() => {
     setPage(1);
-  }, [searchTerm, statusFilter, categoryFilter, departmentFilter]);
+  }, [searchTerm, statusFilter, categoryFilter]);
   // Only after ALL hooks, check loading/permissions and return early if needed
   if (loading) {
     return (
@@ -242,20 +237,6 @@ export default function AssetsPage() {
             ))}
           </select>
         </div>
-        {/* <div>
-          <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-          >
-            <option value="ALL">All Departments</option>
-            {departments.map((department) => (
-              <option key={department} value={department}>
-                {department}
-              </option>
-            ))}
-          </select>
-        </div> */}
       </div>
 
       {isLoading ? (

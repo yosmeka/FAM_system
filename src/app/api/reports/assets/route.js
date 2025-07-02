@@ -127,7 +127,6 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     });
 
     // Calculate actual depreciation data for each asset
-    const depreciationData = [];
     const monthlyDepreciation = new Map();
 
     for (const asset of assets) {
@@ -167,8 +166,8 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
             monthData.assetCount += 1;
           }
         });
-      } catch (error) {
-        console.error(`Error calculating depreciation for asset ${asset.id}:`, error);
+      } catch (e) {
+        console.error(`Error calculating depreciation for asset ${asset.id}:`, e);
       }
     }
 

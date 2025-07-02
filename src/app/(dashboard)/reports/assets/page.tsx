@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
 import { TableExportDropdown } from '@/components/reports/TableExportDropdown';
 import { usePDF } from 'react-to-pdf';
-import { Download, Settings, ChevronDown } from 'lucide-react';
+import { Download, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'react-hot-toast';
 import type {
   AssetStatusData,
-  AssetValueData,
   AssetCategoryData
 } from '@/types/reports';
 

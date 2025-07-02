@@ -6,7 +6,7 @@ import { generateTransferDocumentPdf } from '@/lib/generateTransferDocumentPdf';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { mkdir } from 'fs/promises';
-import { DocumentMeta, PrismaDocumentClient } from '@/types/document';
+import { DocumentMeta } from '@/types/document';
 import { DocumentType } from '@prisma/client';
 //import crypto from 'crypto';
 

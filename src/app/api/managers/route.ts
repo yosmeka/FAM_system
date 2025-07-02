@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 // GET /api/managers - Get all managers for maintenance requests
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
