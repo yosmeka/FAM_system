@@ -82,7 +82,7 @@ export async function refreshAccessToken(
 ): Promise<TokenPair | null> {
   try {
     // Verify the refresh token
-    const decoded = jwt.verify(refreshToken, JWT_SECRET) as any;
+    const decoded = jwt.verify(refreshToken, JWT_SECRET) as { type?: string };
 
     if (decoded.type !== 'refresh') {
       return null;
@@ -129,7 +129,7 @@ export async function refreshAccessToken(
 /**
  * Verify and decode a JWT token
  */
-export function verifyToken(token: string): any {
+export function verifyToken(token: string): unknown {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (error) {

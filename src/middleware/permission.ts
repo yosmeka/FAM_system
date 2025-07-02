@@ -9,8 +9,8 @@ import { authOptions } from '@/lib/auth';
  */
 import { userHasPermission } from "@/lib/server/permissions";
 
-export function withPermission(handler: (req: NextRequest, ...args: any[]) => Promise<Response>, requiredPermission: string) {
-  return async (req: NextRequest, ...rest: any[]) => {
+export function withPermission(handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>, requiredPermission: string) {
+  return async (req: NextRequest, ...rest: unknown[]) => {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });

@@ -6,8 +6,8 @@ interface Asset {
   id: string;
   name: string;
   serialNumber: string;
-  linkedTo?: any[];
-  linkedFrom?: any[];
+  linkedTo?: unknown[];
+  linkedFrom?: unknown[];
 }
 
 interface AssetLinkingTableProps {

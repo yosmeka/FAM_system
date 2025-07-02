@@ -7,7 +7,7 @@ import { X, CheckCircle, XCircle, Clock, User, Calendar } from 'lucide-react';
 interface ManagerWorkReviewModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: unknown;
   onReviewCompleted: () => void;
 }
 

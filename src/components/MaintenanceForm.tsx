@@ -23,7 +23,7 @@ type MaintenanceFormData = z.infer<typeof maintenanceSchema>;
 interface MaintenanceFormProps {
   assetId: string;
   onSuccess: () => void;
-  initialData?: any;
+  initialData?: unknown;
   isEditing?: boolean;
 }
 

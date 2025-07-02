@@ -6,7 +6,7 @@ export interface NotificationData {
   userId: string;
   message: string;
   type: 'AUDIT_ASSIGNMENT' | 'AUDIT_REQUEST' | 'AUDIT_APPROVAL' | 'AUDIT_REJECTION' | 'AUDIT_COMPLETED';
-  meta?: any;
+  meta?: unknown;
 }
 
 export class AuditNotificationService {

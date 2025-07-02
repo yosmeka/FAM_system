@@ -10,7 +10,7 @@ export async function sendNotification({
   userId: string;
   message: string;
   type?: string;
-  meta?: Record<string, any> | null;
+  meta?: Record<string, unknown> | null;
 }) {
   return prisma.notification.create({
     data: {

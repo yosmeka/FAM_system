@@ -17,10 +17,10 @@ interface ClientChartProps {
 
 // Define specific chart components with their types
 const ChartComponents = {
-  line: Line as any,
-  bar: Bar as any,
-  pie: Pie as any,
-  heatmap: Bar as any, // Using Bar as base for heatmap
+  line: Line as unknown,
+  bar: Bar as unknown,
+  pie: Pie as unknown,
+  heatmap: Bar as unknown, // Using Bar as base for heatmap
 } as const;
 
 export function ClientChart({ type, data, options }: ClientChartProps) {

@@ -5,10 +5,22 @@ import { toast } from 'react-hot-toast';
 import { useRole } from '@/hooks/useRole';
 import { ManagerSelector } from './ManagerSelector';
 
+type MaintenanceInitialData = Partial<{
+  description: string;
+  priority: string;
+  status: string;
+  cost?: number;
+  scheduledDate?: string;
+  completedAt?: string;
+  notes?: string;
+  managerId?: string;
+  id?: string;
+}>;
+
 interface MaintenanceFormSimpleProps {
   assetId: string;
   onSuccess: () => void;
-  initialData?: any;
+  initialData?: MaintenanceInitialData;
   isEditing?: boolean;
 }
 
@@ -20,19 +32,19 @@ export function MaintenanceFormSimple({
 }: MaintenanceFormSimpleProps) {
   const { isAdmin, isManager, isUser } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [priority, setPriority] = useState(initialData?.priority || 'MEDIUM');
+  const [description, setDescription] = useState(initialData?.description ?? '');
+  const [priority, setPriority] = useState(initialData?.priority ?? 'MEDIUM');
   // Default status based on role - managers and admins can directly schedule
   const defaultStatus = (isManager() || isAdmin()) ? 'SCHEDULED' : 'PENDING_APPROVAL';
-  const [status, setStatus] = useState(initialData?.status || defaultStatus);
+  const [status, setStatus] = useState(initialData?.status ?? defaultStatus);
 
   // Determine if the user can edit the status field
   const isPendingApproval = initialData?.status === 'PENDING_APPROVAL';
   const isApproved = initialData?.status === 'APPROVED';
   const canEditStatus = isManager() || isAdmin() || (isUser() && isApproved);
-  const [cost, setCost] = useState(initialData?.cost?.toString() || '');
+  const [cost, setCost] = useState(initialData?.cost !== undefined ? initialData.cost.toString() : '');
   const [scheduledDate, setScheduledDate] = useState(
-    initialData?.scheduledDate
+    initialData?.scheduledDate !== undefined && initialData?.scheduledDate !== null
       ? new Date(initialData.scheduledDate).toISOString().split('T')[0]
       : new Date().toISOString().split('T')[0]
   );
@@ -41,8 +53,8 @@ export function MaintenanceFormSimple({
       ? new Date(initialData.completedAt).toISOString().split('T')[0]
       : ''
   );
-  const [notes, setNotes] = useState(initialData?.notes || '');
-  const [managerId, setManagerId] = useState(initialData?.managerId || '');
+  const [notes, setNotes] = useState(initialData?.notes ?? '');
+  const [managerId, setManagerId] = useState(initialData?.managerId ?? '');
 
   const showCompletedFields = status === 'COMPLETED';
 
@@ -61,7 +73,7 @@ export function MaintenanceFormSimple({
       let statusToSubmit = submissionStatus;
 
       // Store the original status for comparison if editing
-      const originalStatus = isEditing ? initialData.status : null;
+      const originalStatus = isEditing ? initialData?.status : null;
 
       // For regular users with pending requests, always keep status as PENDING_APPROVAL
       if (isUser() && isPendingApproval && isEditing) {
@@ -69,7 +81,7 @@ export function MaintenanceFormSimple({
       }
       // For regular users with non-approved requests that aren't pending, keep the original status
       else if (isUser() && !isApproved && !isPendingApproval && isEditing && !canEditStatus) {
-        statusToSubmit = initialData.status;
+        statusToSubmit = initialData?.status;
       }
 
       // Add a flag to indicate if a notification should be sent to the manager
@@ -97,7 +109,7 @@ export function MaintenanceFormSimple({
       };
 
       const url = isEditing
-        ? `/api/assets/${assetId}/maintenance/${initialData.id}`
+        ? `/api/assets/${assetId}/maintenance/${initialData?.id}`
         : `/api/assets/${assetId}/maintenance`;
 
       const response = await fetch(url, {

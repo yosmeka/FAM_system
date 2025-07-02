@@ -9,7 +9,7 @@ interface AssetAuditModalProps {
   onClose: () => void;
   assetId: string;
   onSuccess: () => void;
-  initialData?: any;
+  initialData?: unknown;
   isEditing?: boolean;
 }
 

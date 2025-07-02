@@ -15,7 +15,7 @@ interface ChecklistItem {
 interface ManagerReviewModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: unknown;
   onReviewCompleted: () => void;
 }
 

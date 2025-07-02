@@ -15,7 +15,7 @@ interface Part {
 interface WorkDocumentationModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: unknown;
   onWorkCompleted: () => void;
 }
 

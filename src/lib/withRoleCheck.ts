@@ -3,7 +3,7 @@ import { authOptions } from "./auth";
 import { Role } from "@/types/auth";
 import { NextApiRequest, NextApiResponse } from "next";
 
-export function withRoleCheck(handler: any, requiredRole: Role | Role[]) {
+export function withRoleCheck(handler: (req: NextApiRequest, res: NextApiResponse) => unknown, requiredRole: Role | Role[]) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     const session = await getServerSession(req, res, authOptions);
 

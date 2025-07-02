@@ -5,8 +5,8 @@ import { Bug, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface DebugPanelProps {
-  currentFilters: any;
-  apiResponse: any;
+  currentFilters: unknown;
+  apiResponse: unknown;
   queryString: string;
   isVisible?: boolean;
 }

@@ -17,7 +17,7 @@ export const GET = withRole(['MANAGER', 'AUDITOR'], async function GET(request: 
     const role = searchParams.get('role') || session.user.role;
     const userId = session.user.id;
 
-    let whereClause: any = {};
+    let whereClause: Record<string, unknown> = {};
 
     // Filter based on user role
     if (role === 'AUDITOR') {

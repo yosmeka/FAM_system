@@ -151,7 +151,7 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     }
 
     // Prepare data for update, handling potential invalid values from frontend
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       name: body.name,
       serialNumber: body.serialNumber,
       status: body.status,

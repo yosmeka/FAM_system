@@ -15,7 +15,7 @@ interface ChecklistItem {
 interface TemplateChecklistModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: unknown;
   onTaskCompleted: () => void;
 }
 
