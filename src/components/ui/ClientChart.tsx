@@ -4,7 +4,7 @@
 import '@/lib/chart-registry';
 
 import { Bar, Line, Pie } from 'react-chartjs-2';
-import type { ChartData, ChartOptions } from 'chart.js';
+import type { ChartData, ChartOptions, Point, BubbleDataPoint } from 'chart.js';
 import { useEffect, useState } from 'react';
 import { useTheme } from './ThemeProvider';
 
@@ -16,15 +16,6 @@ interface ClientChartProps {
   options?: ChartOptions;
 }
 
-type ChartComponentType = React.ComponentType<{ data: ChartData; options?: ChartOptions }>;
-
-const ChartComponents: Record<ChartType, ChartComponentType> = {
-  line: Line,
-  bar: Bar,
-  pie: Pie,
-  heatmap: Bar, // Using Bar as base for heatmap
-};
-
 export function ClientChart({ type, data, options }: ClientChartProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
@@ -35,13 +26,6 @@ export function ClientChart({ type, data, options }: ClientChartProps) {
   }, []);
 
   if (!isMounted) {
-    return null;
-  }
-
-  const ChartComponent = ChartComponents[type];
-
-  if (!ChartComponent) {
-    console.error(`Invalid chart type: ${type}`);
     return null;
   }
 
@@ -98,5 +82,41 @@ export function ClientChart({ type, data, options }: ClientChartProps) {
     },
   };
 
-  return <ChartComponent key={chartKey} data={data} options={themeOptions} />;
+  switch (type) {
+    case 'line':
+      return (
+        <Line
+          key={chartKey}
+          data={data as ChartData<'line', (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>}
+          options={themeOptions as ChartOptions<'line'>}
+        />
+      );
+    case 'bar':
+      return (
+        <Bar
+          key={chartKey}
+          data={data as ChartData<'bar', (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>}
+          options={themeOptions as ChartOptions<'bar'>}
+        />
+      );
+    case 'pie':
+      return (
+        <Pie
+          key={chartKey}
+          data={data as ChartData<'pie', (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>}
+          options={themeOptions as ChartOptions<'pie'>}
+        />
+      );
+    case 'heatmap':
+      // Use Bar as a base for heatmap
+      return (
+        <Bar
+          key={chartKey}
+          data={data as ChartData<'bar', (number | [number, number] | Point | BubbleDataPoint | null)[], unknown>}
+          options={themeOptions as ChartOptions<'bar'>}
+        />
+      );
+    default:
+      return null;
+  }
 }

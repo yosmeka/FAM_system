@@ -43,10 +43,10 @@ export function MaintenanceFormSimple({
   const isApproved = initialData?.status === 'APPROVED';
   const canEditStatus = isManager() || isAdmin() || (isUser() && isApproved);
   const [cost, setCost] = useState(initialData?.cost !== undefined ? initialData.cost.toString() : '');
-  const [scheduledDate] = useState(
-    initialData?.scheduledDate !== undefined && initialData?.scheduledDate !== null
+  const [scheduledDate, setScheduledDate] = useState<string>(
+    initialData?.scheduledDate
       ? new Date(initialData.scheduledDate).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0]
+      : (new Date().toISOString().split('T')[0] || "")
   );
   const [completedDate, setCompletedDate] = useState(
     initialData?.completedAt
@@ -81,7 +81,7 @@ export function MaintenanceFormSimple({
       }
       // For regular users with non-approved requests that aren't pending, keep the original status
       else if (isUser() && !isApproved && !isPendingApproval && isEditing && !canEditStatus) {
-        statusToSubmit = initialData?.status;
+        statusToSubmit = initialData?.status ?? "PENDING_APPROVAL";
       }
 
       // Add a flag to indicate if a notification should be sent to the manager
@@ -261,7 +261,7 @@ export function MaintenanceFormSimple({
         </div>
       )}
 
-      {/* <div>
+      <div>
         <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700">
           Scheduled Date
         </label>
@@ -269,10 +269,10 @@ export function MaintenanceFormSimple({
           type="date"
           id="scheduledDate"
           className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
-          value={scheduledDate}
-          onChange={(e) => setScheduledDate(e.target.value)}
+          value={String(scheduledDate)}
+          onChange={(e) => setScheduledDate(e.target.value || "")}
         />
-      </div> */}
+      </div>
 
       {showCompletedFields && (
         <>

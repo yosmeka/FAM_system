@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // Enhanced: sendNotification supports type, metadata, and custom messages
 export async function sendNotification({
@@ -17,7 +18,7 @@ export async function sendNotification({
       userId,
       message,
       type,
-      meta: meta === null ? undefined : meta,
+      meta: meta === null ? undefined : (meta as Prisma.InputJsonValue), 
     },
   });
 }
