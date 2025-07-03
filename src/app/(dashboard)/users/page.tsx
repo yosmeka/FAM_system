@@ -405,7 +405,7 @@ export default function UsersPage() {
                 <option value="USER">User</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
-                {/* <option value="AUDITOR">Auditor</option> */}
+                <option value="AUDITOR">Auditor</option> 
               </select>
             </div>
             <div className="mt-6 flex justify-end space-x-2">
