@@ -4,6 +4,7 @@
 import '@/lib/chart-registry';
 
 import { Bar, Line, Pie } from 'react-chartjs-2';
+import type { ChartData, ChartOptions } from 'chart.js';
 import { useEffect, useState } from 'react';
 import { useTheme } from './ThemeProvider';
 
@@ -11,17 +12,18 @@ import { ChartType } from '@/types/chart';
 
 interface ClientChartProps {
   type: ChartType;
-  data: any;
-  options?: any;
+  data: ChartData;
+  options?: ChartOptions;
 }
 
-// Define specific chart components with their types
-const ChartComponents = {
-  line: Line as unknown,
-  bar: Bar as unknown,
-  pie: Pie as unknown,
-  heatmap: Bar as unknown, // Using Bar as base for heatmap
-} as const;
+type ChartComponentType = React.ComponentType<{ data: ChartData; options?: ChartOptions }>;
+
+const ChartComponents: Record<ChartType, ChartComponentType> = {
+  line: Line,
+  bar: Bar,
+  pie: Pie,
+  heatmap: Bar, // Using Bar as base for heatmap
+};
 
 export function ClientChart({ type, data, options }: ClientChartProps) {
   const [isMounted, setIsMounted] = useState(false);

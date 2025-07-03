@@ -236,7 +236,7 @@ export default function DashboardPage() {
         <AdminCharts userGrowth={userGrowth} permissionAssignments={permissionAssignments} />
         {/* Recent Activity / System Logs */}
         <div className="w-full flex flex-col items-center">
-          <AdminRecentActivity activity={recentActivity || {}} />
+          <AdminRecentActivity activity={recentActivity || { users: [], permissions: [], roleChanges: [] }} />
         </div>
       </div>
     );
