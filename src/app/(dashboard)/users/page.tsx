@@ -20,7 +20,7 @@ import UserPermissionsModal from "./UserPermissionsModal";
 export default function UsersPage() {
   const { permissions } = usePermissionsContext();
   console.log("Current permissions:", permissions);
-  const { checkPermission } = usePermissions();
+  const { checkPermission, loading: permissionsLoading } = usePermissions();
   const { data: session, status } = useSession();
   // const router = useRouter(); // Unused for now
   const isAdmin = session?.user?.role === "ADMIN";
@@ -146,6 +146,24 @@ export default function UsersPage() {
     }
   }, [checkPermission]);
 
+  if (status === "loading") {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
+  }
+
+  // Permissions loading check
+  if (permissionsLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+        <span className="ml-4 text-lg text-gray-700 dark:text-gray-200">Loading permissions...</span>
+      </div>
+    );
+  }
+
   // Conditional returns AFTER all hooks
   if (!checkPermission("User view (list and detail)")) {
     return (
@@ -154,14 +172,6 @@ export default function UsersPage() {
         <p className="mt-2 text-gray-600">
           You do not have permission to view users.
         </p>
-      </div>
-    );
-  }
-
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
       </div>
     );
   }
@@ -266,7 +276,7 @@ export default function UsersPage() {
                   </td>
                   <td className="border px-4 py-2 capitalize">{user.role}</td>
                   <td className="border px-4 py-2">
-                    {checkPermission("User edit/update") && (
+                    {checkPermission("User edit") && (
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEditClick(user)}
@@ -274,8 +284,7 @@ export default function UsersPage() {
                         >
                           Edit
                         </button>
-                        {(checkPermission("User manage permissions") ||
-                          isAdmin) && (
+                        {isAdmin && (
                           <button
                             onClick={() =>
                               setPermissionsModalUser({
