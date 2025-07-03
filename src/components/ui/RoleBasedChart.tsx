@@ -290,7 +290,11 @@ export function RoleBasedChart({
           <ClientChart
             key={`chart-${type}-${Math.random()}`}
             type={type}
-            data={formattedData}
+            data={
+              Array.isArray(formattedData)
+                ? { labels: [], datasets: [] }
+                : formattedData
+            }
             options={mergedOptions}
           />
         </div>
