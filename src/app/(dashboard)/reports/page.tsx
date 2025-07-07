@@ -29,6 +29,12 @@ const reportTypes = [
     path: '/reports/disposals',
     icon: '📉',
   },
+  {
+    title: 'Maintenance Reports',
+    description: '🔍 Track maintenance activities and trends',
+    path: '/reports/maintenance',
+    icon: '🔍', 
+  }
 ];
 
 export default function ReportsPage() {
