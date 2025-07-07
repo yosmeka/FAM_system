@@ -220,11 +220,18 @@ export default function UsersPage() {
         method: "DELETE",
       });
 
-      if (!res.ok) throw new Error("Failed to delete user");
+      if (!res.ok) {
+        let errorMsg = "Failed to delete user";
+        try {
+          const data = await res.json();
+          if (data && data.error) errorMsg = data.error;
+        } catch {}
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
       fetchUsers(); // Refresh the user list
       toast.success("User deleted successfully!");
     } catch (err) {
-      toast.error("Error deleting user");
       console.error(err);
     } finally {
       setDeleteUserId(null); // Close confirmation modal

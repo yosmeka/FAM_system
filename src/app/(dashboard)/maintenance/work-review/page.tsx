@@ -4,6 +4,7 @@ import React from "react";
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/hooks/useRole';
+import { useAuthContext } from '@/contexts/AuthContext';
 import { CheckCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
 import ManagerWorkReviewModal from '@/components/maintenance/ManagerWorkReviewModal';
 
@@ -39,16 +40,21 @@ interface WorkReviewTask {
 
 export default function WorkReviewPage() {
   const { isManager, isAdmin } = useRole();
+  const { isLoading } = useAuthContext();
   const router = useRouter();
   const [tasks, setTasks] = useState<WorkReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('WORK_COMPLETED');
   const [selectedTask, setSelectedTask] = useState<WorkReviewTask | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isManagerRole = isManager();
+  const isAdminRole = isAdmin();
 
   const fetchWorkReviewTasks = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       params.append('status', filter);
       params.append('workReview', 'true');
@@ -56,8 +62,14 @@ export default function WorkReviewPage() {
       if (response.ok) {
         const data = await response.json();
         setTasks(data);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to fetch work review tasks');
+        setTasks([]);
       }
     } catch (error) {
+      setError('Failed to fetch work review tasks');
+      setTasks([]);
       console.error('Error fetching work review tasks:', error);
     } finally {
       setLoading(false);
@@ -65,12 +77,13 @@ export default function WorkReviewPage() {
   }, [filter]);
 
   useEffect(() => {
-    if (!isManager && !isAdmin) {
+    if (isLoading) return;
+    if (!isManagerRole && !isAdminRole) {
       router.push('/maintenance');
       return;
     }
     fetchWorkReviewTasks();
-  }, [filter, isManager, isAdmin, router, fetchWorkReviewTasks]);
+  }, [filter, isManagerRole, isAdminRole, isLoading, router, fetchWorkReviewTasks]);
 
   const handleReviewWork = (task: WorkReviewTask) => {
     setSelectedTask(task);
@@ -115,6 +128,16 @@ export default function WorkReviewPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+        <FileText className="w-16 h-16 text-red-400 mb-4" />
+        <h3 className="text-xl font-semibold dark:text-white mb-2">Error</h3>
+        <p className="text-red-500">{error}</p>
       </div>
     );
   }

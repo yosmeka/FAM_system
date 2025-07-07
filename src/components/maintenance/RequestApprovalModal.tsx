@@ -40,7 +40,7 @@ export default function RequestApprovalModal({
   request,
   onRequestProcessed
 }: RequestApprovalModalProps) {
-  const [technicians, setTechnicians] = useState<any[]>([]);
+  const [technicians, setTechnicians] = useState<{ id: string; name: string; email: string }[]>([]);
   const [assignedToId, setAssignedToId] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState('');
@@ -98,7 +98,15 @@ export default function RequestApprovalModal({
         body: JSON.stringify(updateData),
       });
 
-      if (!response.ok) throw new Error('Failed to approve request');
+      if (!response.ok) {
+        let errorMsg = 'Failed to approve request';
+        try {
+          const data = await response.json();
+          if (data && data.error) errorMsg = data.error;
+        } catch {}
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       toast.success('Maintenance request approved and assigned!');
       onRequestProcessed();
@@ -106,7 +114,6 @@ export default function RequestApprovalModal({
       resetForm();
     } catch (error) {
       console.error('Error approving request:', error);
-      toast.error('Failed to approve request');
     } finally {
       setSubmitting(false);
     }
@@ -287,9 +294,11 @@ export default function RequestApprovalModal({
                     required
                   >
                     <option value="">Select a technician...</option>
-                      <option key={request.requester.name} value={request.requester.name}>
-                        {request.requester.name} ({request.requester.email})
+                    {technicians.map((tech) => (
+                      <option key={tech.id} value={tech.id}>
+                        {tech.name} ({tech.email})
                       </option>
+                    ))}
                   </select>
                 </div>
 
