@@ -22,7 +22,7 @@ interface AssignedToInfo {
 }
 
 interface MaintenanceTask {
-  id: number;
+  id: string;
   checklistItems: string;
   asset?: AssetInfo;
   assignedTo?: AssignedToInfo;

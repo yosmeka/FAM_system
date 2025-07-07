@@ -159,7 +159,9 @@ export default function UsersPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
-        <span className="ml-4 text-lg text-gray-700 dark:text-gray-200">Loading permissions...</span>
+        <span className="ml-4 text-lg text-gray-700 dark:text-gray-200">
+          Loading permissions...
+        </span>
       </div>
     );
   }
@@ -348,6 +350,7 @@ export default function UsersPage() {
                 <option value="USER">User</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
+                <option value="AUDITOR">Auditor</option>
               </select>
               <div className="flex justify-end space-x-2">
                 <button
@@ -414,7 +417,7 @@ export default function UsersPage() {
                 <option value="USER">User</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
-                <option value="AUDITOR">Auditor</option> 
+                <option value="AUDITOR">Auditor</option>
               </select>
             </div>
             <div className="mt-6 flex justify-end space-x-2">
