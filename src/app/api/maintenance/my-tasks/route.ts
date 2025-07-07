@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Only users (technicians) can access this endpoint
     if (session.user.role !== 'USER') {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const userId = session.user.id;
@@ -76,10 +76,10 @@ export async function GET(request: NextRequest) {
       console.log(`Task: ${task.description}, Status: ${task.status}, Assigned to: ${task.assignedToId}`);
     });
 
-    return NextResponse.json(tasks);
+    return Response.json(tasks);
   } catch (error) {
     console.error('Error fetching user tasks:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch tasks' },
       { status: 500 }
     );
