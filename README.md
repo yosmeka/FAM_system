@@ -82,6 +82,9 @@ src/
 │   ├── api/               # API routes
 │   └── auth/              # Authentication routes
 ├── components/            # React components
+|___middleware
+|___ context
+|___ utils
 ├── lib/                   # Utility functions and configurations
 ├── providers/             # Context providers
 └── types/                 # TypeScript type definitions
