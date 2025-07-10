@@ -1,102 +1,87 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+// import { NextRequest, NextResponse } from 'next/server';
+// import { getServerSession } from 'next-auth';
+// import { authOptions } from '@/lib/auth';
+// import { prisma } from '@/lib/prisma';
 
-// POST /api/maintenance/[id]/review
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+// GET /api/maintenance/my-tasks - Get tasks assigned to the current user
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.id) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
+// // GET /api/maintenance/my-tasks - Get tasks assigned to the current user
+// export async function GET(request: NextRequest) {
+//   try {
+//     const session = await getServerSession(authOptions);
+//     if (!session?.user?.id) {
+//       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+//     }
 
-    // Only managers and admins can review maintenance tasks
-    if (session.user?.role !== 'MANAGER' && session.user?.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Only managers can review maintenance tasks' }, { status: 403 });
+    // Only users (technicians) can access this endpoint
+    if (session.user.role !== 'USER') {
+      return Response.json({ error: 'Access denied' }, { status: 403 });
     }
+//     // Only users (technicians) can access this endpoint
+//     if (session.user.role !== 'USER') {
+//       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+//     }
 
-    const body = await request.json();
-    const { action, reviewNotes } = body; // action: 'approve' or 'reject'
+    const userId = session.user.id;
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+//     const userId = session.user.id;
+//     const { searchParams } = new URL(request.url);
+//     const status = searchParams.get('status');
 
-    if (!action || !['approve', 'reject'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action. Must be "approve" or "reject"' }, { status: 400 });
-    }
+    console.log(`Fetching tasks for user: ${userId} (${session.user.name})`);
+//     console.log(`Fetching tasks for user: ${userId} (${session.user.name})`);
 
-    // Await params
-    const { id } = await params;
-
-    // Get the maintenance task
-    const maintenanceTask = await prisma.maintenance.findUnique({
-      where: { id },
-      include: {
-        asset: {
-          select: {
-            name: true,
-            serialNumber: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
-    if (!maintenanceTask) {
-      return NextResponse.json({ error: 'Maintenance task not found' }, { status: 404 });
-    }
-
-    // Check if task is in a reviewable status
-    // PENDING_REVIEW: for corrective maintenance
-    // WORK_COMPLETED: for preventive maintenance
-    if (!['PENDING_REVIEW', 'WORK_COMPLETED'].includes(maintenanceTask.status)) {
-      return NextResponse.json({
-        error: `Task is not in a reviewable status. Current status: ${maintenanceTask.status}`
-      }, { status: 400 });
-    }
-
-    // Update the task status based on manager's decision
-    const newStatus = action === 'approve' ? 'COMPLETED' : 'REJECTED';
-    const updateData: any = {
-      status: newStatus,
+    // Build query to get tasks assigned to this user
+    const where: any = {
+      assignedToId: userId,
     };
+//     // Build query to get tasks assigned to this user
+//     const where: any = {
+//       assignedToId: userId,
+//     };
 
-    // Add review notes to the appropriate field
-    if (reviewNotes) {
-      // For preventive maintenance (WORK_COMPLETED), use managerReviewNotes
-      // For corrective maintenance (PENDING_REVIEW), use notes field
-      if (maintenanceTask.status === 'WORK_COMPLETED') {
-        updateData.managerReviewNotes = reviewNotes;
-      } else {
-        const existingNotes = maintenanceTask.notes || '';
-        const reviewNote = `\n\n--- Manager Review (${new Date().toLocaleString()}) ---\n${reviewNotes}`;
-        updateData.notes = existingNotes + reviewNote;
-      }
+    // Filter by status if provided
+    if (status && status !== 'all') {
+      where.status = status;
     }
+//     // Filter by status if provided
+//     if (status && status !== 'all') {
+//       where.status = status;
+//     }
 
-    // If approved, set final completion date and approval info
-    if (action === 'approve') {
-      updateData.completedAt = maintenanceTask.completedAt || maintenanceTask.workCompletedAt || new Date();
-      updateData.finalApprovedAt = new Date();
-      updateData.finalApprovedBy = session.user?.id;
-    }
-
-    const updatedTask = await prisma.maintenance.update({
-      where: { id },
-      data: updateData,
+    const tasks = await prisma.maintenance.findMany({
+      where,
       include: {
         asset: {
           select: {
+            id: true,
             name: true,
             serialNumber: true,
+            location: true,
+          },
+        },
+        schedule: {
+          select: {
+            id: true,
+            title: true,
+            frequency: true,
+          },
+        },
+        template: {
+          select: {
+            id: true,
+            name: true,
+            maintenanceType: true,
           },
         },
         assignedTo: {
@@ -107,67 +92,74 @@ export async function POST(
           },
         },
       },
+      orderBy: [
+        { scheduledDate: 'asc' },
+        { priority: 'desc' },
+      ],
     });
+//     const tasks = await prisma.maintenance.findMany({
+//       where,
+//       include: {
+//         asset: {
+//           select: {
+//             id: true,
+//             name: true,
+//             serialNumber: true,
+//             location: true,
+//           },
+//         },
+//         schedule: {
+//           select: {
+//             id: true,
+//             title: true,
+//             frequency: true,
+//           },
+//         },
+//         template: {
+//           select: {
+//             id: true,
+//             name: true,
+//             maintenanceType: true,
+//           },
+//         },
+//         assignedTo: {
+//           select: {
+//             id: true,
+//             name: true,
+//             email: true,
+//           },
+//         },
+//       },
+//       orderBy: [
+//         { scheduledDate: 'asc' },
+//         { priority: 'desc' },
+//       ],
+//     });
 
-    // If approved, update asset maintenance dates
-    if (action === 'approve') {
-      const nextMaintenanceDate = new Date();
-      nextMaintenanceDate.setMonth(nextMaintenanceDate.getMonth() + 3); // Schedule next maintenance in 3 months
-
-      await prisma.asset.update({
-        where: { id: updatedTask.assetId },
-        data: {
-          lastMaintenance: new Date(),
-          nextMaintenance: nextMaintenanceDate,
-        },
-      });
-    }
-
-    // Send notification to technician
-    try {
-      const { sendNotification } = await import('@/lib/notifications');
-
-      const message = action === 'approve'
-        ? `✅ Your maintenance task for "${updatedTask.asset.name}" has been approved by the manager`
-        : `❌ Your maintenance task for "${updatedTask.asset.name}" has been rejected by the manager${reviewNotes ? `. Reason: ${reviewNotes}` : ''}`;
-
-      const notificationType = action === 'approve' ? 'maintenance_approved' : 'maintenance_rejected';
-
-      if (updatedTask.assignedTo?.id) {
-        await sendNotification({
-          userId: updatedTask.assignedTo.id,
-          message,
-          type: notificationType,
-          meta: {
-            assetId: updatedTask.assetId,
-            maintenanceId: updatedTask.id,
-            action,
-            reviewNotes,
-            managerName: session.user?.name,
-            assetName: updatedTask.asset.name,
-            assetSerialNumber: updatedTask.asset.serialNumber
-          },
-        });
-
-        console.log(`Sent ${notificationType} notification to technician ${updatedTask.assignedTo.id}`);
-      }
-    } catch (notificationError) {
-      console.error('Error sending notification to technician:', notificationError);
-      // Continue even if notification fails
-    }
-
-    return NextResponse.json({
-      success: true,
-      task: updatedTask,
-      action,
-      message: `Task ${action}d successfully`
+    console.log(`Found ${tasks.length} tasks for user ${userId}`);
+    tasks.forEach(task => {
+      console.log(`Task: ${task.description}, Status: ${task.status}, Assigned to: ${task.assignedToId}`);
     });
+//     console.log(`Found ${tasks.length} tasks for user ${userId}`);
+//     tasks.forEach(task => {
+//       console.log(`Task: ${task.description}, Status: ${task.status}, Assigned to: ${task.assignedToId}`);
+//     });
 
+    return Response.json(tasks);
   } catch (error) {
-    console.error('Error reviewing maintenance task:', error);
-    return NextResponse.json(
-      { error: 'Failed to review maintenance task' },
+    console.error('Error fetching user tasks:', error);
+    return Response.json(
+      { error: 'Failed to fetch tasks' },
       { status: 500 }
     );
   }
 }
+//     return NextResponse.json(tasks);
+//   } catch (error) {
+//     console.error('Error fetching user tasks:', error);
+//     return NextResponse.json(
+//       { error: 'Failed to fetch tasks' },
+//       { status: 500 }
+//     );
+//   }
+// }

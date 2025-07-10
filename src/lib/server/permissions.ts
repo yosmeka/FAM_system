@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/server/prisma";
+import { Role } from '@prisma/client';
 
 /**
  * Checks if a user has a specific permission, considering both user-specific overrides and role-based permissions.
@@ -19,7 +20,7 @@ export async function userHasPermission(userId: string, role: string, permission
 
   // 2. Fallback to role-permission
   const rolePerm = await prisma.rolePermission.findFirst({
-    where: { role, permissionId: permission.id },
+    where: { role: role as Role, permissionId: permission.id },
   });
   return !!rolePerm;
 }

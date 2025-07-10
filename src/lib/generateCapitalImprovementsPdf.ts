@@ -73,7 +73,7 @@ export function generateCapitalImprovementsPdf({
   });
 
   // Add summary at the bottom
-  const finalY = (doc as any).lastAutoTable.finalY || 45;
+  const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY || 45;
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');

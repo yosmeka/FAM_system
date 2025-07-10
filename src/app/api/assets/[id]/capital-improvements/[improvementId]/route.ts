@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -6,19 +5,18 @@ import { authOptions } from '@/lib/auth';
 // GET a specific capital improvement
 export async function GET(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
+  context: { params: Promise<{ id: string; improvementId: string }> }
 ) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const capitalImprovement = await prisma.capitalImprovement.findUnique({
@@ -29,13 +27,13 @@ export async function GET(
     });
 
     if (!capitalImprovement) {
-      return NextResponse.json({ error: 'Capital improvement not found' }, { status: 404 });
+      return Response.json({ error: 'Capital improvement not found' }, { status: 404 });
     }
 
-    return NextResponse.json(capitalImprovement);
+    return Response.json(capitalImprovement);
   } catch (error) {
     console.error('Error fetching capital improvement:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch capital improvement' },
       { status: 500 }
     );
@@ -45,19 +43,18 @@ export async function GET(
 // PUT (update) a specific capital improvement
 export async function PUT(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
+  context: { params: Promise<{ id: string; improvementId: string }> }
 ) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({
@@ -68,7 +65,7 @@ export async function PUT(
     });
 
     if (!existingImprovement) {
-      return NextResponse.json({ error: 'Capital improvement not found' }, { status: 404 });
+      return Response.json({ error: 'Capital improvement not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -76,7 +73,7 @@ export async function PUT(
 
     // Validate required fields
     if (!body.description || !body.improvementDate || !body.cost) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: description, improvementDate, cost' },
         { status: 400 }
       );
@@ -172,10 +169,10 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(updatedImprovement);
+    return Response.json(updatedImprovement);
   } catch (error) {
     console.error('Error updating capital improvement:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update capital improvement', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
@@ -185,19 +182,18 @@ export async function PUT(
 // DELETE a specific capital improvement
 export async function DELETE(
   request: Request,
-  context: { params: { id: string; improvementId: string } }
+  context: { params: Promise<{ id: string; improvementId: string }> }
 ) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract the IDs from the context
-    const assetId = context.params.id;
-    const improvementId = context.params.improvementId;
+    const { id: assetId, improvementId } = await context.params;
 
     // Check if the capital improvement exists
     const existingImprovement = await prisma.capitalImprovement.findUnique({
@@ -208,7 +204,7 @@ export async function DELETE(
     });
 
     if (!existingImprovement) {
-      return NextResponse.json({ error: 'Capital improvement not found' }, { status: 404 });
+      return Response.json({ error: 'Capital improvement not found' }, { status: 404 });
     }
 
     // Get the current asset
@@ -219,7 +215,7 @@ export async function DELETE(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Delete the capital improvement
@@ -252,10 +248,10 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting capital improvement:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete capital improvement', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

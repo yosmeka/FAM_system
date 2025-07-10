@@ -72,7 +72,7 @@ export default function RolePermissionPage() {
         console.error('Error fetching permissions:', error);
         toast.error('Failed to load permissions. Please refresh the page.');
       });
-  }, []);
+  }, [session, status]);
 
   // TEMP: Hardcode roles for testing
   // Comment out the next line if API works
@@ -95,7 +95,7 @@ export default function RolePermissionPage() {
         toast.error('Failed to load permissions. Please try again.');
         setLoading(false);
       });
-  }, [selectedRole]);
+  }, [selectedRole, session, status]);
 
   const handleToggle = (permId: string) => {
     setRolePermissions(prev => {

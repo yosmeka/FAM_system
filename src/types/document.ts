@@ -3,7 +3,7 @@ import { DocumentType } from '@prisma/client';
 export interface DocumentMeta {
   transferId?: string;
   status?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface Document {

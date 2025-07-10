@@ -126,7 +126,7 @@ const assetFormSchema = z.object({
   salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional().nullable(),
 })
 
-type AssetFormValues = z.infer<typeof assetFormSchema>
+export type AssetFormValues = z.infer<typeof assetFormSchema>
 
 interface AssetFormProps {
   initialData?: Partial<AssetFormValues>

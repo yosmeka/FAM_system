@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  
 }
 
 datasource db {
@@ -44,6 +45,8 @@ model User {
   managedTransfers    Transfer[]    @relation("TransferManagedBy")
   disposalRequests    Disposal[]    @relation("DisposalRequestedBy")
   notifications      Notification[]
+  refreshTokens      RefreshToken[]
+  sessions           Session[]
 
   // Audit relations
   auditsPerformed     AssetAudit[]       @relation("AuditPerformedBy")
@@ -51,6 +54,20 @@ model User {
   auditAssignmentsMade AuditAssignment[] @relation("AuditAssignedBy")
   auditRequests       AuditRequest[]     @relation("AuditRequestedBy")
   auditRequestsReviewed AuditRequest[]   @relation("AuditRequestReviewedBy")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  sessionId String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Notification {
@@ -84,7 +101,7 @@ model Asset {
   depreciableCost     Float?
   salvageValue        Float?
   usefulLifeMonths    Int?
-  depreciationMethod  DepreciationMethod?
+  depreciationMethod  DepreciationMethodEnum?
   depreciationStartDate DateTime?
   lastAuditDate       DateTime?
   nextAuditDate       DateTime?
@@ -347,7 +364,7 @@ enum DisposalMethod {
   SCRAP
 }
 
-enum DepreciationMethod {
+enum DepreciationMethodEnum {
   STRAIGHT_LINE
   DECLINING_BALANCE
   DOUBLE_DECLINING
@@ -422,7 +439,7 @@ model CapitalImprovement {
   improvementDate   DateTime
   cost              Float
   usefulLifeMonths  Int?
-  depreciationMethod DepreciationMethod?
+  depreciationMethod DepreciationMethodEnum?
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -669,4 +686,15 @@ model AuditRequest {
   @@index([managerId])
   @@index([status])
   @@index([requestedDate])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
 }

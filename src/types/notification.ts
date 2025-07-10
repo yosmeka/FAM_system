@@ -3,7 +3,7 @@ export interface NotificationMeta {
   transferId?: string;
   documentUrl?: string | null;
   rejectionReason?: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface Notification {

@@ -5,14 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { MaintenancePriority, MaintenanceStatus } from '@/types/maintenance';
+import type { MaintenanceRequest } from '@/types/maintenance';
 
 // Define the form schema using Zod
 const maintenanceSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const),
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const),
-  cost: z.string().optional().transform(val => val ? parseFloat(val) : undefined),
+  cost: z.number().optional(),
   scheduledDate: z.string().optional(),
   completedDate: z.string().optional(),
   notes: z.string().optional(),
@@ -23,7 +23,7 @@ type MaintenanceFormData = z.infer<typeof maintenanceSchema>;
 interface MaintenanceFormProps {
   assetId: string;
   onSuccess: () => void;
-  initialData?: any;
+  initialData?: MaintenanceRequest;
   isEditing?: boolean;
 }
 
@@ -34,18 +34,17 @@ export function MaintenanceForm({
   isEditing = false 
 }: MaintenanceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCompletedFields, setShowCompletedFields] = useState(
-    initialData?.status === 'COMPLETED'
-  );
+  const allowedStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+  const getSafeStatus = (status: string | undefined): MaintenanceFormData['status'] =>
+    allowedStatuses.includes(status as any) ? (status as MaintenanceFormData['status']) : 'PENDING';
 
-  // Initialize the form with default values or initial data if editing
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<MaintenanceFormData>({
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<MaintenanceFormData>({
     resolver: zodResolver(maintenanceSchema),
     defaultValues: initialData ? {
       description: initialData.description || '',
       priority: initialData.priority || 'MEDIUM',
-      status: initialData.status || 'PENDING',
-      cost: initialData.cost ? initialData.cost.toString() : '',
+      status: getSafeStatus(initialData.status),
+      cost: typeof initialData.cost === 'number' ? initialData.cost : undefined,
       scheduledDate: initialData.scheduledDate ? new Date(initialData.scheduledDate).toISOString().split('T')[0] : '',
       completedDate: initialData.completedAt ? new Date(initialData.completedAt).toISOString().split('T')[0] : '',
       notes: initialData.notes || '',
@@ -56,13 +55,18 @@ export function MaintenanceForm({
     }
   });
 
-  // Watch the status field to show/hide completed fields
+  const [showCompletedFields, setShowCompletedFields] = useState(
+    initialData && getSafeStatus(initialData.status) === 'COMPLETED'
+  );
+
   const status = watch('status');
-  if (status === 'COMPLETED' && !showCompletedFields) {
-    setShowCompletedFields(true);
-  } else if (status !== 'COMPLETED' && showCompletedFields) {
-    setShowCompletedFields(false);
-  }
+  React.useEffect(() => {
+    if (status === 'COMPLETED' && !showCompletedFields) {
+      setShowCompletedFields(true);
+    } else if (status !== 'COMPLETED' && showCompletedFields) {
+      setShowCompletedFields(false);
+    }
+  }, [status, showCompletedFields]);
 
   const onSubmit = async (data: MaintenanceFormData) => {
     try {
@@ -73,7 +77,7 @@ export function MaintenanceForm({
         assetId,
       };
       
-      const url = isEditing 
+      const url = isEditing && initialData
         ? `/api/assets/${assetId}/maintenance/${initialData.id}` 
         : `/api/assets/${assetId}/maintenance`;
       
@@ -203,14 +207,9 @@ export function MaintenanceForm({
                 type="number"
                 id="cost"
                 step="0.01"
-                min="0"
                 className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:border-blue-500 focus:ring-blue-500"
-                placeholder="0.00"
-                {...register('cost')}
+                {...register('cost', { valueAsNumber: true })}
               />
-              {errors.cost && (
-                <p className="mt-1 text-sm text-red-600">{errors.cost.message}</p>
-              )}
             </div>
           </div>
         </>

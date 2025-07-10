@@ -35,6 +35,7 @@ export async function sendUserCreationEmail({
           <p><strong>Email:</strong> ${email}</p>
           <p><strong>Password:</strong> ${password}</p>
           <p><strong>Role:</strong> ${role}</p>
+          <p><strong>Link:</strong> <a href="http://172.16.8.163:3000">click here to login</a></p>
         </div>
         <p><strong>Important:</strong> For security reasons, please change your password after your first login.</p>
         <p>You can log in to the system using the credentials above.</p>

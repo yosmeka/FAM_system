@@ -1,11 +1,11 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 // GET /api/managers - Get all managers for maintenance requests
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(managers);
+    return Response.json(managers);
   } catch (error) {
     console.error('Error fetching managers:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

@@ -2,13 +2,12 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
-// Define the type for jspdf-autotable
-declare module 'jspdf-autotable' {
-  import { jsPDF } from 'jspdf';
-
-  function autoTable(doc: jsPDF, options: any): void;
-  export default autoTable;
-}
+// Extend jsPDF type
+type ExtendedJsPDF = jsPDF & {
+  lastAutoTable: {
+    finalY: number;
+  };
+};
 
 export interface TransferStats {
   totalTransfers: number;
@@ -53,7 +52,7 @@ export interface TransferReportData {
 
 export const generateTransferReportPDF = (data: TransferReportData): void => {
   try {
-    const doc = new jsPDF();
+    const doc = new jsPDF() as ExtendedJsPDF;
     const pageWidth = doc.internal.pageSize.getWidth();
     const currentDate = format(new Date(), 'MMMM d, yyyy');
 
@@ -79,7 +78,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
       ['Transfer Growth', `${data.stats.transferGrowth}%`],
     ];
 
-    // Use autoTable directly
+    // Use autoTable with inline options
     autoTable(doc, {
       startY: 45,
       head: [['Metric', 'Value']],
@@ -89,7 +88,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
     });
 
     // Get the final Y position
-    const finalY1 = (doc as any).lastAutoTable.finalY;
+    const finalY1 = doc.lastAutoTable.finalY;
 
     // Location Transfers
     doc.setFontSize(14);
@@ -103,7 +102,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
       `${Math.round(loc.avgProcessingDays)} days`,
     ]);
 
-    // Use autoTable directly
+    // Use autoTable with inline options
     autoTable(doc, {
       startY: finalY1 + 20,
       head: [['Location', 'Outgoing', 'Incoming', 'Net Change', 'Avg. Processing Time']],
@@ -113,7 +112,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
     });
 
     // Get the final Y position
-    const finalY2 = (doc as any).lastAutoTable.finalY;
+    const finalY2 = doc.lastAutoTable.finalY;
 
     // Monthly Trends
     doc.setFontSize(14);
@@ -126,7 +125,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
       `${Math.round((month.approved / (month.count || 1)) * 100)}%`,
     ]);
 
-    // Use autoTable directly
+    // Use autoTable with inline options
     autoTable(doc, {
       startY: finalY2 + 20,
       head: [['Month', 'Total Transfers', 'Approved', 'Approval Rate']],
@@ -147,7 +146,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
         item.count.toString(),
       ]);
 
-      // Use autoTable directly
+      // Use autoTable with inline options
       autoTable(doc, {
         startY: 25,
         head: [['From Location', 'To Location', 'Count']],
@@ -160,7 +159,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
     // Status Distribution
     if (data.statusDistribution && data.statusDistribution.length > 0) {
       // Add a new page if we already have content
-      if (doc.internal.getNumberOfPages() > 1) {
+      if (doc.internal.pages.length > 1) {
         doc.addPage();
       }
 
@@ -173,7 +172,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
         `${item.percentage}%`,
       ]);
 
-      // Use autoTable directly
+      // Use autoTable with inline options
       autoTable(doc, {
         startY: 25,
         head: [['Status', 'Count', 'Percentage']],
@@ -184,7 +183,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
     }
 
     // Footer
-    const pageCount = doc.internal.getNumberOfPages();
+    const pageCount = doc.internal.pages.length;
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);

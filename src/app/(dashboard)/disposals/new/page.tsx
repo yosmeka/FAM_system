@@ -107,9 +107,9 @@ export default function NewDisposalPage() {
       toast.success('Disposal request created successfully');
       router.push('/disposals');
       router.refresh();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error:', error);
-      toast.error(error.message || 'Failed to create disposal request');
+      toast.error(error instanceof Error ? error.message : 'Failed to create disposal request');
     } finally {
       setLoading(false);
     }

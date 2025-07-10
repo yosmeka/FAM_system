@@ -17,15 +17,17 @@ export default function AccountSettings() {
   // Password validation
   const validatePassword = (password: string) => {
     // First check if the password meets minimum requirements
-    const hasMinRequirements = 
-      /[a-z]/.test(password) &&    // at least one lowercase letter
-      /[A-Z]/.test(password) &&    // at least one uppercase letter
-      /\d/.test(password) &&       // at least one number
+    const hasMinRequirements =
+      /[a-z]/.test(password) && // at least one lowercase letter
+      /[A-Z]/.test(password) && // at least one uppercase letter
+      /\d/.test(password) && // at least one number
       /[@$!%*?&]/.test(password) && // at least one special character
-      password.length >= 8;        // at least 8 characters
+      password.length >= 8; // at least 8 characters
 
     if (!hasMinRequirements) {
-      setPasswordError("Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)");
+      setPasswordError(
+        "Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, one number, and one special character (@$!%*?&)"
+      );
       return false;
     }
     setPasswordError("");
@@ -42,16 +44,26 @@ export default function AccountSettings() {
 
   return (
     <div className="max-w-2xl mx-auto p-8 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-xl shadow-xl mt-8">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">Account Settings</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">
+        Account Settings
+      </h1>
       <div className="flex gap-4 mb-6">
         <button
-          className={`px-4 py-2 rounded-lg font-semibold ${currentTab === "password" ? "bg-red-600 text-white" : "bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100"}`}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            currentTab === "password"
+              ? "bg-red-600 text-white"
+              : "bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+          }`}
           onClick={() => setCurrentTab("password")}
         >
           Change Password
         </button>
         <button
-          className={`px-4 py-2 rounded-lg font-semibold ${currentTab === "profile" ? "bg-red-600 text-white" : "bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100"}`}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            currentTab === "profile"
+              ? "bg-red-600 text-white"
+              : "bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+          }`}
           onClick={() => setCurrentTab("profile")}
         >
           Profile Info
@@ -83,19 +95,23 @@ export default function AccountSettings() {
                 body: JSON.stringify({ currentPassword, newPassword }),
               });
               const data = await res.json();
-              if (!res.ok) throw new Error(data.error || "Failed to update password");
+              if (!res.ok)
+                throw new Error(data.error || "Failed to update password");
               setPasswordSuccess("Password updated successfully!");
               setCurrentPassword("");
               setNewPassword("");
               setConfirmNewPassword("");
-            } catch (err: any) {
-              setPasswordError(err.message);
+            } catch (err: unknown) {
+              setPasswordError(
+                err instanceof Error ? err.message : "An error occurred"
+              );
             } finally {
               setPasswordLoading(false);
             }
           }}
         >
-          <label className="font-semibold">Current Password
+          <label className="font-semibold">
+            Current Password
             <input
               type="password"
               value={currentPassword}
@@ -104,7 +120,8 @@ export default function AccountSettings() {
             />
           </label>
           <div className="space-y-1">
-            <label className="font-semibold">New Password
+            <label className="font-semibold">
+              New Password
               <input
                 type="password"
                 value={newPassword}
@@ -116,11 +133,14 @@ export default function AccountSettings() {
               />
             </label>
             {passwordError && (
-              <p className="text-sm text-red-500 dark:text-red-400">{passwordError}</p>
+              <p className="text-sm text-red-500 dark:text-red-400">
+                {passwordError}
+              </p>
             )}
           </div>
           <div className="space-y-1">
-            <label className="font-semibold">Confirm New Password
+            <label className="font-semibold">
+              Confirm New Password
               <input
                 type="password"
                 value={confirmNewPassword}
@@ -129,65 +149,96 @@ export default function AccountSettings() {
               />
             </label>
             {passwordError && (
-              <p className="text-sm text-red-500 dark:text-red-400">{passwordError}</p>
+              <p className="text-sm text-red-500 dark:text-red-400">
+                {passwordError}
+              </p>
             )}
           </div>
-          <button type="submit" className="mt-2 w-full rounded-lg bg-red-600 text-white py-2 font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400" disabled={passwordLoading}>
+          <button
+            type="submit"
+            className="mt-2 w-full rounded-lg bg-red-600 text-white py-2 font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+            disabled={passwordLoading}
+          >
             {passwordLoading ? "Updating..." : "Update Password"}
           </button>
-          {passwordError && <div className="text-red-500 font-semibold mt-2">{passwordError}</div>}
-          {passwordSuccess && <div className="text-green-500 font-semibold mt-2">{passwordSuccess}</div>}
+          {passwordError && (
+            <div className="text-red-500 font-semibold mt-2">
+              {passwordError}
+            </div>
+          )}
+          {passwordSuccess && (
+            <div className="text-green-500 font-semibold mt-2">
+              {passwordSuccess}
+            </div>
+          )}
         </form>
       )}
       {currentTab === "profile" && (
         <form
-            className="flex flex-col gap-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setProfileError("");
-              setProfileSuccess("");
-              if (!userId) {
-                setProfileError("User not found");
-                return;
-              }
-              setProfileLoading(true);
-              try {
-                const res = await fetch(`/api/users/${userId}`, {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ name, email }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed to update profile");
-                setProfileSuccess("Profile updated successfully!");
-              } catch (err: any) {
-                setProfileError(err.message);
-              } finally {
-                setProfileLoading(false);
-              }
-            }}
-          >
-          <label className="font-semibold">Name
+          className="flex flex-col gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setProfileError("");
+            setProfileSuccess("");
+            if (!userId) {
+              setProfileError("User not found");
+              return;
+            }
+            setProfileLoading(true);
+            try {
+              const res = await fetch(`/api/users/${userId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email }),
+              });
+              const data = await res.json();
+              if (!res.ok)
+                throw new Error(data.error || "Failed to update profile");
+              setProfileSuccess("Profile updated successfully!");
+            } catch (err: unknown) {
+              setProfileError(
+                err instanceof Error ? err.message : "An error occurred"
+              );
+            } finally {
+              setProfileLoading(false);
+            }
+          }}
+        >
+          <label className="font-semibold">
+            Name
             <input
               type="text"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               className="block w-full mt-1 p-2 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
             />
           </label>
-          <label className="font-semibold">Email
+          <label className="font-semibold">
+            Email
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               className="block w-full mt-1 p-2 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
             />
           </label>
-          <button type="submit" className="mt-2 w-full rounded-lg bg-red-600 text-white py-2 font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400" disabled={profileLoading}>
-  {profileLoading ? "Updating..." : "Update Profile"}
-</button>
-{profileError && <div className="text-red-500 font-semibold mt-2">{profileError}</div>}
-{profileSuccess && <div className="text-green-500 font-semibold mt-2">{profileSuccess}</div>}
+          <button
+            type="submit"
+            className="mt-2 w-full rounded-lg bg-red-600 text-white py-2 font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+            disabled={profileLoading}
+          >
+            {profileLoading ? "Updating..." : "Update Profile"}
+          </button>
+          {profileError && (
+            <div className="text-red-500 font-semibold mt-2">
+              {profileError}
+            </div>
+          )}
+          {profileSuccess && (
+            <div className="text-green-500 font-semibold mt-2">
+              {profileSuccess}
+            </div>
+          )}
         </form>
       )}
     </div>

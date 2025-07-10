@@ -14,9 +14,9 @@ import {
   PointElement,
   LineElement,
 } from 'chart.js/auto';
-import { Bar, Line, Pie } from 'react-chartjs-2';
 import { useQuery } from '@tanstack/react-query';
-import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
+import { Toaster } from 'react-hot-toast';
+import { Pie } from 'react-chartjs-2';
 
 interface CustomUser {
   id: string;
@@ -68,8 +68,24 @@ interface DashboardData {
 import { useState, useEffect } from 'react';
 import { AdminRecentActivity } from '@/components/ui/AdminRecentActivity';
 import { AdminCharts } from '@/components/ui/AdminCharts';
-import { Toaster, toast } from 'react-hot-toast';
-import { NotificationBell } from '@/components/ui/NotificationBell';
+
+interface RecentActivity {
+  users: Array<{ id: string; name: string; email: string; role: string; updatedAt: string; createdAt: string }>;
+  permissions: Array<{ id: string; name: string; description: string }>;
+  roleChanges: Array<{ id: string; user: { id: string; name: string; email: string }; changedByUser: { id: string; name: string; email: string }; changedAt: string }>;
+}
+
+interface UserGrowth {
+  year: number;
+  month: number;
+  count: number;
+}
+
+interface PermissionAssignment {
+  year: number;
+  month: number;
+  count: number;
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -129,10 +145,9 @@ export default function DashboardPage() {
   };
 
   // Fetch recent activity, charts, and notifications for admin
-  const [recentActivity, setRecentActivity] = useState<any>(null);
-  const [userGrowth, setUserGrowth] = useState<any[]>([]);
-  const [permissionAssignments, setPermissionAssignments] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity | null>(null);
+  const [userGrowth, setUserGrowth] = useState<UserGrowth[]>([]);
+  const [permissionAssignments, setPermissionAssignments] = useState<PermissionAssignment[]>([]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -168,17 +183,6 @@ export default function DashboardPage() {
           }
           const data = await res.json();
           setPermissionAssignments(data.permissionAssignments || []);
-        });
-      fetch('/api/admin/notifications')
-        .then(async res => {
-          if (!res.ok) return setNotifications([]);
-          const contentType = res.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            setNotifications([]);
-            return;
-          }
-          const data = await res.json();
-          setNotifications(data.notifications || []);
         });
     }
   }, [isAdmin]);
@@ -232,7 +236,7 @@ export default function DashboardPage() {
         <AdminCharts userGrowth={userGrowth} permissionAssignments={permissionAssignments} />
         {/* Recent Activity / System Logs */}
         <div className="w-full flex flex-col items-center">
-          <AdminRecentActivity activity={recentActivity || {}} />
+          <AdminRecentActivity activity={recentActivity || { users: [], permissions: [], roleChanges: [] }} />
         </div>
       </div>
     );

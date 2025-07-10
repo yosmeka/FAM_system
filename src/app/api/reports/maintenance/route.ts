@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // Helper function to format time ago
@@ -79,7 +79,7 @@ export async function GET() {
     console.log(`Found ${allMaintenanceRecords.length} maintenance records`);
 
     if (allMaintenanceRecords.length === 0) {
-      return NextResponse.json({
+      return Response.json({
         stats: {
           totalRequests: 0,
           pendingRequests: 0,
@@ -288,7 +288,7 @@ export async function GET() {
             const completedDate = new Date(request.completedAt!);
             const duration = Math.max(0, completedDate.getTime() - scheduledDate.getTime());
             return sum + (duration / (1000 * 60 * 60 * 24)); // Convert to days
-          } catch (e) {
+          } catch {
             return sum;
           }
         }, 0) / completedRequests.length
@@ -325,7 +325,7 @@ export async function GET() {
             const updatedDate = new Date(record.updatedAt);
             const timeDiff = Math.max(0, updatedDate.getTime() - createdDate.getTime());
             return sum + (timeDiff / (1000 * 60 * 60 * 24));
-          } catch (e) {
+          } catch {
             return sum;
           }
         }, 0) / approvedRequests.length
@@ -353,7 +353,7 @@ export async function GET() {
           completionRate: item.count > 0 ? (item.completed / item.count) * 100 : 0,
           avgCost: item.count > 0 ? item.totalCost / item.count : 0,
         };
-      } catch (e) {
+      } catch {
         return {
           ...item,
           monthDisplay: item.month,
@@ -365,7 +365,7 @@ export async function GET() {
 
     console.log("Returning maintenance report data");
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalRequests,
         pendingRequests: pendingApprovalCount,
@@ -388,7 +388,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate maintenance reports' },
       { status: 500 }
     );

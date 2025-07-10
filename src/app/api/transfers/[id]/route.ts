@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/transfers/[id]
@@ -14,7 +14,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -76,7 +76,7 @@ export async function GET(
     }
 
     if (!transfer) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer not found' },
         { status: 404 }
       );
@@ -84,7 +84,7 @@ export async function GET(
 
     // Only allow MANAGER or the user who requested
     if (session.user.role !== 'MANAGER' && transfer.requesterId !== session.user.id) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Forbidden' },
         { status: 403 }
       );
@@ -99,10 +99,10 @@ export async function GET(
       manager: transfer.manager,
       managerId: transfer.managerId,
     };
-    return NextResponse.json(result);
+    return Response.json(result);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch transfer' },
       { status: 500 }
     );
@@ -118,7 +118,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -128,12 +128,12 @@ export async function PUT(
     const transfer = await prisma.transfer.findUnique({ where: { id } });
 
     if (!transfer) {
-      return NextResponse.json({ error: 'Transfer not found' }, { status: 404 });
+      return Response.json({ error: 'Transfer not found' }, { status: 404 });
     }
 
     // Only allow editing if transfer is still PENDING
     if (transfer.status !== 'PENDING') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Only PENDING transfers can be edited' },
         { status: 400 }
       );
@@ -150,7 +150,7 @@ export async function PUT(
         fromLocation: updated.fromDepartment,
         toLocation: updated.toDepartment,
       };
-      return NextResponse.json(result);
+      return Response.json(result);
     }
 
     // If requester, allow editing toDepartment and reason
@@ -167,17 +167,17 @@ export async function PUT(
         fromLocation: updated.fromDepartment,
         toLocation: updated.toDepartment,
       };
-      return NextResponse.json(result);
+      return Response.json(result);
     }
 
     // Otherwise, forbidden
-    return NextResponse.json(
+    return Response.json(
       { error: 'Forbidden: Not allowed to edit this transfer' },
       { status: 403 }
     );
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update transfer' },
       { status: 500 }
     );
@@ -194,7 +194,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -204,19 +204,19 @@ export async function DELETE(
       where: { id },
     });
     if (!transfer) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Transfer not found' },
         { status: 404 }
       );
     }
     if (transfer.requesterId !== session.user.id) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Forbidden: Only the requester can delete this transfer' },
         { status: 403 }
       );
     }
     if (transfer.status !== 'PENDING') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Only PENDING transfers can be deleted' },
         { status: 400 }
       );
@@ -224,10 +224,10 @@ export async function DELETE(
     await prisma.transfer.delete({
       where: { id },
     });
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete transfer' },
       { status: 500 }
     );

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, CheckCircle, XCircle, AlertTriangle, MapPin, Clock, User } from 'lucide-react';
+import { X, CheckCircle, XCircle, AlertTriangle, Clock, User } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -180,7 +180,6 @@ export default function ReviewAuditModal({
           {/* Location Verification */}
           <div className="p-4 bg-gray-200 dark:bg-gray-700 rounded-md">
             <h3 className="text-lg font-medium dark:text-white mb-3 flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
               Location Verification
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

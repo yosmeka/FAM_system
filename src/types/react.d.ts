@@ -1,9 +1,14 @@
-import React from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 declare global {
   namespace JSX {
     interface IntrinsicElements {
-      [elemName: string]: any;
+      [elemName: string]: {
+        className?: string;
+        style?: CSSProperties;
+        children?: ReactNode;
+        [key: string]: unknown;
+      };
     }
   }
 }

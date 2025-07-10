@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -119,10 +118,10 @@ export async function GET() {
             }))
         };
 
-        return NextResponse.json(formattedData);
+        return Response.json(formattedData);
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        return NextResponse.json(
+        return Response.json(
             { error: 'Failed to fetch dashboard data' },
             { status: 500 }
         );

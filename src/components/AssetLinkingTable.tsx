@@ -6,8 +6,16 @@ interface Asset {
   id: string;
   name: string;
   serialNumber: string;
-  linkedTo?: any[];
-  linkedFrom?: any[];
+  linkedTo?: unknown[];
+  linkedFrom?: unknown[];
+}
+
+interface LinkedAsset {
+  id: string;
+  fromAssetId: string;
+  toAssetId: string;
+  fromAsset: Asset;
+  toAsset: Asset;
 }
 
 interface AssetLinkingTableProps {
@@ -18,8 +26,8 @@ interface AssetLinkingTableProps {
 
 export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: AssetLinkingTableProps) {
   const [isChildAsset, setIsChildAsset] = useState(false);
-  const [validChildLinks, setValidChildLinks] = useState<any[]>([]);
-  const [validParentLinks, setValidParentLinks] = useState<any[]>([]);
+  const [validChildLinks, setValidChildLinks] = useState<LinkedAsset[]>([]);
+  const [validParentLinks, setValidParentLinks] = useState<LinkedAsset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to trigger re-fetching
 
@@ -59,11 +67,11 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
         console.log("DIRECT FETCH - All linked assets:", data.linkedAssets);
 
         // Filter linked assets for this specific asset
-        const childLinks = data.linkedAssets.filter((link: any) =>
+        const childLinks = data.linkedAssets.filter((link: LinkedAsset) =>
           link.fromAssetId === asset.id
         );
 
-        const parentLinks = data.linkedAssets.filter((link: any) =>
+        const parentLinks = data.linkedAssets.filter((link: LinkedAsset) =>
           link.toAssetId === asset.id
         );
 
@@ -99,7 +107,7 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Asset Linking</h2>
 
-      <div className="mb-4">
+      {/* <div className="mb-4">
         <div className="flex items-center mb-2">
           <input
             type="checkbox"
@@ -111,7 +119,7 @@ export function AssetLinkingTable({ asset, onLinkClick, onUnlinkSuccess }: Asset
         <p className="text-sm text-gray-600 dark:text-gray-400 ml-7">
           Select this checkbox to indicate that this asset and its linking assets should be audited/check-out/checked-in, etc., as a group.
         </p>
-      </div>
+      </div> */}
 
       {/* Only show the Link Child Asset button if this is not a child asset */}
       {!isChildAsset && (

@@ -248,7 +248,7 @@ export async function exportToExcel(data: ExcelExportData, filename: string = 'a
   }
 }
 
-export function exportToCSV(data: any[], filename: string = 'asset-data', headers: string[] = []) {
+export function exportToCSV(data: Record<string, unknown>[], filename: string = 'asset-data', headers: string[] = []) {
   try {
     // Convert data to CSV format
     const csvContent = [

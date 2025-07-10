@@ -1,18 +1,64 @@
-// Role-Based Access Control (RBAC) middleware for Next.js API routes
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+// Enhanced Role-Based Access Control (RBAC) middleware for Next.js API routes
+// Supports both session and JWT authentication
+import { NextRequest } from 'next/server';
+import { apiMiddleware } from './api';
+import { Role } from '@/types/auth';
 
-export function withRole(allowedRoles: string[], handler: Function) {
-  return async function (req: NextRequest, ...args: any[]) {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+// Define AuthContext type if needed (adjust as per your actual context)
+type AuthContext = {
+  user: {
+    id: string;
+    email?: string;
+    role?: string;
+  };
+  authMethod?: string;
+};
+
+export function withRole(allowedRoles: Role[], handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>) {
+  return async function (req: NextRequest, ...args: unknown[]) {
+    const authResult = await apiMiddleware(req, allowedRoles);
+    if (authResult) {
+      return authResult;
     }
     return handler(req, ...args);
   };
 }
 
-// Usage Example (in a route):
-// import { withRole } from '@/middleware/rbac';
+/**
+ * Enhanced middleware with explicit auth context passing
+ */
+export function withAuth(handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>) {
+  return async function (req: NextRequest, ...args: unknown[]) {
+    const authResult = await apiMiddleware(req);
+    if (authResult) {
+      return authResult;
+    }
+    return handler(req, ...args);
+  };
+}
+
+/**
+ * Middleware for specific role with auth context
+ */
+export function withRoleAndAuth(
+  allowedRoles: Role[],
+  handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>
+) {
+  return async function (req: NextRequest, ...args: unknown[]) {
+    const authResult = await apiMiddleware(req, allowedRoles);
+    if (authResult) {
+      return authResult;
+    }
+    return handler(req, ...args);
+  };
+}
+
+// Usage Examples:
+// Basic role check (backward compatible):
 // export const GET = withRole(['ADMIN'], async (req) => { ... });
+
+// With auth context:
+// export const GET = withRoleAndAuth(['ADMIN'], async (req, auth) => {
+//   console.log('User:', auth.user.email, 'Method:', auth.authMethod);
+//   // ... handler logic
+// });

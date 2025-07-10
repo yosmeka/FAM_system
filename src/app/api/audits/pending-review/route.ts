@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -9,7 +9,7 @@ export const GET = withRole(['MANAGER'], async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userRole = session.user.role;
@@ -92,10 +92,10 @@ export const GET = withRole(['MANAGER'], async function GET() {
         null,
     }));
 
-    return NextResponse.json(formattedAudits);
+    return Response.json(formattedAudits);
   } catch (error) {
     console.error('Error fetching pending audits:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch pending audits' },
       { status: 500 }
     );

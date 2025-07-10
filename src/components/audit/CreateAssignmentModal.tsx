@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, Calendar, User, AlertCircle } from 'lucide-react';
+import { X, User } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -27,6 +27,8 @@ interface CreateAssignmentModalProps {
   onSuccess: () => void;
 }
 
+type PriorityType = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
 export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: CreateAssignmentModalProps) {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
@@ -37,7 +39,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
     assignedToId: '',
     title: '',
     description: '',
-    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+    priority: 'MEDIUM' as PriorityType,
     dueDate: '',
     scheduledDate: '',
     instructions: '',
@@ -225,7 +227,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
               </label>
               <select
                 value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as PriorityType })}
                 required
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
               >

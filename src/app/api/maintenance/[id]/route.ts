@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -60,7 +59,7 @@ export async function GET(
     });
 
     if (!maintenanceRequest) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Maintenance request not found' },
         { status: 404 }
       );
@@ -70,42 +69,23 @@ export async function GET(
     let documentUrl = null;
     if (maintenanceRequest.status === 'APPROVED' || maintenanceRequest.status === 'REJECTED') {
       try {
-        console.log(`Checking for document for maintenance ${params.id} with status ${maintenanceRequest.status}`);
-
         // Find documents for this maintenance request
         const documents = await prisma.document.findMany({
           where: {
             assetId: maintenanceRequest.assetId,
           },
         });
-
-        console.log(`Found ${documents.length} documents for asset ${maintenanceRequest.assetId}`);
-
-        // Log all documents for debugging
-        documents.forEach((doc, index) => {
-          console.log(`Document ${index + 1}:`, {
-            id: doc.id,
-            type: doc.type,
-            url: doc.url,
-            meta: doc.meta
-          });
-        });
-
         // Find the document related to this maintenance request
         const maintenanceDocument = documents.find(
           (doc) =>
             doc.meta &&
             typeof doc.meta === 'object' &&
             'maintenanceId' in doc.meta &&
-            doc.meta.maintenanceId === params.id
+            doc.meta.maintenanceId === id
         );
-
         if (maintenanceDocument) {
           documentUrl = maintenanceDocument.url;
-          console.log(`Found document for maintenance ${params.id}:`, maintenanceDocument.url);
         } else {
-          console.log(`No document found for maintenance ${params.id}`);
-
           // Try a different approach - look for documents by type
           const typeDocument = documents.find(
             (doc) =>
@@ -113,22 +93,20 @@ export async function GET(
               doc.meta &&
               typeof doc.meta === 'object'
           );
-
           if (typeDocument) {
             documentUrl = typeDocument.url;
-            console.log(`Found document by type for maintenance ${params.id}:`, typeDocument.url);
           }
         }
       } catch (error) {
-        console.error(`Error fetching document for maintenance ${params.id}:`, error);
+        console.error(`Error fetching document for maintenance ${id}:`, error);
       }
     }
 
     // Parse template JSON strings if template exists
-    let processedRequest = { ...maintenanceRequest, documentUrl };
+    const processedRequest = { ...maintenanceRequest, documentUrl };
 
     if (processedRequest.schedule?.template) {
-      const safeParseJSON = (jsonString: string | null): any[] => {
+      const safeParseJSON = (jsonString: string | null): unknown[] => {
         if (!jsonString) return [];
         try {
           const parsed = JSON.parse(jsonString);
@@ -141,16 +119,20 @@ export async function GET(
 
       processedRequest.schedule.template = {
         ...processedRequest.schedule.template,
-        toolsRequired: safeParseJSON(processedRequest.schedule.template.toolsRequired),
-        partsRequired: safeParseJSON(processedRequest.schedule.template.partsRequired),
-        checklistItems: safeParseJSON(processedRequest.schedule.template.checklistItems),
+        toolsRequired: safeParseJSON(processedRequest.schedule.template.toolsRequired as string),
+        partsRequired: safeParseJSON(processedRequest.schedule.template.partsRequired as string),
+        checklistItems: safeParseJSON(processedRequest.schedule.template.checklistItems as string),
+      } as typeof processedRequest.schedule.template & {
+        toolsRequired: unknown[];
+        partsRequired: unknown[];
+        checklistItems: unknown[];
       };
     }
 
-    return NextResponse.json(processedRequest);
+    return Response.json(processedRequest);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance request' },
       { status: 500 }
     );
@@ -221,7 +203,7 @@ export async function PUT(
     });
 
     if (!currentRequest) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Maintenance request not found' },
         { status: 404 }
       );
@@ -241,7 +223,7 @@ export async function PUT(
     if (userRole === 'USER') {
       // Regular users (technicians) can only update tasks assigned to them
       if (!isAssignedTechnician && !isRequester) {
-        return NextResponse.json(
+        return Response.json(
           { error: 'You can only update tasks assigned to you' },
           { status: 403 }
         );
@@ -249,7 +231,7 @@ export async function PUT(
 
       // Requesters cannot change status of pending requests
       if (isRequester && isPendingApproval && status !== undefined && status !== 'PENDING_APPROVAL') {
-        return NextResponse.json(
+        return Response.json(
           { error: 'Regular users cannot change the status of a pending request' },
           { status: 403 }
         );
@@ -257,7 +239,7 @@ export async function PUT(
     }
 
     // Build the update data object
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     // Only update fields that are provided
     if (description !== undefined) updateData.description = description;
@@ -266,12 +248,12 @@ export async function PUT(
     if (scheduledDate !== undefined) updateData.scheduledDate = new Date(scheduledDate);
     if (managerId !== undefined) updateData.managerId = managerId || null; // Allow unsetting manager with empty string
     if (actualHours !== undefined) updateData.actualHours = actualHours;
-    if (checklistItems !== undefined) updateData.checklistItems = checklistItems;
+    if (Array.isArray(checklistItems)) updateData.checklistItems = JSON.stringify(checklistItems);
     if (assignedToId !== undefined) updateData.assignedToId = assignedToId;
 
     // Work documentation fields
     if (workPerformed !== undefined) updateData.workPerformed = workPerformed;
-    if (partsUsed !== undefined) updateData.partsUsed = partsUsed;
+    if (Array.isArray(partsUsed)) updateData.partsUsed = JSON.stringify(partsUsed);
     if (laborHours !== undefined) updateData.laborHours = laborHours;
     if (partsCost !== undefined) updateData.partsCost = partsCost;
     if (laborCost !== undefined) updateData.laborCost = laborCost;
@@ -340,21 +322,6 @@ export async function PUT(
         // Import the sendNotification function
         const { sendNotification } = await import('@/lib/notifications');
 
-        // Create a user-friendly status name
-        const getStatusName = (status: string) => {
-          const statusMap: Record<string, string> = {
-            'PENDING_APPROVAL': 'Pending Approval',
-            'APPROVED': 'Approved',
-            'REJECTED': 'Rejected',
-            'SCHEDULED': 'Scheduled',
-            'IN_PROGRESS': 'In Progress',
-            'PENDING_REVIEW': 'Pending Review',
-            'COMPLETED': 'Completed',
-            'CANCELLED': 'Cancelled'
-          };
-          return statusMap[status] || status;
-        };
-
         let message = '';
         let notificationType = '';
         let targetUserId = '';
@@ -401,8 +368,6 @@ export async function PUT(
               assetSerialNumber: maintenanceRequest.asset.serialNumber
             },
           });
-
-          console.log(`Sent ${notificationType} notification to user ${targetUserId}`);
         }
       } catch (notificationError) {
         console.error('Error sending notification:', notificationError);
@@ -410,10 +375,10 @@ export async function PUT(
       }
     }
 
-    return NextResponse.json(maintenanceRequest);
+    return Response.json(maintenanceRequest);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update maintenance request' },
       { status: 500 }
     );
@@ -423,19 +388,20 @@ export async function PUT(
 // DELETE /api/maintenance/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if the maintenance request exists
     const maintenanceRequest = await prisma.maintenance.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         requester: {
           select: {
@@ -446,7 +412,7 @@ export async function DELETE(
     });
 
     if (!maintenanceRequest) {
-      return NextResponse.json({ error: 'Maintenance request not found' }, { status: 404 });
+      return Response.json({ error: 'Maintenance request not found' }, { status: 404 });
     }
 
     // Check if the user is authorized to delete this request
@@ -458,18 +424,18 @@ export async function DELETE(
     const isManagerOrAdmin = userRole === 'MANAGER' || userRole === 'ADMIN';
 
     if (!isRequester && !isManagerOrAdmin) {
-      return NextResponse.json({ error: 'Not authorized to delete this maintenance request' }, { status: 403 });
+      return Response.json({ error: 'Not authorized to delete this maintenance request' }, { status: 403 });
     }
 
     // Delete the maintenance request
     await prisma.maintenance.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error deleting maintenance request:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete maintenance request' },
       { status: 500 }
     );

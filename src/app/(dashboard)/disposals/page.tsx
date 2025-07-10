@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
@@ -30,7 +30,7 @@ function DeleteConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Confirm Deletion</h3>
         <p className="mb-4 dark:text-white">
-          Are you sure you want to delete the disposal request for asset "{assetName}"? 
+          Are you sure you want to delete the disposal request for asset &quot;{assetName}&quot;? 
           This action cannot be undone.
         </p>
         <div className="flex justify-end space-x-3">
@@ -75,7 +75,7 @@ function RejectConfirmationModal({
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full">
         <h3 className="text-lg font-semibold mb-4 dark:text-white">Reject Disposal Request</h3>
         <p className="mb-4 dark:text-white">
-          Please provide a reason for rejecting the disposal request for asset "{assetName}".
+          Please provide a reason for rejecting the disposal request for asset &quot;{assetName}&quot;.
         </p>
         <textarea
           value={reason}
@@ -110,11 +110,6 @@ export default function DisposalsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  if (status === 'loading') return null;
-  if (status !== 'authenticated' || !session) {
-    return null;
-  }
-
   const [loading, setLoading] = useState(true);
   const [disposals, setDisposals] = useState<DisposalRequest[]>([]);
   const [filteredDisposals, setFilteredDisposals] = useState<DisposalRequest[]>([]);
@@ -128,21 +123,14 @@ export default function DisposalsPage() {
     assetName: ''
   });
   const [rejectReason, setRejectReason] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 7;
+  const totalPages = Math.ceil(filteredDisposals.length / pageSize);
+  const paginatedDisposals = filteredDisposals.slice((page - 1) * pageSize, page * pageSize);
 
- // Show nothing until session is loaded
-  //if (status === 'loading') return null;
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    setPage(1);
+  }, [filteredDisposals]);
 
   useEffect(() => {
     fetchDisposals();
@@ -187,6 +175,21 @@ export default function DisposalsPage() {
     setFilteredDisposals(filtered);
   }, [searchQuery, searchField, disposals]);
 
+  if (status === 'loading') return null;
+
+  const showAccessDenied = status !== 'authenticated' || !session || session?.user?.role === 'AUDITOR';
+
+  if (showAccessDenied) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   const fetchDisposals = async () => {
     try {
       const response = await fetch('/api/disposals');
@@ -196,9 +199,10 @@ export default function DisposalsPage() {
       }
       const data = await response.json();
       setDisposals(data);
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to fetch disposals');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to fetch disposals');
     } finally {
       setLoading(false);
     }
@@ -224,9 +228,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request deleted successfully');
       fetchDisposals(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to delete disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to delete disposal request');
     } finally {
       setDeleteModalOpen(false);
       setDisposalToDelete(null);
@@ -246,9 +251,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request approved successfully');
       fetchDisposals(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to approve disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to approve disposal request');
     }
   };
 
@@ -275,9 +281,10 @@ export default function DisposalsPage() {
 
       toast.success('Disposal request rejected successfully');
       fetchDisposals();
-    } catch (error: any) {
-      console.error('Error:', error);
-      toast.error(error.message || 'Failed to reject disposal request');
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error('Error:', err);
+      toast.error(err.message || 'Failed to reject disposal request');
     } finally {
       setRejectModal({ open: false, disposalId: null, assetName: '' });
       setRejectReason('');
@@ -312,11 +319,6 @@ export default function DisposalsPage() {
       key: 'expectedValue',
       header: 'Expected Value',
       render: (value) => `$${(value as number).toFixed(2)}`,
-    },
-    {
-      key: 'actualValue',
-      header: 'Actual Value',
-      render: (value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : 'N/A'),
     },
     {
       key: 'status',
@@ -468,11 +470,34 @@ export default function DisposalsPage() {
       </div>
 
       <RoleBasedTable
-        data={filteredDisposals}
+        data={paginatedDisposals}
         columns={columns}
         loading={loading}
         onRowClick={(value) => router.push(`/disposals/${value}`)}
       />
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4 dark:bg-gray-900 border-t">
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-800 dark:hover:bg-gray-700"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       <DeleteConfirmationModal
         isOpen={deleteModalOpen}

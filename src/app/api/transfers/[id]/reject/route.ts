@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -15,7 +15,7 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'MANAGER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { id } = await params;
     const body = await request.json();
@@ -125,10 +125,10 @@ export async function POST(
       });
       console.log(`Sent rejection notification to user ${transfer.requesterId}`);
     }
-    return NextResponse.json(transfer);
+    return Response.json(transfer);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to reject transfer' },
       { status: 500 }
     );

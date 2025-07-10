@@ -1,6 +1,3 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
@@ -39,7 +36,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
     console.log(`Found ${allAudits.length} audit records`);
 
     if (allAudits.length === 0) {
-      return NextResponse.json({
+      return Response.json({
         stats: {
           totalAudits: 0,
           completedAudits: 0,
@@ -187,7 +184,8 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
 
     // Condition distribution
     const conditionCounts = allAudits.reduce((acc, audit) => {
-      acc[audit.condition] = (acc[audit.condition] || 0) + 1;
+      const condition = audit.condition || 'Unknown';
+      acc[condition] = (acc[condition] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -283,7 +281,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
           totalAudits: 0,
           lastAuditDate: null as string | null,
           nextAuditDate: audit.asset?.nextAuditDate?.toISOString() || null,
-          condition: audit.condition,
+          condition: audit.condition || 'Unknown',
           discrepancies: 0,
           isOverdue: false,
         };
@@ -294,27 +292,39 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
       // Update last audit date if this audit is more recent
       if (!acc[assetId].lastAuditDate || new Date(audit.auditDate) > new Date(acc[assetId].lastAuditDate!)) {
         acc[assetId].lastAuditDate = audit.auditDate.toISOString();
-        acc[assetId].condition = audit.condition;
+        acc[assetId].condition = audit.condition || 'Unknown';
       }
 
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, {
+      assetId: string;
+      assetName: string;
+      serialNumber: string;
+      department: string;
+      category: string;
+      totalAudits: number;
+      lastAuditDate: string | null;
+      nextAuditDate: string | null;
+      condition: string;
+      discrepancies: number;
+      isOverdue: boolean;
+    }>);
 
     // Check for overdue status
-    Object.values(assetAuditCounts).forEach((asset: any) => {
+    Object.values(assetAuditCounts).forEach((asset) => {
       if (asset.nextAuditDate) {
         asset.isOverdue = new Date(asset.nextAuditDate) < now;
       }
     });
 
     const topAssets = Object.values(assetAuditCounts)
-      .sort((a: any, b: any) => b.totalAudits - a.totalAudits)
+      .sort((a, b) => b.totalAudits - a.totalAudits)
       .slice(0, 10);
 
     // Overdue assets
     const overdueAssetsList = Object.values(assetAuditCounts)
-      .filter((asset: any) => asset.isOverdue)
-      .sort((a: any, b: any) => new Date(a.nextAuditDate).getTime() - new Date(b.nextAuditDate).getTime())
+      .filter((asset) => asset.isOverdue)
+      .sort((a, b) => new Date(a.nextAuditDate!).getTime() - new Date(b.nextAuditDate!).getTime())
       .slice(0, 10);
 
     // Recent unresolved discrepancies
@@ -337,7 +347,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
         };
       });
 
-    return NextResponse.json({
+    return Response.json({
       stats: {
         totalAudits,
         completedAudits,
@@ -363,7 +373,7 @@ export const GET = withRole(['AUDITOR', 'MANAGER', 'USER'], async function GET()
 
   } catch (error) {
     console.error('Error generating audit reports:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to generate audit reports', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

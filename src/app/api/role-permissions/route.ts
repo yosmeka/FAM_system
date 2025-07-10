@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Role } from '@prisma/client';
 // Fallback: hardcode roles if Prisma enum import fails
 const roles = ['ADMIN', 'MANAGER', 'USER', 'AUDITOR']; // Added AUDITOR
 
@@ -9,19 +10,19 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const role = searchParams.get('role');
     if (!role || !roles.includes(role)) {
-      return NextResponse.json({ error: 'Role is required or invalid' }, { status: 400 });
+      return Response.json({ error: 'Role is required or invalid' }, { status: 400 });
     }
 
     // @ts-ignore: Prisma client may not be up to date
     const rolePermissions = await prisma.rolePermission.findMany({
-      where: { role },
+      where: { role: role as Role },
       include: { permission: true },
     });
 
-    return NextResponse.json({ permissions: rolePermissions.map((rp: any) => rp.permission) });
+    return Response.json({ permissions: rolePermissions.map((rp: any) => rp.permission) });
   } catch (error) {
     console.error('Error fetching role permissions:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch role permissions', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
@@ -34,10 +35,10 @@ export async function PUT(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const role = searchParams.get('role');
     if (!role || !roles.includes(role)) {
-      return NextResponse.json({ error: 'Role is required or invalid' }, { status: 400 });
+      return Response.json({ error: 'Role is required or invalid' }, { status: 400 });
     }
     if (role === 'ADMIN') {
-      return NextResponse.json({ error: 'Cannot update permissions for ADMIN role' }, { status: 403 });
+      return Response.json({ error: 'Cannot update permissions for ADMIN role' }, { status: 403 });
     }
 
     let body;
@@ -45,26 +46,26 @@ export async function PUT(req: NextRequest) {
       body = await req.json();
     } catch (jsonError) {
       console.error('Error parsing request body:', jsonError);
-      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+      return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
     }
 
     const { permissionIds } = body;
     if (!Array.isArray(permissionIds)) {
-      return NextResponse.json({ error: 'permissionIds must be an array' }, { status: 400 });
+      return Response.json({ error: 'permissionIds must be an array' }, { status: 400 });
     }
 
     // @ts-ignore: Prisma client may not be up to date
-    await prisma.rolePermission.deleteMany({ where: { role } });
+    await prisma.rolePermission.deleteMany({ where: { role: role as Role } });
 
     // @ts-ignore: Prisma client may not be up to date
     await prisma.rolePermission.createMany({
-      data: permissionIds.map((permissionId: string) => ({ role, permissionId })),
+      data: permissionIds.map((permissionId: string) => ({ role: role as Role, permissionId })),
     });
 
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error) {
     console.error('Error updating role permissions:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update role permissions', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

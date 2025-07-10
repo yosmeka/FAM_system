@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -7,29 +7,30 @@ import { sendNotification } from '@/lib/notifications';
 // POST /api/transfers/[id]/complete
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const transfer = await prisma.transfer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { asset: true, manager: true },
     });
     if (!transfer) {
-      return NextResponse.json({ error: 'Transfer not found' }, { status: 404 });
+      return Response.json({ error: 'Transfer not found' }, { status: 404 });
     }
     if (transfer.status !== 'APPROVED') {
-      return NextResponse.json({ error: 'Only approved transfers can be completed' }, { status: 400 });
+      return Response.json({ error: 'Only approved transfers can be completed' }, { status: 400 });
     }
     if (transfer.requesterId !== session.user.id) {
-      return NextResponse.json({ error: 'Forbidden: Only the requester can complete this transfer' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Only the requester can complete this transfer' }, { status: 403 });
     }
     // Update transfer status and asset location/status
     const updatedTransfer = await prisma.transfer.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
     });
     const updatedAsset = await prisma.asset.update({
@@ -43,7 +44,7 @@ export async function POST(
     if (transfer.managerId) {
       await sendNotification({
         userId: transfer.managerId,
-        message: `Transfer for asset "${transfer.asset.name}" has been completed by the requester.`,
+        message: `Transfer for asset "${transfer.asset?.name || 'Unknown'}" has been completed by the requester.`,
         type: 'transfer_completed',
         meta: {
           assetId: transfer.assetId,
@@ -51,9 +52,9 @@ export async function POST(
         },
       });
     }
-    return NextResponse.json({ transfer: updatedTransfer, asset: updatedAsset });
+    return Response.json({ transfer: updatedTransfer, asset: updatedAsset });
   } catch (error) {
     console.error('Error completing transfer:', error);
-    return NextResponse.json({ error: 'Failed to complete transfer' }, { status: 500 });
+    return Response.json({ error: 'Failed to complete transfer' }, { status: 500 });
   }
 }

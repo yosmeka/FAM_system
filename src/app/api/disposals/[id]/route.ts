@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -31,16 +30,16 @@ export async function GET(
     });
 
     if (!disposal) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Disposal request not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(disposal);
+    return Response.json(disposal);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch disposal request' },
       { status: 500 }
     );
@@ -57,7 +56,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
@@ -67,10 +66,10 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json(disposal);
+    return Response.json(disposal);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to delete disposal request' },
       { status: 500 }
     );
@@ -86,7 +85,7 @@ export async function PUT(
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the disposal request to check ownership
@@ -96,7 +95,7 @@ export async function PUT(
     });
 
     if (!existingDisposal) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Disposal request not found' },
         { status: 404 }
       );
@@ -104,7 +103,7 @@ export async function PUT(
 
     // Check if the user is the owner of the request
     if (existingDisposal.requesterId !== session.user.id) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'You can only edit your own disposal requests' },
         { status: 403 }
       );
@@ -112,7 +111,7 @@ export async function PUT(
 
     // Check if the request is still pending
     if (existingDisposal.status !== 'PENDING') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Can only edit pending disposal requests' },
         { status: 400 }
       );
@@ -124,7 +123,7 @@ export async function PUT(
     // Validate the disposal method
     const validMethods = ['SALE', 'DONATION', 'RECYCLE', 'SCRAP'] as const;
     if (!validMethods.includes(method)) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Invalid disposal method. Must be one of: SALE, DONATION, RECYCLE, SCRAP' },
         { status: 400 }
       );
@@ -155,10 +154,10 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json(disposal);
+    return Response.json(disposal);
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update disposal request' },
       { status: 500 }
     );

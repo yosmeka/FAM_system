@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { CalendarIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
 // Define the schema for audit validation
@@ -31,7 +31,7 @@ type AuditFormData = z.infer<typeof auditSchema>;
 interface AssetAuditFormProps {
   assetId: string;
   onSuccess: () => void;
-  initialData?: any;
+  initialData?: unknown;
   isEditing?: boolean;
 }
 
@@ -43,25 +43,25 @@ export function AssetAuditForm({
 }: AssetAuditFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResolutionFields, setShowResolutionFields] = useState(
-    initialData?.discrepancyResolved || false
+    (initialData && typeof initialData === 'object' && initialData !== null && 'discrepancyResolved' in initialData ? (initialData as Partial<AuditFormData>).discrepancyResolved : false)
   );
 
   // Initialize the form with default values or initial data if editing
   const { register, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm<AuditFormData>({
     resolver: zodResolver(auditSchema),
-    defaultValues: initialData ? {
-      auditDate: initialData.auditDate ? format(new Date(initialData.auditDate), 'yyyy-MM-dd') : '',
-      status: initialData.status || 'COMPLETED',
-      condition: initialData.condition || 'GOOD',
-      locationVerified: initialData.locationVerified !== undefined ? initialData.locationVerified : true,
-      notes: initialData.notes || '',
-      discrepancies: initialData.discrepancies || '',
-      discrepancyResolved: initialData.discrepancyResolved || false,
-      resolvedDate: initialData.resolvedDate ? format(new Date(initialData.resolvedDate), 'yyyy-MM-dd') : null,
-      resolvedBy: initialData.resolvedBy || null,
-      resolutionNotes: initialData.resolutionNotes || null,
-      photoUrls: initialData.photoUrls || null,
-      nextAuditDate: initialData.nextAuditDate ? format(new Date(initialData.nextAuditDate), 'yyyy-MM-dd') : null,
+    defaultValues: initialData && typeof initialData === 'object' && initialData !== null ? {
+      auditDate: 'auditDate' in initialData && initialData.auditDate ? format(new Date((initialData as Partial<AuditFormData>).auditDate as string), 'yyyy-MM-dd') : '',
+      status: 'status' in initialData ? (initialData as Partial<AuditFormData>).status ?? 'COMPLETED' : 'COMPLETED',
+      condition: 'condition' in initialData ? (initialData as Partial<AuditFormData>).condition ?? 'GOOD' : 'GOOD',
+      locationVerified: 'locationVerified' in initialData ? (initialData as Partial<AuditFormData>).locationVerified ?? true : true,
+      notes: 'notes' in initialData ? (initialData as Partial<AuditFormData>).notes ?? '' : '',
+      discrepancies: 'discrepancies' in initialData ? (initialData as Partial<AuditFormData>).discrepancies ?? '' : '',
+      discrepancyResolved: 'discrepancyResolved' in initialData ? (initialData as Partial<AuditFormData>).discrepancyResolved ?? false : false,
+      resolvedDate: 'resolvedDate' in initialData && (initialData as Partial<AuditFormData>).resolvedDate ? format(new Date((initialData as Partial<AuditFormData>).resolvedDate as string), 'yyyy-MM-dd') : null,
+      resolvedBy: 'resolvedBy' in initialData ? (initialData as Partial<AuditFormData>).resolvedBy ?? null : null,
+      resolutionNotes: 'resolutionNotes' in initialData ? (initialData as Partial<AuditFormData>).resolutionNotes ?? null : null,
+      photoUrls: 'photoUrls' in initialData ? (initialData as Partial<AuditFormData>).photoUrls ?? null : null,
+      nextAuditDate: 'nextAuditDate' in initialData && (initialData as Partial<AuditFormData>).nextAuditDate ? format(new Date((initialData as Partial<AuditFormData>).nextAuditDate as string), 'yyyy-MM-dd') : null,
     } : {
       auditDate: format(new Date(), 'yyyy-MM-dd'),
       status: 'COMPLETED',
@@ -74,7 +74,7 @@ export function AssetAuditForm({
 
   // Watch for changes to discrepancyResolved
   const discrepancyResolved = watch('discrepancyResolved');
-  const hasDiscrepancies = watch('discrepancies')?.trim().length > 0;
+  const hasDiscrepancies = (watch('discrepancies') || '').trim().length > 0;
 
   // Update resolution fields visibility when discrepancyResolved changes
   React.useEffect(() => {
@@ -89,8 +89,12 @@ export function AssetAuditForm({
   const onSubmit = async (data: AuditFormData) => {
     setIsSubmitting(true);
     try {
+      let id: string | undefined = undefined;
+      if (isEditing && initialData && typeof initialData === 'object' && initialData !== null && 'id' in initialData) {
+        id = (initialData as { id?: string }).id;
+      }
       const url = isEditing 
-        ? `/api/assets/${assetId}/audits/${initialData.id}`
+        ? `/api/assets/${assetId}/audits/${id}`
         : `/api/assets/${assetId}/audits`;
       
       const method = isEditing ? 'PUT' : 'POST';
@@ -136,7 +140,7 @@ export function AssetAuditForm({
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Calendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
             <input
               id="auditDate"
@@ -157,7 +161,7 @@ export function AssetAuditForm({
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+              <Calendar className="h-5 w-5 text-gray-400" aria-hidden="true" />
             </div>
             <input
               id="nextAuditDate"

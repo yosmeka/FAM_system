@@ -5,7 +5,7 @@ import { NextRequest } from "next/server";
 
 type RequestWithAuth = NextRequest & { 
   nextauth: { 
-    token: any 
+    token: unknown 
   } 
 };
 

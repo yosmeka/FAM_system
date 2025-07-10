@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -6,18 +5,18 @@ import { authOptions } from '@/lib/auth';
 // GET all capital improvements for an asset
 export async function GET(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract the asset ID from the context
-    const assetId = context.params.id;
+    const { id: assetId } = await context.params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
@@ -27,7 +26,7 @@ export async function GET(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Get all capital improvements for the asset
@@ -40,10 +39,10 @@ export async function GET(
       },
     });
 
-    return NextResponse.json(capitalImprovements);
+    return Response.json(capitalImprovements);
   } catch (error) {
     console.error('Error fetching capital improvements:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch capital improvements' },
       { status: 500 }
     );
@@ -53,18 +52,18 @@ export async function GET(
 // POST a new capital improvement
 export async function POST(
   request: Request,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get session for authentication
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract the asset ID from the context
-    const assetId = context.params.id;
+    const { id: assetId } = await context.params;
 
     // Check if the asset exists
     const asset = await prisma.asset.findUnique({
@@ -74,7 +73,7 @@ export async function POST(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Parse the request body
@@ -82,7 +81,7 @@ export async function POST(
 
     // Validate required fields
     if (!body.description || !body.improvementDate || !body.cost) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: description, improvementDate, cost' },
         { status: 400 }
       );
@@ -161,10 +160,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(capitalImprovement, { status: 201 });
+    return Response.json(capitalImprovement, { status: 201 });
   } catch (error) {
     console.error('Error creating capital improvement:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create capital improvement', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -6,14 +6,14 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // POST /api/audits/workflow - Create audit from assignment or request
-export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request: Request) {
+export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const {
       assetId,
       assignmentId,
@@ -29,7 +29,7 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
 
     // Validate required fields
     if (!assetId || !auditDate) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: assetId, auditDate' },
         { status: 400 }
       );
@@ -42,7 +42,7 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Verify assignment or request if provided
@@ -56,21 +56,26 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
           id: true,
           assignedToId: true,
           status: true,
+          assignedBy: {
+            select: {
+              id: true,
+            },
+          },
         },
       });
 
       if (!assignment) {
-        return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+        return Response.json({ error: 'Assignment not found' }, { status: 404 });
       }
 
       // Only AUDITOR can perform assigned audit
       if (session.user.role === 'AUDITOR' && assignment.assignedToId !== session.user.id) {
-        return NextResponse.json({ error: 'Not assigned to this audit' }, { status: 403 });
+        return Response.json({ error: 'Not assigned to this audit' }, { status: 403 });
       }
 
       // Prevent USER from performing audits
       if (session.user.role === 'USER') {
-        return NextResponse.json({ error: 'Only auditors can perform audits' }, { status: 403 });
+        return Response.json({ error: 'Only auditors can perform audits' }, { status: 403 });
       }
     }
 
@@ -85,12 +90,12 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
       });
 
       if (!auditRequest) {
-        return NextResponse.json({ error: 'Audit request not found' }, { status: 404 });
+        return Response.json({ error: 'Audit request not found' }, { status: 404 });
       }
 
       // Verify request is approved
       if (auditRequest.status !== 'APPROVED') {
-        return NextResponse.json(
+        return Response.json(
           { error: 'Audit request must be approved before performing audit' },
           { status: 400 }
         );
@@ -98,12 +103,12 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
 
       // Only AUDITOR can perform audits from requests
       if (session.user.role === 'AUDITOR' && auditRequest.requesterId !== session.user.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
 
       // Prevent USER from performing audits
       if (session.user.role === 'USER') {
-        return NextResponse.json({ error: 'Only auditors can perform audits' }, { status: 403 });
+        return Response.json({ error: 'Only auditors can perform audits' }, { status: 403 });
       }
     }
 
@@ -191,23 +196,23 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
       if (managerId) {
         await AuditNotificationService.notifyAuditCompleted({
           id: audit.id,
-          assignmentId: audit.assignmentId,
-          requestId: audit.requestId,
-          auditorId: audit.auditorId,
+          assignmentId: audit.assignmentId || undefined,
+          requestId: audit.requestId || undefined,
+          auditorId: audit.auditorId || '',
           asset: {
             name: audit.asset.name,
             serialNumber: audit.asset.serialNumber,
           },
-          condition: audit.condition,
+          condition: audit.condition || '',
           managerId: managerId,
         });
       }
     }
 
-    return NextResponse.json(audit, { status: 201 });
+    return Response.json(audit, { status: 201 });
   } catch (error) {
     console.error('Error creating audit:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create audit' },
       { status: 500 }
     );
@@ -215,18 +220,18 @@ export const POST = withRole(['MANAGER', 'AUDITOR'], async function POST(request
 });
 
 // PUT /api/audits/workflow - Submit audit for review
-export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: Request) {
+export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await req.json();
     const { auditId, action, ...updateData } = body;
 
     if (!auditId) {
-      return NextResponse.json({ error: 'Missing auditId' }, { status: 400 });
+      return Response.json({ error: 'Missing auditId' }, { status: 400 });
     }
 
     // Get current audit
@@ -249,7 +254,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
     });
 
     if (!currentAudit) {
-      return NextResponse.json({ error: 'Audit not found' }, { status: 404 });
+      return Response.json({ error: 'Audit not found' }, { status: 404 });
     }
 
     const userRole = session.user.role;
@@ -260,7 +265,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
     if (action === 'submit_for_review' && userRole === 'AUDITOR') {
       // Auditor submits audit for manager review
       if (currentAudit.auditorId !== userId) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
 
       updateFields = {
@@ -285,7 +290,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
         (currentAudit.request?.managerId === userId);
 
       if (!canApprove) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
 
       updateFields = {
@@ -331,7 +336,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
         (currentAudit.request?.managerId === userId);
 
       if (!canReject) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        return Response.json({ error: 'Access denied' }, { status: 403 });
       }
 
       updateFields = {
@@ -353,7 +358,7 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
         });
       }
     } else {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Invalid action or insufficient permissions' },
         { status: 400 }
       );
@@ -415,14 +420,14 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
       if (managerId) {
         await AuditNotificationService.notifyAuditCompleted({
           id: updatedAudit.id,
-          assignmentId: updatedAudit.assignmentId,
-          requestId: updatedAudit.requestId,
-          auditorId: updatedAudit.auditorId,
+          assignmentId: updatedAudit.assignmentId || undefined,
+          requestId: updatedAudit.requestId || undefined,
+          auditorId: updatedAudit.auditorId || '',
           asset: {
             name: updatedAudit.asset.name,
             serialNumber: updatedAudit.asset.serialNumber,
           },
-          condition: updatedAudit.condition,
+          condition: updatedAudit.condition || '',
           managerId: managerId,
         });
       }
@@ -430,33 +435,33 @@ export const PUT = withRole(['MANAGER', 'AUDITOR'], async function PUT(request: 
       // Notify auditor that audit was approved
       await AuditNotificationService.notifyAuditApproved({
         id: updatedAudit.id,
-        auditorId: updatedAudit.auditorId,
+        auditorId: updatedAudit.auditorId || '',
         managerId: userId,
         asset: {
           name: updatedAudit.asset.name,
           serialNumber: updatedAudit.asset.serialNumber,
         },
-        reviewNotes: updatedAudit.reviewNotes,
+        reviewNotes: updatedAudit.reviewNotes || undefined,
       });
     } else if (action === 'reject') {
       // Notify auditor that audit was rejected
       await AuditNotificationService.notifyAuditRejected({
         id: updatedAudit.id,
-        auditorId: updatedAudit.auditorId,
+        auditorId: updatedAudit.auditorId || '',
         managerId: userId,
         asset: {
           name: updatedAudit.asset.name,
           serialNumber: updatedAudit.asset.serialNumber,
         },
         rejectionReason: updateData.rejectionReason || 'Audit requires revision',
-        reviewNotes: updatedAudit.reviewNotes,
+        reviewNotes: updatedAudit.reviewNotes || undefined,
       });
     }
 
-    return NextResponse.json(updatedAudit);
+    return Response.json(updatedAudit);
   } catch (error) {
     console.error('Error updating audit workflow:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update audit workflow' },
       { status: 500 }
     );

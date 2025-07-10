@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateDepreciation, generateChartData } from '@/utils/depreciation';
 import { getServerSession } from 'next-auth';
@@ -6,10 +5,10 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const url = new URL(request.url);
 
     const asset = await prisma.asset.findUnique({
@@ -38,7 +37,7 @@ export async function GET(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     const queryUsefulLife = url.searchParams.get('usefulLife');
@@ -49,7 +48,7 @@ export async function GET(
     const depreciableCost = asset.depreciableCost || asset.purchasePrice;
     const salvageValue = querySalvageValue ? parseFloat(querySalvageValue) : (asset.salvageValue || 0);
     const usefulLifeYears = queryUsefulLife ? parseInt(queryUsefulLife) : (asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : 5);
-    const depreciationMethod = queryMethod || asset.depreciationMethod || 'STRAIGHT_LINE';
+    const depreciationMethod = (queryMethod || asset.depreciationMethod || 'STRAIGHT_LINE') as 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
     const depreciationRate = queryDepreciationRate ? parseFloat(queryDepreciationRate) : undefined;
 
     const depreciationResults = calculateDepreciation({
@@ -63,7 +62,7 @@ export async function GET(
 
     const chartData = generateChartData(depreciationResults);
 
-    return NextResponse.json({
+    return Response.json({
       asset,
       depreciationSettings: {
         depreciableCost,
@@ -79,12 +78,14 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching depreciation data:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch depreciation data', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
+
+
 
 export async function PUT(
   request: Request,
@@ -96,7 +97,7 @@ export async function PUT(
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get URL to parse query parameters
@@ -123,7 +124,7 @@ export async function PUT(
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Get the parameters from the query string
@@ -139,14 +140,14 @@ export async function PUT(
     console.log("API PUT: Query parameter value:", url.searchParams.get('calculateAsGroup'));
 
     // Map the method to handle special cases like DOUBLE_DECLINING
-    let depreciationMethodValue = null;
+    let depreciationMethodValue: 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY' | null = null;
     let effectivePutDepreciationRate = depreciationRate ? parseInt(depreciationRate) : 20;
     if (method) {
       if (method === 'DOUBLE_DECLINING') {
         depreciationMethodValue = 'DOUBLE_DECLINING'; // Store as DOUBLE_DECLINING
         effectivePutDepreciationRate = 40; // Always use 40% for double declining
       } else {
-        depreciationMethodValue = method;
+        depreciationMethodValue = method as 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
       }
     }
 
@@ -270,7 +271,7 @@ export async function PUT(
     }
 
     // Return the updated depreciation data
-    return NextResponse.json({
+    return Response.json({
       asset: {
         id: updatedAsset.id,
         name: updatedAsset.name,
@@ -296,7 +297,7 @@ export async function PUT(
     });
   } catch (error) {
     console.error('Error updating depreciation settings:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to update depreciation settings', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );

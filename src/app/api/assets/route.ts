@@ -1,8 +1,6 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-
 import { withRole } from '@/middleware/rbac';
 import { withPermission } from '@/middleware/permission';
 
@@ -26,10 +24,10 @@ export const GET = withRole(['MANAGER', 'USER','AUDITOR'], async function GET() 
       }
     });
 
-    return NextResponse.json(assets);
+    return Response.json(assets);
   } catch (error) {
     console.error('Error fetching assets:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 });
 
@@ -38,7 +36,7 @@ export const POST = withPermission(async function POST(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -87,7 +85,7 @@ export const POST = withPermission(async function POST(request: Request) {
       assetId: asset.id,
       field,
       oldValue: null,
-      newValue: asset[field]?.toString() || null,
+      newValue: (asset as any)[field]?.toString() || null,
       changedBy: session.user?.email || 'system',
     }));
 
@@ -105,13 +103,13 @@ export const POST = withPermission(async function POST(request: Request) {
       console.error('Error creating initial history records:', error);
     }
 
-    return NextResponse.json(asset);
+    return Response.json(asset);
   } catch (error: any) {
     console.error('Error creating asset:', error);
 
     // Check for Prisma unique constraint error
     if (error.code === 'P2002' && error.meta?.target?.includes('serialNumber')) {
-      return NextResponse.json(
+      return Response.json(
         {
           error: 'Serial number already exists',
           code: 'P2002',
@@ -122,7 +120,7 @@ export const POST = withPermission(async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
+    return Response.json({
       error: error.message || 'Internal Server Error',
       code: error.code
     }, { status: 500 });

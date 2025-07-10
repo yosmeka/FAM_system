@@ -1,6 +1,19 @@
 // Common Types
 export type ChartType = 'bar' | 'line' | 'pie' | 'heatmap';
 
+export interface ChartDataPoint {
+  name?: string;
+  value: number;
+  label?: string;
+  category?: string;
+  date?: string;
+}
+
+export interface ChartSeries {
+  name: string;
+  data: number[];
+}
+
 // Asset Reports
 export interface AssetStats {
   totalAssets: number;
@@ -209,16 +222,13 @@ export interface RoleBasedStatsProps {
 
 export interface RoleBasedChartProps {
   type: ChartType;
-  data: any[];
+  data: ChartDataPoint[];
   options: {
     labels?: string[];
     values?: number[];
     xAxis?: string[];
     yAxis?: number[];
-    series?: Array<{
-      name: string;
-      data: number[];
-    }>;
+    series?: ChartSeries[];
   };
 }
 

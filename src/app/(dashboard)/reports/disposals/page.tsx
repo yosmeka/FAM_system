@@ -1,20 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
-import { usePDF } from 'react-to-pdf';
-import { Download, Settings } from 'lucide-react';
+import { Download, Settings, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import type {
   DisposalStats,
   DisposalMethodData,
-  DisposalTrendData,
-  ValueRecoveryData,
   Column,
-  ChartType,
-  RoleBasedStatsProps
 } from '@/types/reports';
 
 import { useSession } from 'next-auth/react';
@@ -38,23 +33,17 @@ interface DisposedAsset {
 
 export default function DisposalReportsPage() {
   const { data: session, status } = useSession();
-  const { toPDF, targetRef } = usePDF({
-    filename: `disposal-report-${new Date().toISOString().split('T')[0]}.pdf`,
-  });
-  const { toPDF: toPDFTable, targetRef: tableTargetRef } = usePDF({
-    filename: `disposal-assets-table-${new Date().toISOString().split('T')[0]}.pdf`,
-  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disposalStats, setDisposalStats] = useState<DisposalStats | null>(null);
   const [methodDistribution, setMethodDistribution] = useState<DisposalMethodData[]>([]);
-  const [monthlyTrends, setMonthlyTrends] = useState<DisposalTrendData[]>([]);
-  const [valueRecovery, setValueRecovery] = useState<ValueRecoveryData[]>([]);
   const [disposedAssets, setDisposedAssets] = useState<DisposedAsset[]>([]);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
   const [methodFilter, setMethodFilter] = useState<string>('ALL');
-  const [statusDistribution, setStatusDistribution] = useState<{ status: string; count: number }[]>([]);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Show nothing until session is loaded
   if (status === 'loading') return null;
@@ -106,7 +95,6 @@ export default function DisposalReportsPage() {
       
       setDisposalStats(data.stats);
       setMethodDistribution(data.methodDistribution);
-      setStatusDistribution(data.statusDistribution);
       setDisposedAssets(data.disposedAssets || []);
 
       if (isRefresh) {
@@ -158,10 +146,15 @@ export default function DisposalReportsPage() {
     );
   }
 
-  const filteredDisposedAssets = disposedAssets.filter(asset => 
-    (statusFilter === 'ALL' || asset.status === statusFilter) &&
-    (methodFilter === 'ALL' || asset.method === methodFilter)
-  );
+  const filteredDisposedAssets = disposedAssets.filter(asset => {
+    const disposalDate = new Date(asset.disposalDate);
+    const isInDateRange = (!startDate || disposalDate >= new Date(startDate)) &&
+                         (!endDate || disposalDate <= new Date(endDate));
+    
+    return (statusFilter === 'ALL' || asset.status === statusFilter) &&
+           (methodFilter === 'ALL' || asset.method === methodFilter) &&
+           isInDateRange;
+  });
 
   // Calculate charts data from filtered assets
   const filteredStatusDistribution = [
@@ -248,8 +241,103 @@ export default function DisposalReportsPage() {
     },
   ];
 
+  const exportToPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF();
+      
+      // Add title
+      doc.setFontSize(16);
+      doc.text('Asset Disposal Report', 14, 15);
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+      // Add table
+      const tableColumn = disposedAssetsColumns.map(col => col.header);
+      const tableRows = filteredDisposedAssets.map(asset => [
+        asset.assetName,
+        asset.serialNumber,
+        asset.category,
+        `$${Number(asset.purchasePrice).toFixed(2)}`,
+        new Date(asset.disposalDate).toLocaleDateString(),
+        asset.method,
+        asset.status,
+        asset.requesterName
+      ]);
+
+      autoTable(doc, {
+        head: [tableColumn],
+        body: tableRows,
+        startY: 30,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
+      doc.save(`disposal-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exporting to PDF:', error);
+      toast.error('Failed to export PDF');
+    }
+  };
+
+  const exportToExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      
+      const worksheet = XLSX.utils.json_to_sheet(
+        filteredDisposedAssets.map(asset => ({
+          'Asset Name': asset.assetName,
+          'Serial Number': asset.serialNumber,
+          'Category': asset.category,
+          'Purchase Price': `$${Number(asset.purchasePrice).toFixed(2)}`,
+          'Disposal Date': new Date(asset.disposalDate).toLocaleDateString(),
+          'Method': asset.method,
+          'Status': asset.status,
+          'Requested By': asset.requesterName
+        }))
+      );
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Disposal Report');
+      XLSX.writeFile(workbook, `disposal-report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export Excel file');
+    }
+  };
+
+  const exportToCSV = () => {
+    const headers = disposedAssetsColumns.map(col => col.header).join(',');
+    const rows = filteredDisposedAssets.map(asset => [
+      asset.assetName,
+      asset.serialNumber,
+      asset.category,
+      `$${Number(asset.purchasePrice).toFixed(2)}`,
+      new Date(asset.disposalDate).toLocaleDateString(),
+      asset.method,
+      asset.status,
+      asset.requesterName
+    ].join(','));
+    
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `disposal-report-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   return (
-    <div className="container mx-auto p-6" ref={targetRef}>
+    <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <BackButton href="/reports" className='text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300' />
@@ -263,13 +351,49 @@ export default function DisposalReportsPage() {
           >
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-          <button
-            onClick={() => toPDF()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            <Download size={16} />
-            Export PDF
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              <Download size={16} />
+              Export
+              <ChevronDown size={16} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 dark:bg-gray-800">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      exportToPDF();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToExcel();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as Excel
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToCSV();
+                      setShowExportMenu(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Export as CSV
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -299,24 +423,28 @@ export default function DisposalReportsPage() {
 
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Filter Disposals</h2>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Filter Disposals</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex items-center gap-2">
               <Settings size={16} className="text-gray-500" />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'APPROVED' | 'REJECTED')}
-                className="border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
               >
                 <option value="ALL">All Status</option>
                 <option value="APPROVED">Approved</option>
                 <option value="REJECTED">Rejected</option>
               </select>
+            </div>
+            <div className="flex items-center gap-2">
               <select
                 value={methodFilter}
                 onChange={(e) => setMethodFilter(e.target.value)}
-                className="border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
               >
                 <option value="ALL">All Methods</option>
                 {methodDistribution.map((method) => (
@@ -325,6 +453,37 @@ export default function DisposalReportsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                placeholder="Start Date"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full border rounded-md px-3 py-1.5 text-sm dark:bg-gray-900"
+                placeholder="End Date"
+              />
+              {(statusFilter!=='ALL'||methodFilter !=='ALL'|| startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStatusFilter('ALL')
+                    setMethodFilter('ALL')
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  className="text-sm text-red-600 hover:text-red-700"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -355,16 +514,9 @@ export default function DisposalReportsPage() {
       </div>
 
       {/* Disposed Assets Table */}
-      <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900" ref={tableTargetRef}>
+      <div className="bg-white p-6 rounded-lg shadow mb-8 dark:bg-gray-900">
         <div className="flex justify-between items-center mb-4 dark:bg-gray-900">
           <h2 className="text-lg font-semibold">Asset Disposal Table</h2>
-          <button
-            onClick={() => toPDFTable()}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-          >
-            <Download size={16} />
-            Export Table PDF
-          </button>
         </div>
         <RoleBasedTable
           data={filteredDisposedAssets}

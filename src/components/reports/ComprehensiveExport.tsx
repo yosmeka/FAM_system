@@ -1,23 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, Download, FileText, FileSpreadsheet, FileImage, Printer } from 'lucide-react';
+import { ChevronDown, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { generatePdf } from '@/lib/generatePdf';
-import { exportToExcel } from '@/lib/excelExport';
+import { exportToExcel, ExcelExportData } from '@/lib/excelExport';
 import { toast } from 'react-hot-toast';
 
-interface ExportData {
-  stats: any;
-  byCategory: any[];
-  byDepartment: any[];
-  statusDistribution: any[];
-  depreciation: any[];
-  assets: any[];
-  analytics: any;
-}
-
 interface ComprehensiveExportProps {
-  data: ExportData;
+  data: ExcelExportData;
   isLoading?: boolean;
   filterSummary?: string;
 }
@@ -75,7 +65,7 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
       setIsOpen(false);
       toast.loading('Generating Excel file...', { id: 'excel-export' });
 
-      let exportData = { ...data };
+      let exportData: ExcelExportData = { ...data };
       let filename = 'asset-report';
 
       switch (type) {
@@ -87,13 +77,12 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
         case 'detailed':
           // Only include assets and basic stats
           exportData = {
-            stats: data.stats,
+            ...data,
             byCategory: [],
             byDepartment: [],
             statusDistribution: [],
             depreciation: [],
             assets: data.assets,
-            analytics: {}
           };
           filename = 'detailed-assets-report';
           break;
@@ -117,7 +106,7 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
 
       let title = 'Asset Report';
       let exportData = data.byCategory;
-      let pdfType: 'category' | 'department' = 'category';
+      const pdfType: 'category' | 'department' = 'category';
 
       switch (type) {
         case 'summary':
@@ -126,11 +115,11 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
           break;
         case 'detailed':
           title = 'Detailed Assets Report';
-          exportData = data.assets || [];
+          exportData = data.byDepartment.length > 0 ? data.byDepartment : data.byCategory;
           break;
         case 'complete':
           title = 'Complete Asset Report';
-          exportData = [...data.byCategory, ...data.assets];
+          exportData = data.byCategory;
           break;
       }
 

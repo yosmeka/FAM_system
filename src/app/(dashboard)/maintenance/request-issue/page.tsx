@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
-import { Plus, AlertTriangle, Clock, CheckCircle, XCircle, Eye, Play, FileText, DollarSign } from 'lucide-react';
-import MaintenanceRequestForm from '@/components/maintenance/MaintenanceRequestForm';
-import WorkDocumentationModal from '@/components/maintenance/WorkDocumentationModal';
+import React, { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "react-hot-toast";
+import {
+  Plus,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Play,
+  FileText,
+  DollarSign,
+} from "lucide-react";
+import MaintenanceRequestForm from "@/components/maintenance/MaintenanceRequestForm";
+import WorkDocumentationModal from "@/components/maintenance/WorkDocumentationModal";
 
 interface MaintenanceRequest {
   id: string;
@@ -37,46 +45,23 @@ interface MaintenanceRequest {
 }
 
 export default function RequestIssuePage() {
-  const { data: session } = useSession();
-  const router = useRouter();
+  const { data: session, status } = useSession();
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [filter, setFilter] = useState('ALL');
-  const [selectedRequest, setSelectedRequest] = useState<MaintenanceRequest | null>(null);
+  const [filter, setFilter] = useState("ALL");
+  const [selectedRequest, setSelectedRequest] =
+    useState<MaintenanceRequest | null>(null);
   const [showWorkModal, setShowWorkModal] = useState(false);
 
-
-// Show nothing until session is loaded
-  if (status === 'loading') return null;
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-
-
-
-  useEffect(() => {
-    fetchMyRequests();
-  }, [filter]);
-
-  const fetchMyRequests = async () => {
+  const fetchMyRequests = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append('maintenanceType', 'CORRECTIVE');
-      params.append('requester', 'me');
-      if (filter !== 'ALL') {
-        params.append('status', filter);
+      params.append("maintenanceType", "CORRECTIVE");
+      params.append("requester", "me");
+      if (filter !== "ALL") {
+        params.append("status", filter);
       }
 
       const response = await fetch(`/api/maintenance?${params}`);
@@ -85,35 +70,45 @@ export default function RequestIssuePage() {
         setRequests(data);
       }
     } catch (error) {
-      console.error('Error fetching maintenance requests:', error);
+      console.error("Error fetching maintenance requests:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (session?.user?.role === "AUDITOR") {
+      return;
+    }
+
+    fetchMyRequests();
+  }, [filter, status, session?.user?.role, fetchMyRequests]);
 
   const handleRequestCreated = () => {
     fetchMyRequests();
-    toast.success('Maintenance request submitted successfully!');
+    toast.success("Maintenance request submitted successfully!");
   };
 
   const handleStartWork = async (request: MaintenanceRequest) => {
     try {
       const response = await fetch(`/api/maintenance/${request.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          status: 'IN_PROGRESS',
+          status: "IN_PROGRESS",
           workStartedAt: new Date().toISOString(),
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to start work');
+      if (!response.ok) throw new Error("Failed to start work");
 
       fetchMyRequests(); // Refresh requests
-      toast.success('Work started successfully!');
+      toast.success("Work started successfully!");
     } catch (error) {
-      console.error('Error starting work:', error);
-      toast.error('Failed to start work');
+      console.error("Error starting work:", error);
+      toast.error("Failed to start work");
     }
   };
 
@@ -126,39 +121,57 @@ export default function RequestIssuePage() {
     fetchMyRequests(); // Refresh requests
     setSelectedRequest(null);
     setShowWorkModal(false);
-    toast.success('Work completed and submitted for manager review!');
+    toast.success("Work completed and submitted for manager review!");
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PENDING_APPROVAL': return 'text-yellow-600 bg-yellow-100';
-      case 'APPROVED': return 'text-green-600 bg-green-100';
-      case 'REJECTED': return 'text-red-600 bg-red-100';
-      case 'IN_PROGRESS': return 'text-blue-600 bg-blue-100';
-      case 'WORK_COMPLETED': return 'text-orange-600 bg-orange-100';
-      case 'PENDING_REVIEW': return 'text-purple-600 bg-purple-100';
-      case 'COMPLETED': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case "PENDING_APPROVAL":
+        return "text-yellow-600 bg-yellow-100";
+      case "APPROVED":
+        return "text-green-600 bg-green-100";
+      case "REJECTED":
+        return "text-red-600 bg-red-100";
+      case "IN_PROGRESS":
+        return "text-blue-600 bg-blue-100";
+      case "WORK_COMPLETED":
+        return "text-orange-600 bg-orange-100";
+      case "PENDING_REVIEW":
+        return "text-purple-600 bg-purple-100";
+      case "COMPLETED":
+        return "text-green-600 bg-green-100";
+      default:
+        return "text-gray-600 bg-gray-100";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'CRITICAL': return 'text-red-600';
-      case 'HIGH': return 'text-orange-600';
-      case 'MEDIUM': return 'text-yellow-600';
-      case 'LOW': return 'text-green-600';
-      default: return 'text-gray-600';
+      case "CRITICAL":
+        return "text-red-600";
+      case "HIGH":
+        return "text-orange-600";
+      case "MEDIUM":
+        return "text-yellow-600";
+      case "LOW":
+        return "text-green-600";
+      default:
+        return "text-gray-600";
     }
   };
 
   const getUrgencyColor = (urgency?: string) => {
     switch (urgency) {
-      case 'Immediate': return 'text-red-600';
-      case 'Urgent': return 'text-orange-600';
-      case 'Normal': return 'text-yellow-600';
-      case 'Low': return 'text-green-600';
-      default: return 'text-gray-600';
+      case "Immediate":
+        return "text-red-600";
+      case "Urgent":
+        return "text-orange-600";
+      case "Normal":
+        return "text-yellow-600";
+      case "Low":
+        return "text-green-600";
+      default:
+        return "text-gray-600";
     }
   };
 
@@ -175,8 +188,12 @@ export default function RequestIssuePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold dark:text-white mb-2">Report Maintenance Issues</h1>
-          <p className="text-gray-400">Submit corrective maintenance requests for asset issues</p>
+          <h1 className="text-2xl font-bold dark:text-white mb-2">
+            Report Maintenance Issues
+          </h1>
+          <p className="text-gray-400">
+            Submit corrective maintenance requests for asset issues
+          </p>
         </div>
         <button
           onClick={() => setShowRequestForm(true)}
@@ -190,24 +207,49 @@ export default function RequestIssuePage() {
       {/* Filter Tabs */}
       <div className="flex gap-4 mb-6">
         {[
-          { key: 'ALL', label: 'All Requests', count: requests.length },
-          { key: 'PENDING_APPROVAL', label: 'Pending', count: requests.filter(r => r.status === 'PENDING_APPROVAL').length },
-          { key: 'APPROVED', label: 'Approved', count: requests.filter(r => r.status === 'APPROVED').length },
-          { key: 'IN_PROGRESS', label: 'In Progress', count: requests.filter(r => r.status === 'IN_PROGRESS').length },
-          { key: 'WORK_COMPLETED', label: 'Work Done', count: requests.filter(r => r.status === 'WORK_COMPLETED').length },
-          { key: 'COMPLETED', label: 'Completed', count: requests.filter(r => r.status === 'COMPLETED').length },
-          { key: 'REJECTED', label: 'Rejected', count: requests.filter(r => r.status === 'REJECTED').length }
+          { key: "ALL", label: "All Requests", count: requests.length },
+          {
+            key: "PENDING_APPROVAL",
+            label: "Pending",
+            count: requests.filter((r) => r.status === "PENDING_APPROVAL")
+              .length,
+          },
+          {
+            key: "APPROVED",
+            label: "Approved",
+            count: requests.filter((r) => r.status === "APPROVED").length,
+          },
+          {
+            key: "IN_PROGRESS",
+            label: "In Progress",
+            count: requests.filter((r) => r.status === "IN_PROGRESS").length,
+          },
+          {
+            key: "WORK_COMPLETED",
+            label: "Work Done",
+            count: requests.filter((r) => r.status === "WORK_COMPLETED").length,
+          },
+          {
+            key: "COMPLETED",
+            label: "Completed",
+            count: requests.filter((r) => r.status === "COMPLETED").length,
+          },
+          {
+            key: "REJECTED",
+            label: "Rejected",
+            count: requests.filter((r) => r.status === "REJECTED").length,
+          },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               filter === tab.key
-                ? 'text-white'
-                : 'text-gray-400 dark:hover:text-white hover:text-red-600'
+                ? "text-white"
+                : "text-gray-400 dark:hover:text-white hover:text-red-600"
             }`}
             style={{
-              backgroundColor: filter === tab.key ? 'red' : '',
+              backgroundColor: filter === tab.key ? "red" : "",
             }}
           >
             {tab.label}
@@ -224,17 +266,18 @@ export default function RequestIssuePage() {
       {requests.length === 0 ? (
         <div className="text-center py-12">
           <AlertTriangle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold dark:text-white mb-2">No Maintenance Requests</h3>
+          <h3 className="text-xl font-semibold dark:text-white mb-2">
+            No Maintenance Requests
+          </h3>
           <p className="text-gray-400 mb-6">
-            {filter === 'ALL'
+            {filter === "ALL"
               ? "You haven't submitted any maintenance requests yet."
-              : `No ${filter.toLowerCase().replace('_', ' ')} requests found.`
-            }
+              : `No ${filter.toLowerCase().replace("_", " ")} requests found.`}
           </p>
           <button
             onClick={() => setShowRequestForm(true)}
             className="px-6 py-3 rounded-lg text-white transition-colors"
-            style={{ backgroundColor: 'red' }}
+            style={{ backgroundColor: "red" }}
           >
             Report Your First Issue
           </button>
@@ -257,8 +300,12 @@ export default function RequestIssuePage() {
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(request.status)}`}>
-                    {request.status.replace('_', ' ')}
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(
+                      request.status
+                    )}`}
+                  >
+                    {request.status.replace("_", " ")}
                   </span>
                   {request.assetDowntime && (
                     <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-600 rounded-full">
@@ -279,7 +326,11 @@ export default function RequestIssuePage() {
 
                 {request.urgencyLevel && (
                   <div className="flex items-center gap-2 text-sm">
-                    <Clock className={`w-4 h-4 ${getUrgencyColor(request.urgencyLevel)}`} />
+                    <Clock
+                      className={`w-4 h-4 ${getUrgencyColor(
+                        request.urgencyLevel
+                      )}`}
+                    />
                     <span className={getUrgencyColor(request.urgencyLevel)}>
                       {request.urgencyLevel} Priority
                     </span>
@@ -287,7 +338,11 @@ export default function RequestIssuePage() {
                 )}
 
                 <div className="flex items-center gap-2 text-sm text-gray-300">
-                  <span className={`font-medium ${getPriorityColor(request.priority)}`}>
+                  <span
+                    className={`font-medium ${getPriorityColor(
+                      request.priority
+                    )}`}
+                  >
                     {request.priority} Priority
                   </span>
                 </div>
@@ -315,7 +370,10 @@ export default function RequestIssuePage() {
                 <div className="mb-4 p-3 bg-blue-900/20 border border-blue-600/30 rounded-lg">
                   <div className="flex items-center gap-2 text-sm text-blue-400 mb-2">
                     <Play className="w-4 h-4" />
-                    <span>Started: {new Date(request.workStartedAt).toLocaleDateString()}</span>
+                    <span>
+                      Started:{" "}
+                      {new Date(request.workStartedAt).toLocaleDateString()}
+                    </span>
                   </div>
                   {request.assignedTo && (
                     <div className="text-sm dark:text-gray-300 text-gray-700">
@@ -329,7 +387,10 @@ export default function RequestIssuePage() {
                 <div className="mb-4 p-3 bg-orange-900/20 border border-orange-600/30 rounded-lg">
                   <div className="flex items-center gap-2 text-sm text-orange-400 mb-2">
                     <FileText className="w-4 h-4" />
-                    <span>Completed: {new Date(request.workCompletedAt).toLocaleDateString()}</span>
+                    <span>
+                      Completed:{" "}
+                      {new Date(request.workCompletedAt).toLocaleDateString()}
+                    </span>
                   </div>
                   {request.laborHours && (
                     <div className="text-sm dark:text-gray-300 text-gray-700 mb-1">
@@ -348,7 +409,7 @@ export default function RequestIssuePage() {
               {/* Action Buttons */}
               <div className="flex gap-2 mb-4">
                 {/* Start Work Button */}
-                {request.status === 'APPROVED' && (
+                {request.status === "APPROVED" && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -362,7 +423,7 @@ export default function RequestIssuePage() {
                 )}
 
                 {/* Complete Work Button */}
-                {request.status === 'IN_PROGRESS' && (
+                {request.status === "IN_PROGRESS" && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -387,37 +448,37 @@ export default function RequestIssuePage() {
 
               {/* Status Indicator */}
               <div className="flex items-center justify-center">
-                {request.status === 'PENDING_APPROVAL' && (
+                {request.status === "PENDING_APPROVAL" && (
                   <div className="flex items-center gap-2 dark:text-yellow-400 text-yellow-700">
                     <Clock className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager approval</span>
                   </div>
                 )}
-                {request.status === 'APPROVED' && (
+                {request.status === "APPROVED" && (
                   <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Ready to start work</span>
                   </div>
                 )}
-                {request.status === 'REJECTED' && (
+                {request.status === "REJECTED" && (
                   <div className="flex items-center gap-2 dark:text-red-400 text-red-700">
                     <XCircle className="w-4 h-4" />
                     <span className="text-sm">Request rejected</span>
                   </div>
                 )}
-                {request.status === 'IN_PROGRESS' && (
+                {request.status === "IN_PROGRESS" && (
                   <div className="flex items-center gap-2 dark:text-blue-400 text-blue-700">
                     <Play className="w-4 h-4" />
                     <span className="text-sm">Work in progress</span>
                   </div>
                 )}
-                {request.status === 'WORK_COMPLETED' && (
+                {request.status === "WORK_COMPLETED" && (
                   <div className="flex items-center gap-2 dark:text-orange-400 text-orange-700">
                     <FileText className="w-4 h-4" />
                     <span className="text-sm">Awaiting manager review</span>
                   </div>
                 )}
-                {request.status === 'COMPLETED' && (
+                {request.status === "COMPLETED" && (
                   <div className="flex items-center gap-2 dark:text-green-400 text-green-700">
                     <CheckCircle className="w-4 h-4" />
                     <span className="text-sm">Work completed and approved</span>
@@ -437,12 +498,14 @@ export default function RequestIssuePage() {
       />
 
       {/* Work Documentation Modal */}
-      <WorkDocumentationModal
-        open={showWorkModal}
-        onClose={() => setShowWorkModal(false)}
-        task={selectedRequest}
-        onWorkCompleted={handleWorkCompleted}
-      />
+      {selectedRequest && (
+        <WorkDocumentationModal
+          open={showWorkModal}
+          onClose={() => setShowWorkModal(false)}
+          task={selectedRequest}
+          onWorkCompleted={handleWorkCompleted}
+        />
+      )}
     </div>
   );
 }

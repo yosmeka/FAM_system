@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -10,7 +9,7 @@ import { mkdir } from 'fs/promises';
 // POST /api/transfers/[id]/approve
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Update the transfer status to APPROVED
@@ -36,7 +35,7 @@ export async function POST(
 
     // Ensure toDepartment (used as location) is set
     if (!transfer.toDepartment) {
-      return NextResponse.json({ error: 'Transfer request missing destination location.' }, { status: 400 });
+      return Response.json({ error: 'Transfer request missing destination location.' }, { status: 400 });
     }
 
     // Update asset status only (do not change location)
@@ -151,10 +150,10 @@ export async function POST(
       });
       console.log(`Sent approval notification to user ${transfer.requesterId}`);
     }
-    return NextResponse.json({ transfer });
+    return Response.json({ transfer });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to approve transfer' },
       { status: 500 }
     );
@@ -164,28 +163,29 @@ export async function POST(
 // PUT /api/transfers/[id]/approve
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get the transfer request
     const transfer = await prisma.transfer.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { asset: true }
     });
 
     if (!transfer) {
-      return NextResponse.json({ error: 'Transfer not found' }, { status: 404 });
+      return Response.json({ error: 'Transfer not found' }, { status: 404 });
     }
 
     // Update the transfer status
     const updatedTransfer = await prisma.transfer.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
       include: { asset: true }
     });
@@ -204,7 +204,7 @@ export async function PUT(
     try {
       // Generate the document - use absolute URL with host
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-      const documentResponse = await fetch(`${baseUrl}/api/transfers/${params.id}/document`, {
+      const documentResponse = await fetch(`${baseUrl}/api/transfers/${id}/document`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -234,9 +234,9 @@ export async function PUT(
         },
       });
     }
-    return NextResponse.json(updatedTransfer);
+    return Response.json(updatedTransfer);
   } catch (error) {
     console.error('Error approving transfer:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

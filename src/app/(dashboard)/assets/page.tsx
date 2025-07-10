@@ -29,11 +29,10 @@ export default function AssetsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
-  const [departmentFilter, setDepartmentFilter] = useState("ALL");
   const [deleteAssetId, setDeleteAssetId] = useState<string | null>(null);
   // Pagination state
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 6;
   // Fetch assets
   const {
     data: assets = [],
@@ -50,8 +49,9 @@ export default function AssetsPage() {
     },
   });
   // Get unique categories and departments
-  const categories = Array.from(new Set(assets.map(asset => asset.category).filter(Boolean)));
-  const departments = Array.from(new Set(assets.map(asset => asset.department).filter(Boolean)));
+  const categories = Array.from(
+    new Set(assets.map((asset) => asset.category).filter(Boolean))
+  );
   // Filtered and paginated assets
   const filteredAssets = assets.filter((asset) => {
     const matchesSearch =
@@ -65,17 +65,17 @@ export default function AssetsPage() {
     const matchesCategory =
       categoryFilter === "ALL" || asset.category === categoryFilter;
 
-    const matchesDepartment =
-      departmentFilter === "ALL" || asset.department === departmentFilter;
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesDepartment;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
   const totalPages = Math.ceil(filteredAssets.length / pageSize);
-  const paginatedAssets = filteredAssets.slice((page - 1) * pageSize, page * pageSize);
+  const paginatedAssets = filteredAssets.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
   // Reset page to 1 when filters/search change
   React.useEffect(() => {
     setPage(1);
-  }, [searchTerm, statusFilter, categoryFilter, departmentFilter]);
+  }, [searchTerm, statusFilter, categoryFilter]);
   // Only after ALL hooks, check loading/permissions and return early if needed
   if (loading) {
     return (
@@ -84,7 +84,7 @@ export default function AssetsPage() {
       </div>
     );
   }
-  if (!checkPermission('Asset view (list and detail)')) {
+  if (!checkPermission("Asset view (list and detail)")) {
     return (
       <div className="p-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
         <h1 className="text-2xl font-semibold">Access Denied</h1>
@@ -93,7 +93,6 @@ export default function AssetsPage() {
     );
   }
   // ...rest of your component
-
 
   const handleDelete = async (id: string) => {
     try {
@@ -194,8 +193,10 @@ export default function AssetsPage() {
     <div className="container mx-auto p-6 bg-white dark:bg-gray-900">
       <Toaster position="top-right" />
       <div className="mb-8 flex justify-between items-center">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Assets</h1>
-        {checkPermission('Asset create') && (
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          Assets
+        </h1>
+        {checkPermission("Asset create") && (
           <Link
             href="/assets/new"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -242,35 +243,30 @@ export default function AssetsPage() {
             ))}
           </select>
         </div>
-        {/* <div>
-          <select
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-          >
-            <option value="ALL">All Departments</option>
-            {departments.map((department) => (
-              <option key={department} value={department}>
-                {department}
-              </option>
-            ))}
-          </select>
-        </div> */}
       </div>
 
       {isLoading ? (
-        <div className="text-center py-4 text-gray-900 dark:text-gray-100">Loading assets...</div>
+        <div className="text-center py-4 text-gray-900 dark:text-gray-100">
+          Loading assets...
+        </div>
       ) : error ? (
         <div className="text-center py-4 text-red-600 dark:text-red-400">
           Error loading assets. Please try again.
         </div>
       ) : filteredAssets.length === 0 ? (
-        <div className="text-center py-4 text-gray-500 dark:text-gray-400">No assets found</div>
+        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+          No assets found
+        </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
           <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredAssets.map((asset) => (
-              <li key={asset.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${isAssetDisposed(asset) ? 'bg-gray-50 dark:bg-gray-700' : ''}`}>
+            {paginatedAssets.map((asset) => (
+              <li
+                key={asset.id}
+                className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                  isAssetDisposed(asset) ? "bg-gray-50 dark:bg-gray-700" : ""
+                }`}
+              >
                 <div className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
@@ -294,26 +290,28 @@ export default function AssetsPage() {
                       >
                         View
                       </Link>
-                      {!isAssetDisposed(asset) && (checkPermission('Asset edit') || checkPermission('Asset delete')) && (
-                        <>
-                          {checkPermission('Asset edit') && (
-                            <Link
-                              href={`/assets/${asset.id}/edit`}
-                              className="text-gray-800 dark:text-gray-400 hover:underline mr-2"
-                            >
-                              Edits
-                            </Link>
-                          )}
-                          {checkPermission('Asset delete') && (
-                            <button
-                              className="text-[#ff0000] dark:[#ff0000] hover:underline"
-                              onClick={() => setDeleteAssetId(asset.id)}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </>
-                      )}
+                      {!isAssetDisposed(asset) &&
+                        (checkPermission("Asset edit") ||
+                          checkPermission("Asset delete")) && (
+                          <>
+                            {checkPermission("Asset edit") && (
+                              <Link
+                                href={`/assets/${asset.id}/edit`}
+                                className="text-gray-800 dark:text-gray-400 hover:underline mr-2"
+                              >
+                                Edits
+                              </Link>
+                            )}
+                            {checkPermission("Asset delete") && (
+                              <button
+                                className="text-[#ff0000] dark:[#ff0000] hover:underline"
+                                onClick={() => setDeleteAssetId(asset.id)}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
                     </div>
                   </div>
                   <div className="mt-2 sm:flex sm:justify-between">
@@ -365,8 +363,12 @@ export default function AssetsPage() {
       {deleteAssetId && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Confirm Deletion</h2>
-            <p className="text-gray-700 dark:text-gray-300">Are you sure you want to delete this asset?</p>
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+              Confirm Deletion
+            </h2>
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete this asset?
+            </p>
             <div className="mt-6 flex justify-end space-x-2">
               <button
                 onClick={() => setDeleteAssetId(null)}

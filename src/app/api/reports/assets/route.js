@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateDepreciation } from '@/utils/depreciation';
 
@@ -127,7 +127,6 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     });
 
     // Calculate actual depreciation data for each asset
-    const depreciationData = [];
     const monthlyDepreciation = new Map();
 
     for (const asset of assets) {
@@ -167,8 +166,8 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
             monthData.assetCount += 1;
           }
         });
-      } catch (error) {
-        console.error(`Error calculating depreciation for asset ${asset.id}:`, error);
+      } catch (e) {
+        console.error(`Error calculating depreciation for asset ${asset.id}:`, e);
       }
     }
 
@@ -357,10 +356,10 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       }
     };
 
-    return NextResponse.json(formattedData);
+    return Response.json(formattedData);
   } catch (error) {
     console.error('Error fetching asset reports:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch asset reports' },
       { status: 500 }
     );

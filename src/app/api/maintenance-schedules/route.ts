@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -8,13 +8,16 @@ import { withRole } from '@/middleware/rbac';
 export const GET = withRole(['MANAGER', 'USER'], async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const assetId = searchParams.get('assetId');
     const status = searchParams.get('status');
     const assignedToId = searchParams.get('assignedToId');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Filter by asset if specified
     if (assetId) {
@@ -90,10 +93,10 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET(request: Nex
       },
     });
 
-    return NextResponse.json(schedules);
+    return Response.json(schedules);
   } catch (error) {
     console.error('Error fetching maintenance schedules:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance schedules' },
       { status: 500 }
     );
@@ -104,6 +107,9 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET(request: Nex
 export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    if (!session) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const data = await request.json();
     const {
@@ -124,7 +130,7 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
 
     // Validate required fields
     if (!assetId || !title || !frequency || !startDate) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
@@ -136,7 +142,7 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Calculate next due date based on frequency
@@ -193,10 +199,10 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
       },
     });
 
-    return NextResponse.json(schedule, { status: 201 });
+    return Response.json(schedule, { status: 201 });
   } catch (error) {
     console.error('Error creating maintenance schedule:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create maintenance schedule' },
       { status: 500 }
     );

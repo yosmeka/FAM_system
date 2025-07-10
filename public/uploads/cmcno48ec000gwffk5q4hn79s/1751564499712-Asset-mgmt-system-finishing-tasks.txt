@@ -1,0 +1,16 @@
+1. adding zemen logo
+2. edit the landing page with the bull
+3 add pagination
+4. complete status for  the transfer request
+5. add search field in transfer module, maintenace module, disposal module
+6. add search field in the whole report and the report should be exported with the
+    need of the user , he/her could select the date range and the report should generated
+7. report for asset linking , and the other remainig modules 
+8. the nav bar should be fixed 
+9. the Ui shuould be consistent
+10. the profle setting for the account information should be worked
+11. the account setting section of updating the profile info should also worked 
+12. the delete button found in the user module in the admin role should be worked properly.
+13. remove the delete button found in the detail page of the transfer request in the manager 
+     role when the request is initaited.
+14. 

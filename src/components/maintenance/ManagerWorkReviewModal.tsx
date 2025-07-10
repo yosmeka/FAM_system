@@ -2,12 +2,32 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { X, CheckCircle, XCircle, DollarSign, Clock, User, Calendar, Wrench } from 'lucide-react';
+import { X, CheckCircle, XCircle, Clock, User, Calendar } from 'lucide-react';
+
+interface ManagerWorkTask {
+  id: string;
+  asset?: {
+    name?: string;
+    serialNumber?: string;
+  };
+  assignedTo?: {
+    name?: string;
+  };
+  workStartedAt?: string | Date;
+  workCompletedAt?: string | Date;
+  laborHours?: number;
+  laborCost?: number;
+  partsCost?: number;
+  totalCost?: number;
+  workPerformed?: string;
+  technicianNotes?: string;
+  partsUsed?: string;
+}
 
 interface ManagerWorkReviewModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: ManagerWorkTask;
   onReviewCompleted: () => void;
 }
 
@@ -108,11 +128,11 @@ export default function ManagerWorkReviewModal({
   if (!open || !task) return null;
 
   // Parse parts used
-  let partsUsed = [];
+  let partsUsed: { name: string; quantity: number; unitCost: number; totalCost: number }[] = [];
   if (task.partsUsed) {
     try {
       partsUsed = JSON.parse(task.partsUsed);
-    } catch (e) {
+    } catch {
       partsUsed = [];
     }
   }
@@ -207,7 +227,7 @@ export default function ManagerWorkReviewModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {partsUsed.map((part: any, index: number) => (
+                    {partsUsed.map((part, index) => (
                       <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
                         <td className="py-2">{part.name}</td>
                         <td className="text-center py-2">{part.quantity}</td>

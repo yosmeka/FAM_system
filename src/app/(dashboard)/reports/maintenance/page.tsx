@@ -12,41 +12,89 @@ import { useSession } from 'next-auth/react';
 import { BackButton } from "@/components/ui/BackButton";
 import { toast } from 'react-hot-toast';
 import { ToastContainer } from "react-toastify";
+import type { MaintenanceStats, MaintenanceStatusData } from '@/types/reports';
+import type { ChartDataItem } from '@/components/ui/RoleBasedChart';
 
+// Define the type for recentActivity based on the API and schema
+interface RecentMaintenanceActivity {
+  id: string;
+  description: string;
+  cost?: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+  scheduledDate?: string;
+  priority: string;
+  status: string;
+  asset: {
+    id: string;
+    name: string;
+    serialNumber: string;
+    department: string;
+    category: string;
+    lastMaintenance?: string;
+    nextMaintenance?: string;
+  };
+  requester: {
+    id: string;
+    name: string;
+  };
+  manager?: {
+    id: string;
+    name: string;
+  };
+  timeAgo?: string;
+}
+
+// Ensure MaintenanceAssetTableData includes all keys used in the table columns
+interface MaintenanceAssetTableData {
+  name: string;
+  serialNumber?: string;
+  department?: string;
+  totalRequests: number;
+  criticalRequests?: number;
+  lastMaintenance?: string | null;
+  averageCost?: number | null;
+  status?: 'Due' | 'OK';
+}
+
+// Define a local type for monthly trends
+interface MaintenanceMonthlyTrend extends ChartDataItem {
+  monthDisplay?: string;
+  completed?: number;
+  highPriority?: number;
+}
 
 export default function MaintenanceReportsPage() {
   const { data: session, status } = useSession(); // Destructure session and status from useSession
 
   // All hooks must be at the top, before any early returns!
   const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [maintenanceStats, setMaintenanceStats] = useState<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [statusDistribution, setStatusDistribution] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [priorityDistribution, setPriorityDistribution] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [departmentDistribution, setDepartmentDistribution] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [monthlyTrends, setMonthlyTrends] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [topAssets, setTopAssets] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [maintenanceStats, setMaintenanceStats] = useState<MaintenanceStats & {
+    totalCost?: number;
+    avgCostPerRequest?: number;
+    highPriorityPercentage?: number;
+    avgTimeToApproval?: number;
+    maintenanceEfficiency?: number;
+    costEfficiency?: number;
+  } | null>(null);
+  const [statusDistribution, setStatusDistribution] = useState<MaintenanceStatusData[]>([]);
+  const [priorityDistribution, setPriorityDistribution] = useState<MaintenanceStatusData[]>([]);
+  const [monthlyTrends, setMonthlyTrends] = useState<MaintenanceMonthlyTrend[]>([]);
+  const [topAssets, setTopAssets] = useState<MaintenanceAssetTableData[]>([]);
+  const [recentActivity, setRecentActivity] = useState<RecentMaintenanceActivity[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState('12months');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [generatedOn, setGeneratedOn] = useState<string>("");
   const [generatedTime, setGeneratedTime] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [debug, setDebug] = useState<any>(null);
+  const [debug, setDebug] = useState<Record<string, number> | null>(null);
 
 
   useEffect(() => {
     fetchMaintenanceReports();
     setGeneratedOn(new Date().toLocaleDateString());
     setGeneratedTime(new Date().toLocaleTimeString());
-  }, [selectedTimeRange, selectedDepartment]);
+  }, [selectedTimeRange]);
 
   const fetchMaintenanceReports = async () => {
     try {
@@ -63,7 +111,6 @@ export default function MaintenanceReportsPage() {
       setDebug({
         statusDistributionLength: data.statusDistribution?.length || 0,
         priorityDistributionLength: data.priorityDistribution?.length || 0,
-        departmentDistributionLength: data.departmentDistribution?.length || 0,
         monthlyTrendsLength: data.monthlyTrends?.length || 0,
         topAssetsLength: data.topAssets?.length || 0,
         recentActivityLength: data.recentActivity?.length || 0,
@@ -71,7 +118,6 @@ export default function MaintenanceReportsPage() {
       setMaintenanceStats(data.stats);
       setStatusDistribution(data.statusDistribution || []);
       setPriorityDistribution(data.priorityDistribution || []);
-      setDepartmentDistribution(data.departmentDistribution || []);
       setMonthlyTrends(data.monthlyTrends || []);
       setTopAssets(data.topAssets || []);
       setRecentActivity(data.recentActivity || []);
@@ -95,19 +141,19 @@ export default function MaintenanceReportsPage() {
             value: 0
           },
           {
-            category: 'Completed Requests',
-            count: maintenanceStats?.completedRequests || 0,
-            value: 0
-          },
-          {
             category: 'Pending Requests',
             count: maintenanceStats?.pendingRequests || 0,
             value: 0
           },
           {
-            category: 'Average Response Time',
+            category: 'Completion Rate',
             count: 1,
-            value: maintenanceStats?.averageResponseTime || 0
+            value: maintenanceStats?.completionRate || 0
+          },
+          {
+            category: 'Avg Resolution Days',
+            count: 1,
+            value: maintenanceStats?.avgResolutionDays || 0
           }
         ],
         type: 'category'
@@ -178,20 +224,6 @@ export default function MaintenanceReportsPage() {
                 <SelectItem value="all">All Time</SelectItem>
               </SelectContent>
             </Select>
-            {/* <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger className="w-40">
-                <span className="inline-block h-4 w-4 mr-2">⏷</span>
-                <SelectValue placeholder="Department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                {departmentDistribution.map((dept) => (
-                  <SelectItem key={dept.department} value={dept.department}>
-                    {dept.department}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select> */}
             <Button onClick={handleExportReport} variant="outline">
               <Download className="h-4 w-4 mr-2" />
               Export
@@ -314,7 +346,7 @@ export default function MaintenanceReportsPage() {
               type="pie"
               data={priorityDistribution}
               options={{
-                labels: priorityDistribution.map((item) => item.priority),
+                labels: priorityDistribution.map((item) => item.status),
                 values: priorityDistribution.map((item) => item.count),
                 customColors: ['#EF4444', '#F59E0B', '#10B981', '#6B7280'],
               }}
@@ -341,7 +373,7 @@ export default function MaintenanceReportsPage() {
               data={monthlyTrends}
               options={{
                 xAxis: monthlyTrends.map((item) => {
-                  return item.monthDisplay || new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                  return item.monthDisplay || (item.month ? new Date(item.month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : '');
                 }),
                 series: [
                   {
@@ -365,29 +397,6 @@ export default function MaintenanceReportsPage() {
             </div>
           )}
         </div>
-
-        {/* Department Distribution
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">By Department</h2>
-            <span className="inline-block h-5 w-5 text-purple-600">⏷</span>
-          </div>
-          {departmentDistribution && departmentDistribution.length > 0 ? (
-            <RoleBasedChart
-              type="bar"
-              data={departmentDistribution}
-              options={{
-                labels: departmentDistribution.map((item) => item.department || 'Unknown'),
-                values: departmentDistribution.map((item) => item.count || 0),
-                customColors: ['#3B82F6'],
-              }}
-            />
-          ) : (
-            <div className="p-8 text-center text-gray-500">
-              <p>No department data available</p>
-            </div>
-          )}
-        </div> */}
       </div>
 
       {/* Enhanced Tables Section */}
@@ -559,12 +568,12 @@ export default function MaintenanceReportsPage() {
           <div className="mt-4 p-4 bg-gray-100 rounded-lg text-left dark:bg-gray-900">
             <p className="text-sm font-semibold mb-2">Debug Information:</p>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-              <div>Status Distribution: {debug.statusDistributionLength}</div>
-              <div>Priority Distribution: {debug.priorityDistributionLength}</div>
-              <div>Department Distribution: {debug.departmentDistributionLength}</div>
-              <div>Monthly Trends: {debug.monthlyTrendsLength}</div>
-              <div>Top Assets: {debug.topAssetsLength}</div>
-              <div>Recent Activity: {debug.recentActivityLength}</div>
+              <div>Status Distribution: {debug?.statusDistributionLength ?? 0}</div>
+              <div>Priority Distribution: {debug?.priorityDistributionLength ?? 0}</div>
+              <div>Department Distribution: {debug?.departmentDistributionLength ?? 0}</div>
+              <div>Monthly Trends: {debug?.monthlyTrendsLength ?? 0}</div>
+              <div>Top Assets: {debug?.topAssetsLength ?? 0}</div>
+              <div>Recent Activity: {debug?.recentActivityLength ?? 0}</div>
             </div>
             <div className="mt-2 text-xs">
               <p>Total Requests: {maintenanceStats?.totalRequests || 0}</p>
@@ -577,3 +586,4 @@ export default function MaintenanceReportsPage() {
     </div>
   );
 }
+

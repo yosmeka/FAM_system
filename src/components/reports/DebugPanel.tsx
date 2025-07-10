@@ -1,12 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bug, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
+import { Bug, ChevronDown, Copy, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { FilterOptions } from './AdvancedFilters';
+import type {
+  AssetStats,
+  AssetCategoryData,
+  AssetStatusData,
+  DepreciationData
+} from '@/types/reports';
+
+interface DebugPanelApiResponse {
+  stats: AssetStats;
+  byCategory: AssetCategoryData[];
+  statusDistribution: AssetStatusData[];
+  depreciation: DepreciationData[];
+  filterOptions: FilterOptions;
+}
 
 interface DebugPanelProps {
-  currentFilters: any;
-  apiResponse: any;
+  currentFilters: unknown;
+  apiResponse: DebugPanelApiResponse | null;
   queryString: string;
   isVisible?: boolean;
 }
@@ -26,15 +41,15 @@ export function DebugPanel({
       setCopiedSection(section);
       toast.success(`${section} copied to clipboard!`);
       setTimeout(() => setCopiedSection(null), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Failed to copy to clipboard');
     }
   };
 
-  const formatJSON = (obj: any) => {
+  const formatJSON = (obj: unknown) => {
     try {
       return JSON.stringify(obj, null, 2);
-    } catch (error) {
+    } catch {
       return 'Error formatting JSON';
     }
   };
@@ -177,21 +192,21 @@ export function DebugPanel({
           <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-xs">
             <div className="space-y-1">
               <div className={`flex items-center gap-2 ${
-                apiResponse?.stats?.totalAssets > 0 ? 'text-green-600' : 'text-red-600'
+                (apiResponse?.stats?.totalAssets ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                <span>{apiResponse?.stats?.totalAssets > 0 ? '✓' : '✗'}</span>
+                <span>{(apiResponse?.stats?.totalAssets ?? 0) > 0 ? '✓' : '✗'}</span>
                 <span>Has asset data</span>
               </div>
               <div className={`flex items-center gap-2 ${
-                apiResponse?.depreciation?.length > 0 ? 'text-green-600' : 'text-yellow-600'
+                (apiResponse?.depreciation?.length ?? 0) > 0 ? 'text-green-600' : 'text-yellow-600'
               }`}>
-                <span>{apiResponse?.depreciation?.length > 0 ? '✓' : '⚠'}</span>
+                <span>{(apiResponse?.depreciation?.length ?? 0) > 0 ? '✓' : '⚠'}</span>
                 <span>Has depreciation data</span>
               </div>
               <div className={`flex items-center gap-2 ${
-                apiResponse?.byCategory?.length > 0 ? 'text-green-600' : 'text-red-600'
+                (apiResponse?.byCategory?.length ?? 0) > 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                <span>{apiResponse?.byCategory?.length > 0 ? '✓' : '✗'}</span>
+                <span>{(apiResponse?.byCategory?.length ?? 0) > 0 ? '✓' : '✗'}</span>
                 <span>Has category data</span>
               </div>
             </div>

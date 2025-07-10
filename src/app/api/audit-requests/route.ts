@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+//import { Response } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -10,14 +10,14 @@ export const GET = withRole(['MANAGER', 'AUDITOR'], async function GET(request: 
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role') || session.user.role;
     const userId = session.user.id;
 
-    let whereClause: any = {};
+    let whereClause: Record<string, unknown> = {};
 
     // Filter based on user role
     if (role === 'AUDITOR') {
@@ -77,10 +77,10 @@ export const GET = withRole(['MANAGER', 'AUDITOR'], async function GET(request: 
       },
     });
 
-    return NextResponse.json(requests);
+    return Response.json(requests);
   } catch (error) {
     console.error('Error fetching audit requests:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch audit requests' },
       { status: 500 }
     );
@@ -92,7 +92,7 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -110,7 +110,7 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
 
     // Validate required fields
     if (!assetId || !title || !reason || !requestedDate) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: assetId, title, reason, requestedDate' },
         { status: 400 }
       );
@@ -123,7 +123,7 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // If managerId is provided, verify manager exists and has MANAGER role
@@ -134,11 +134,11 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
       });
 
       if (!manager) {
-        return NextResponse.json({ error: 'Manager not found' }, { status: 404 });
+        return Response.json({ error: 'Manager not found' }, { status: 404 });
       }
 
       if (manager.role !== 'MANAGER' ) {
-        return NextResponse.json(
+        return Response.json(
           { error: 'Selected user is not a manager' },
           { status: 400 }
         );
@@ -191,7 +191,7 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
       id: auditRequest.id,
       title: auditRequest.title,
       requesterId: auditRequest.requesterId,
-      managerId: auditRequest.managerId,
+      managerId: auditRequest.managerId || undefined,
       asset: {
         name: auditRequest.asset.name,
         serialNumber: auditRequest.asset.serialNumber,
@@ -199,10 +199,10 @@ export const POST = withRole(['MANAGER',  'AUDITOR'], async function POST(reques
       urgency: auditRequest.urgency,
     });
 
-    return NextResponse.json(auditRequest, { status: 201 });
+    return Response.json(auditRequest, { status: 201 });
   } catch (error) {
     console.error('Error creating audit request:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create audit request' },
       { status: 500 }
     );

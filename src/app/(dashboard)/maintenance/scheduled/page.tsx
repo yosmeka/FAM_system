@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Plus, Settings, CheckCircle } from 'lucide-react';
-import CreateScheduleModal from '@/components/maintenance/CreateScheduleModal';
-import ManagerReviewModal from '@/components/maintenance/ManagerReviewModal';
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Plus, Settings, CheckCircle } from "lucide-react";
+import CreateScheduleModal from "@/components/maintenance/CreateScheduleModal";
+import ManagerReviewModal from "@/components/maintenance/ManagerReviewModal";
 
 interface MaintenanceSchedule {
   id: string;
@@ -40,20 +40,40 @@ interface MaintenanceSchedule {
   }>;
 }
 
+interface MaintenanceTask {
+  id: string;
+  description: string;
+  status: string;
+  priority: string;
+  completedAt?: string;
+  workPerformed?: string;
+  laborHours?: number;
+  totalCost?: number;
+  asset: {
+    name: string;
+    serialNumber: string;
+  };
+  assignedTo?: {
+    name: string;
+    email: string;
+  };
+  checklistItems?: string[];
+}
+
 export default function ScheduledMaintenancePage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [schedules, setSchedules] = useState<MaintenanceSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-
   // Manager review states
-  const [activeTab, setActiveTab] = useState('schedules'); // 'schedules' or 'reviews'
-  const [pendingReviews, setPendingReviews] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("schedules"); // 'schedules' or 'reviews'
+  const [pendingReviews, setPendingReviews] = useState<MaintenanceTask[]>([]);
   const [reviewLoading, setReviewLoading] = useState(false);
-  const [selectedTaskForReview, setSelectedTaskForReview] = useState<any>(null);
+  const [selectedTaskForReview, setSelectedTaskForReview] =
+    useState<MaintenanceTask | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
 
   const handleScheduleCreated = () => {
@@ -61,19 +81,11 @@ export default function ScheduledMaintenancePage() {
     fetchSchedules(); // Refresh the schedules list
   };
 
-  useEffect(() => {
-    if (activeTab === 'schedules') {
-      fetchSchedules();
-    } else if (activeTab === 'reviews') {
-      fetchPendingReviews();
-    }
-  }, [filter, activeTab]);
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (filter !== 'all') {
-        params.append('status', filter);
+      if (filter !== "all") {
+        params.append("status", filter);
       }
 
       const response = await fetch(`/api/maintenance-schedules?${params}`);
@@ -82,33 +94,36 @@ export default function ScheduledMaintenancePage() {
         setSchedules(data);
       }
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      console.error("Error fetching schedules:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (activeTab === "schedules") {
+      fetchSchedules();
+    } else if (activeTab === "reviews") {
+      fetchPendingReviews();
+    }
+  }, [filter, activeTab, fetchSchedules]);
 
   const fetchPendingReviews = async () => {
     try {
       setReviewLoading(true);
-      // Fetch preventive maintenance tasks that are completed and awaiting manager review
-      const params = new URLSearchParams();
-      params.append('status', 'WORK_COMPLETED');
-      params.append('maintenanceType', 'PREVENTIVE');
-
-      const response = await fetch(`/api/maintenance?${params}`);
+      const response = await fetch("/api/maintenance?status=PENDING_REVIEW");
       if (response.ok) {
         const data = await response.json();
         setPendingReviews(data);
       }
     } catch (error) {
-      console.error('Error fetching pending reviews:', error);
+      console.error("Error fetching pending reviews:", error);
     } finally {
       setReviewLoading(false);
     }
   };
 
-  const handleReviewTask = (task: any) => {
+  const handleReviewTask = (task: MaintenanceTask) => {
     setSelectedTaskForReview(task);
     setShowReviewModal(true);
   };
@@ -119,38 +134,46 @@ export default function ScheduledMaintenancePage() {
     setShowReviewModal(false);
   };
 
-
-
   const getFrequencyDisplay = (frequency: string) => {
     const frequencyMap: { [key: string]: string } = {
-      DAILY: 'Daily',
-      WEEKLY: 'Weekly',
-      MONTHLY: 'Monthly',
-      QUARTERLY: 'Quarterly',
-      SEMI_ANNUALLY: 'Semi-Annually',
-      ANNUALLY: 'Annually',
-      CUSTOM: 'Custom',
+      DAILY: "Daily",
+      WEEKLY: "Weekly",
+      MONTHLY: "Monthly",
+      QUARTERLY: "Quarterly",
+      SEMI_ANNUALLY: "Semi-Annually",
+      ANNUALLY: "Annually",
+      CUSTOM: "Custom",
     };
     return frequencyMap[frequency] || frequency;
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'CRITICAL': return 'text-red-400';
-      case 'HIGH': return 'text-orange-400';
-      case 'MEDIUM': return 'text-yellow-400';
-      case 'LOW': return 'text-green-400';
-      default: return 'text-gray-400';
+      case "CRITICAL":
+        return "text-red-400";
+      case "HIGH":
+        return "text-orange-400";
+      case "MEDIUM":
+        return "text-yellow-400";
+      case "LOW":
+        return "text-green-400";
+      default:
+        return "text-gray-400";
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return 'text-green-400';
-      case 'INACTIVE': return 'text-gray-400';
-      case 'PAUSED': return 'text-yellow-400';
-      case 'EXPIRED': return 'text-red-400';
-      default: return 'text-gray-400';
+      case "ACTIVE":
+        return "text-green-400";
+      case "INACTIVE":
+        return "text-gray-400";
+      case "PAUSED":
+        return "text-yellow-400";
+      case "EXPIRED":
+        return "text-red-400";
+      default:
+        return "text-gray-400";
     }
   };
 
@@ -167,32 +190,42 @@ export default function ScheduledMaintenancePage() {
   }
 
   return (
-    <div className="p-6" style={{ backgroundColor: '#212332' }}>
+    <div className="p-6" style={{ backgroundColor: "#212332" }}>
       {/* Navigation Tabs */}
       <div className="mb-6">
-        <div className="flex space-x-1 p-1 rounded-lg w-fit" style={{ backgroundColor: '#2A2D3E' }}>
+        <div
+          className="flex space-x-1 p-1 rounded-lg w-fit"
+          style={{ backgroundColor: "#2A2D3E" }}
+        >
           <button
-            onClick={() => setActiveTab('schedules')}
+            onClick={() => setActiveTab("schedules")}
             className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'schedules'
-                ? 'text-white shadow-sm font-medium'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+              activeTab === "schedules"
+                ? "text-white shadow-sm font-medium"
+                : "text-gray-300 hover:text-white hover:bg-gray-600"
             }`}
-            style={{ backgroundColor: activeTab === 'schedules' ? '#2697FF' : 'transparent' }}
+            style={{
+              backgroundColor:
+                activeTab === "schedules" ? "#2697FF" : "transparent",
+            }}
           >
             <Settings className="w-4 h-4" />
             Scheduled Maintenance
           </button>
 
-          {(session?.user?.role === 'MANAGER' || session?.user?.role === 'ADMIN') && (
+          {(session?.user?.role === "MANAGER" ||
+            session?.user?.role === "ADMIN") && (
             <button
-              onClick={() => setActiveTab('reviews')}
+              onClick={() => setActiveTab("reviews")}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
-                activeTab === 'reviews'
-                  ? 'text-white shadow-sm font-medium'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                activeTab === "reviews"
+                  ? "text-white shadow-sm font-medium"
+                  : "text-gray-300 hover:text-white hover:bg-gray-600"
               }`}
-              style={{ backgroundColor: activeTab === 'reviews' ? '#2697FF' : 'transparent' }}
+              style={{
+                backgroundColor:
+                  activeTab === "reviews" ? "#2697FF" : "transparent",
+              }}
             >
               <Settings className="w-4 h-4" />
               Manager Review
@@ -204,9 +237,10 @@ export default function ScheduledMaintenancePage() {
             </button>
           )}
 
-          {(session?.user?.role === 'MANAGER' || session?.user?.role === 'ADMIN') && (
+          {(session?.user?.role === "MANAGER" ||
+            session?.user?.role === "ADMIN") && (
             <button
-              onClick={() => router.push('/maintenance/templates')}
+              onClick={() => router.push("/maintenance/templates")}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
             >
               <Settings className="w-4 h-4" />
@@ -214,9 +248,9 @@ export default function ScheduledMaintenancePage() {
             </button>
           )}
 
-          {session?.user?.role === 'USER' && (
+          {session?.user?.role === "USER" && (
             <button
-              onClick={() => router.push('/maintenance/tasks')}
+              onClick={() => router.push("/maintenance/tasks")}
               className="flex items-center gap-2 px-4 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-600 transition-colors"
             >
               <Settings className="w-4 h-4" />
@@ -229,27 +263,28 @@ export default function ScheduledMaintenancePage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            {activeTab === 'schedules' ? 'Scheduled Maintenance' : 'Manager Review'}
+            {activeTab === "schedules"
+              ? "Scheduled Maintenance"
+              : "Manager Review"}
           </h1>
           <p className="text-gray-400">
-            {activeTab === 'schedules'
-              ? 'Manage recurring maintenance schedules'
-              : 'Review and approve completed maintenance tasks'
-            }
+            {activeTab === "schedules"
+              ? "Manage recurring maintenance schedules"
+              : "Review and approve completed maintenance tasks"}
           </p>
         </div>
 
         <div className="flex gap-3">
           {/* Debug: Show user role */}
           <div className="text-xs text-gray-400 mr-4">
-            Role: {session?.user?.role || 'Unknown'}
+            Role: {session?.user?.role || "Unknown"}
           </div>
 
-          {session?.user?.role === 'MANAGER' && (
+          {session?.user?.role === "MANAGER" && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#2697FF' }}
+              style={{ backgroundColor: "#2697FF" }}
             >
               <Plus className="w-4 h-4" />
               Create Schedule
@@ -259,7 +294,7 @@ export default function ScheduledMaintenancePage() {
       </div>
 
       {/* Manager Review Content */}
-      {activeTab === 'reviews' ? (
+      {activeTab === "reviews" ? (
         <div>
           {reviewLoading ? (
             <div className="text-center py-12">
@@ -269,8 +304,12 @@ export default function ScheduledMaintenancePage() {
           ) : pendingReviews.length === 0 ? (
             <div className="text-center py-12">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Pending Reviews</h3>
-              <p className="text-gray-400">All maintenance tasks have been reviewed.</p>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No Pending Reviews
+              </h3>
+              <p className="text-gray-400">
+                All maintenance tasks have been reviewed.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -278,7 +317,7 @@ export default function ScheduledMaintenancePage() {
                 <div
                   key={task.id}
                   className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-                  style={{ backgroundColor: '#2A2D3E' }}
+                  style={{ backgroundColor: "#2A2D3E" }}
                 >
                   {/* Header */}
                   <div className="flex justify-between items-start mb-4">
@@ -304,7 +343,12 @@ export default function ScheduledMaintenancePage() {
 
                     <div className="flex items-center gap-2 text-sm text-gray-300">
                       <Settings className="w-4 h-4" />
-                      <span>Completed: {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : 'N/A'}</span>
+                      <span>
+                        Completed:{" "}
+                        {task.completedAt
+                          ? new Date(task.completedAt).toLocaleDateString()
+                          : "N/A"}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-gray-300">
@@ -317,7 +361,7 @@ export default function ScheduledMaintenancePage() {
                   <button
                     onClick={() => handleReviewTask(task)}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: '#2697FF' }}
+                    style={{ backgroundColor: "#2697FF" }}
                   >
                     <Settings className="w-4 h-4" />
                     Review Task
@@ -331,20 +375,22 @@ export default function ScheduledMaintenancePage() {
         <div>
           {/* Filter Tabs */}
           <div className="flex gap-4 mb-6">
-            {['all', 'ACTIVE', 'INACTIVE', 'PAUSED'].map((status) => (
+            {["all", "ACTIVE", "INACTIVE", "PAUSED"].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
                 className={`px-4 py-2 rounded-lg transition-colors ${
                   filter === status
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? "text-white"
+                    : "text-gray-400 hover:text-white"
                 }`}
                 style={{
-                  backgroundColor: filter === status ? '#2697FF' : '#2A2D3E',
+                  backgroundColor: filter === status ? "#2697FF" : "#2A2D3E",
                 }}
               >
-                {status === 'all' ? 'All Schedules' : status.charAt(0) + status.slice(1).toLowerCase()}
+                {status === "all"
+                  ? "All Schedules"
+                  : status.charAt(0) + status.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -355,8 +401,10 @@ export default function ScheduledMaintenancePage() {
               <div
                 key={schedule.id}
                 className="p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-                style={{ backgroundColor: '#2A2D3E' }}
-                onClick={() => window.location.href = `/maintenance/scheduled/${schedule.id}`}
+                style={{ backgroundColor: "#2A2D3E" }}
+                onClick={() =>
+                  (window.location.href = `/maintenance/scheduled/${schedule.id}`)
+                }
               >
                 {/* Header */}
                 <div className="flex justify-between items-start mb-4">
@@ -368,7 +416,11 @@ export default function ScheduledMaintenancePage() {
                       {schedule.asset.name} ({schedule.asset.serialNumber})
                     </p>
                   </div>
-                  <span className={`text-sm font-medium ${getStatusColor(schedule.status)}`}>
+                  <span
+                    className={`text-sm font-medium ${getStatusColor(
+                      schedule.status
+                    )}`}
+                  >
                     {schedule.status}
                   </span>
                 </div>
@@ -382,9 +434,16 @@ export default function ScheduledMaintenancePage() {
 
                   <div className="flex items-center gap-2 text-sm">
                     <Settings className="w-4 h-4" />
-                    <span className={isOverdue(schedule.nextDue) ? 'text-red-400' : 'text-gray-300'}>
-                      Next due: {new Date(schedule.nextDue).toLocaleDateString()}
-                      {isOverdue(schedule.nextDue) && ' (Overdue)'}
+                    <span
+                      className={
+                        isOverdue(schedule.nextDue)
+                          ? "text-red-400"
+                          : "text-gray-300"
+                      }
+                    >
+                      Next due:{" "}
+                      {new Date(schedule.nextDue).toLocaleDateString()}
+                      {isOverdue(schedule.nextDue) && " (Overdue)"}
                     </span>
                   </div>
 
@@ -398,7 +457,11 @@ export default function ScheduledMaintenancePage() {
 
                 {/* Priority and Template */}
                 <div className="flex justify-between items-center">
-                  <span className={`text-sm font-medium ${getPriorityColor(schedule.priority)}`}>
+                  <span
+                    className={`text-sm font-medium ${getPriorityColor(
+                      schedule.priority
+                    )}`}
+                  >
                     {schedule.priority} Priority
                   </span>
 
@@ -416,16 +479,21 @@ export default function ScheduledMaintenancePage() {
                       Recent tasks: {schedule.maintenanceTasks.length}
                     </p>
                     <div className="flex gap-1">
-                      {schedule.maintenanceTasks.slice(0, 5).map((task, index) => (
+                      {schedule.maintenanceTasks.slice(0, 5).map((task) => (
                         <div
                           key={task.id}
                           className={`w-2 h-2 rounded-full ${
-                            task.status === 'COMPLETED' ? 'bg-green-400' :
-                            task.status === 'IN_PROGRESS' ? 'bg-blue-400' :
-                            task.status === 'SCHEDULED' ? 'bg-yellow-400' :
-                            'bg-gray-400'
+                            task.status === "COMPLETED"
+                              ? "bg-green-400"
+                              : task.status === "IN_PROGRESS"
+                              ? "bg-blue-400"
+                              : task.status === "SCHEDULED"
+                              ? "bg-yellow-400"
+                              : "bg-gray-400"
                           }`}
-                          title={`${task.status} - ${new Date(task.scheduledDate).toLocaleDateString()}`}
+                          title={`${task.status} - ${new Date(
+                            task.scheduledDate
+                          ).toLocaleDateString()}`}
                         />
                       ))}
                     </div>
@@ -438,18 +506,19 @@ export default function ScheduledMaintenancePage() {
           {schedules.length === 0 && (
             <div className="text-center py-12">
               <Settings className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Scheduled Maintenance</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No Scheduled Maintenance
+              </h3>
               <p className="text-gray-400 mb-6">
-                {session?.user?.role === 'MANAGER'
-                  ? 'Create your first maintenance schedule to get started.'
-                  : 'No maintenance schedules have been created yet.'
-                }
+                {session?.user?.role === "MANAGER"
+                  ? "Create your first maintenance schedule to get started."
+                  : "No maintenance schedules have been created yet."}
               </p>
-              {session?.user?.role === 'MANAGER' && (
+              {session?.user?.role === "MANAGER" && (
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="px-6 py-3 rounded-lg text-white transition-colors"
-                  style={{ backgroundColor: '#2697FF' }}
+                  style={{ backgroundColor: "#2697FF" }}
                 >
                   Create Schedule
                 </button>
@@ -473,7 +542,10 @@ export default function ScheduledMaintenancePage() {
         <ManagerReviewModal
           open={showReviewModal}
           onClose={() => setShowReviewModal(false)}
-          task={selectedTaskForReview}
+          task={{
+            ...selectedTaskForReview,
+            checklistItems: JSON.stringify(selectedTaskForReview.checklistItems ?? [])
+          }}
           onReviewCompleted={handleReviewCompleted}
         />
       )}

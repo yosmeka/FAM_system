@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -7,12 +7,11 @@ import { withRole } from '@/middleware/rbac';
 // GET /api/maintenance-templates - Get all maintenance templates
 export const GET = withRole(['MANAGER', 'USER'], async function GET(request: NextRequest) {
   try {
-
     const { searchParams } = new URL(request.url);
     const maintenanceType = searchParams.get('maintenanceType');
     const isActive = searchParams.get('isActive');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     // Filter by maintenance type if specified
     if (maintenanceType) {
@@ -48,7 +47,7 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET(request: Nex
 
     // Parse JSON strings back to arrays for frontend with safe parsing
     const templatesWithParsedArrays = templates.map(template => {
-      const safeParseJSON = (jsonString: string | null): any[] => {
+      const safeParseJSON = (jsonString: string | null): unknown[] => {
         if (!jsonString) return [];
         try {
           const parsed = JSON.parse(jsonString);
@@ -67,10 +66,10 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET(request: Nex
       };
     });
 
-    return NextResponse.json(templatesWithParsedArrays);
+    return Response.json(templatesWithParsedArrays);
   } catch (error) {
     console.error('Error fetching maintenance templates:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch maintenance templates' },
       { status: 500 }
     );
@@ -81,7 +80,12 @@ export const GET = withRole(['MANAGER', 'USER'], async function GET(request: Nex
 export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
+    if (!session || !session.user) {
+      return Response.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     const data = await request.json();
     const {
       name,
@@ -100,7 +104,7 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
 
     // Validate required fields
     if (!name) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Template name is required' },
         { status: 400 }
       );
@@ -117,7 +121,7 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
     });
 
     if (existingTemplate) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Template with this name already exists' },
         { status: 400 }
       );
@@ -150,10 +154,10 @@ export const POST = withRole(['MANAGER', 'ADMIN'], async function POST(request: 
       },
     });
 
-    return NextResponse.json(template, { status: 201 });
+    return Response.json(template, { status: 201 });
   } catch (error) {
     console.error('Error creating maintenance template:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create maintenance template' },
       { status: 500 }
     );

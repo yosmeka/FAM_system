@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, Trash2, CheckCircle, Wrench, Package, AlertTriangle } from 'lucide-react';
@@ -33,16 +33,32 @@ interface MaintenanceTemplate {
 }
 
 export default function TemplateDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const resolvedParams = use(params);
   const [template, setTemplate] = useState<MaintenanceTemplate | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchTemplate = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/maintenance-templates/${resolvedParams.id}`);
+      if (!response.ok) throw new Error('Failed to fetch template');
 
+      const data = await response.json();
+      setTemplate(data);
+    } catch (error) {
+      console.error('Error fetching template:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [resolvedParams.id]);
 
+  useEffect(() => {
+    fetchTemplate();
+  }, [fetchTemplate]);
 
-// Show nothing until session is loaded
+  // Show nothing until session is loaded
   if (status === 'loading') return null;
 
   // If not allowed, show access denied
@@ -56,29 +72,6 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
       </div>
     );
   }
-
-
-
-
-
-  useEffect(() => {
-    fetchTemplate();
-  }, [resolvedParams.id]);
-
-  const fetchTemplate = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/maintenance-templates/${resolvedParams.id}`);
-      if (!response.ok) throw new Error('Failed to fetch template');
-
-      const data = await response.json();
-      setTemplate(data);
-    } catch (error) {
-      console.error('Error fetching template:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const deleteTemplate = async () => {
     if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
@@ -131,7 +124,7 @@ export default function TemplateDetailPage({ params }: { params: Promise<{ id: s
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#212332' }}>
         <div className="text-center">
           <h2 className="text-xl font-semibold text-white mb-2">Template Not Found</h2>
-          <p className="text-gray-400 mb-4">The maintenance template you're looking for doesn't exist.</p>
+          <p className="text-gray-400 mb-4">The maintenance template you are looking for does not exist.</p>
           <button
             onClick={() => router.push('/maintenance/templates')}
             className="px-4 py-2 rounded-lg text-white transition-colors"

@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -6,14 +5,14 @@ import { withRole } from '@/middleware/rbac';
 import { AuditNotificationService } from '@/lib/auditNotifications';
 
 // GET /api/audit-assignments - Get audit assignments
-export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(request: Request) {
+export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const role = searchParams.get('role') || session.user.role;
     const userId = session.user.id;
 
@@ -77,10 +76,10 @@ export const GET = withRole(['MANAGER',  'AUDITOR'], async function GET(request:
       },
     });
 
-    return NextResponse.json(assignments);
+    return Response.json(assignments);
   } catch (error) {
     console.error('Error fetching audit assignments:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch audit assignments' },
       { status: 500 }
     );
@@ -92,7 +91,7 @@ export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -111,7 +110,7 @@ export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request
 
     // Validate required fields
     if (!assetId || !assignedToId || !title || !dueDate) {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Missing required fields: assetId, assignedToId, title, dueDate' },
         { status: 400 }
       );
@@ -124,7 +123,7 @@ export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request
     });
 
     if (!asset) {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
+      return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     // Verify assigned user exists and is a AUDITOR user with the correct role
@@ -134,11 +133,11 @@ export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request
     });
 
     if (!assignedUser) {
-      return NextResponse.json({ error: 'Assigned user not found' }, { status: 404 });
+      return Response.json({ error: 'Assigned user not found' }, { status: 404 });
     }
 
     if (assignedUser.role !== 'AUDITOR') {
-      return NextResponse.json(
+      return Response.json(
         { error: 'Can only assign audits to users with USER role' },
         { status: 400 }
       );
@@ -199,10 +198,10 @@ export const POST = withRole([ 'MANAGER','AUDITOR'], async function POST(request
       dueDate: assignment.dueDate,
     });
 
-    return NextResponse.json(assignment, { status: 201 });
+    return Response.json(assignment, { status: 201 });
   } catch (error) {
     console.error('Error creating audit assignment:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to create audit assignment' },
       { status: 500 }
     );

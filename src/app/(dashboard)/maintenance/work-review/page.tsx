@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import React from "react";
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/hooks/useRole';
-import { CheckCircle, XCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { CheckCircle, Clock, DollarSign, User, Calendar, FileText } from 'lucide-react';
 import ManagerWorkReviewModal from '@/components/maintenance/ManagerWorkReviewModal';
 
 interface WorkReviewTask {
@@ -38,48 +39,51 @@ interface WorkReviewTask {
 }
 
 export default function WorkReviewPage() {
-  const { data: session } = useSession();
   const { isManager, isAdmin } = useRole();
+  const { isLoading } = useAuthContext();
   const router = useRouter();
   const [tasks, setTasks] = useState<WorkReviewTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('WORK_COMPLETED');
   const [selectedTask, setSelectedTask] = useState<WorkReviewTask | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isManagerRole = isManager();
+  const isAdminRole = isAdmin();
 
-  useEffect(() => {
-    if (!isManager && !isAdmin) {
-      router.push('/maintenance');
-      return;
-    }
-    fetchWorkReviewTasks();
-  }, [filter]); // Removed isManager and isAdmin from dependencies
-
-  // Separate useEffect for role checking to avoid infinite loop
-  useEffect(() => {
-    if (!isManager && !isAdmin) {
-      router.push('/maintenance');
-    }
-  }, [isManager, isAdmin, router]);
-
-  const fetchWorkReviewTasks = async () => {
+  const fetchWorkReviewTasks = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const params = new URLSearchParams();
       params.append('status', filter);
-      params.append('workReview', 'true'); // Flag to get work review tasks
-
+      params.append('workReview', 'true');
       const response = await fetch(`/api/maintenance?${params}`);
       if (response.ok) {
         const data = await response.json();
         setTasks(data);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to fetch work review tasks');
+        setTasks([]);
       }
     } catch (error) {
+      setError('Failed to fetch work review tasks');
+      setTasks([]);
       console.error('Error fetching work review tasks:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (!isManagerRole && !isAdminRole) {
+      router.push('/maintenance');
+      return;
+    }
+    fetchWorkReviewTasks();
+  }, [filter, isManagerRole, isAdminRole, isLoading, router, fetchWorkReviewTasks]);
 
   const handleReviewWork = (task: WorkReviewTask) => {
     setSelectedTask(task);
@@ -124,6 +128,16 @@ export default function WorkReviewPage() {
     return (
       <div className="flex justify-center items-center min-h-screen bg-white dark:bg-gray-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 dark:border-red-400"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900">
+        <FileText className="w-16 h-16 text-red-400 mb-4" />
+        <h3 className="text-xl font-semibold dark:text-white mb-2">Error</h3>
+        <p className="text-red-500">{error}</p>
       </div>
     );
   }
@@ -224,14 +238,12 @@ export default function WorkReviewPage() {
                     Technician: {task.assignedTo?.name}
                   </span>
                 </div>
-
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="w-4 h-4" />
                   <span className="dark:text-gray-300">
                     Completed: {task.workCompletedAt ? new Date(task.workCompletedAt).toLocaleDateString() : 'N/A'}
                   </span>
                 </div>
-
                 {task.laborHours && (
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4" />
@@ -240,7 +252,6 @@ export default function WorkReviewPage() {
                     </span>
                   </div>
                 )}
-
                 {task.totalCost && (
                   <div className="flex items-center gap-2 text-sm">
                     <DollarSign className="w-4 h-4" />
@@ -249,7 +260,6 @@ export default function WorkReviewPage() {
                     </span>
                   </div>
                 )}
-
                 <div className="flex items-center gap-2 text-sm">
                   <span className={`${getPriorityColor(task.priority)} font-medium`}>
                     {task.priority} Priority
@@ -268,38 +278,29 @@ export default function WorkReviewPage() {
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                {task.status === 'WORK_COMPLETED' && (
-                  <button
-                    onClick={() => handleReviewWork(task)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex-1"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Review Work
-                  </button>
-                )}
-
-                {/* <button
-                  onClick={() => router.push(`/maintenance/${task.id}`)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm"
+              {/* Review Button */}
+              {task.status === 'WORK_COMPLETED' && (
+                <button
+                  onClick={() => handleReviewWork(task)}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors w-full mt-2"
                 >
-                  <FileText className="w-4 h-4" />
-                  Details
-                </button> */}
-              </div>
+                  Review Work
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Manager Work Review Modal */}
-      <ManagerWorkReviewModal
-        open={showReviewModal}
-        onClose={() => setShowReviewModal(false)}
-        task={selectedTask}
-        onReviewCompleted={handleReviewCompleted}
-      />
+      {/* Review Modal */}
+      {showReviewModal && selectedTask && (
+        <ManagerWorkReviewModal
+          open={showReviewModal}
+          task={selectedTask}
+          onClose={() => setShowReviewModal(false)}
+          onReviewCompleted={handleReviewCompleted}
+        />
+      )}
     </div>
   );
 }

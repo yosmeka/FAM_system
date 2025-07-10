@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Plus, Settings, Trash2, Eye, Edit, FileText } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit } from 'lucide-react';
 
 interface MaintenanceTemplate {
   id: string;
@@ -28,48 +28,18 @@ interface MaintenanceTemplate {
 }
 
 export default function MaintenanceTemplatesPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [templates, setTemplates] = useState<MaintenanceTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-
-
-// Show nothing until session is loaded
-  if (status === 'loading') return null;
-
-  // If not allowed, show access denied
-  if (session?.user?.role === 'AUDITOR') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
-        <div className="bg-white p-8 rounded shadow text-center">
-          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
-          <p className="text-gray-700">You do not have permission to view this page.</p>
-        </div>
-      </div>
-    );
-  }
-
-
-
-
-
-
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
   const fetchTemplates = async () => {
     try {
       setLoading(true);
-      console.log('Fetching templates...');
       const response = await fetch('/api/maintenance-templates');
-      console.log('Templates response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('Templates data received:', data);
         setTemplates(data);
       } else {
         const errorText = await response.text();
@@ -82,19 +52,34 @@ export default function MaintenanceTemplatesPage() {
     }
   };
 
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  if (status === 'loading') return null;
+
+  if (session?.user?.role === 'AUDITOR') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-2 text-red-600">Access Denied</h1>
+          <p className="text-gray-700">You do not have permission to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+
   const deleteTemplate = async (templateId: string) => {
     if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
       return;
     }
-
     try {
       const response = await fetch(`/api/maintenance-templates/${templateId}`, {
         method: 'DELETE',
       });
-
       if (response.ok) {
         alert('Template deleted successfully');
-        fetchTemplates(); // Refresh the list
+        fetchTemplates();
       } else {
         const errorData = await response.json().catch(() => ({}));
         alert(`Failed to delete template: ${errorData.error || 'Unknown error'}`);
@@ -142,7 +127,6 @@ export default function MaintenanceTemplatesPage() {
           <h1 className="text-2xl font-bold text-white mb-2">Maintenance Templates</h1>
           <p className="text-gray-400">Manage standardized maintenance procedures and checklists</p>
         </div>
-
         {canManageTemplates() && (
           <button
             onClick={() => router.push('/maintenance/templates/create')}
@@ -245,7 +229,6 @@ export default function MaintenanceTemplatesPage() {
                 <Eye className="w-3 h-3" />
                 View
               </button>
-
               {canManageTemplates() && (
                 <>
                   <button
@@ -255,7 +238,6 @@ export default function MaintenanceTemplatesPage() {
                     <Edit className="w-3 h-3" />
                     Edit
                   </button>
-
                   <button
                     onClick={() => deleteTemplate(template.id)}
                     className="flex items-center gap-1 px-3 py-1 rounded text-xs text-white bg-red-600 hover:bg-red-700 transition-colors"
@@ -269,31 +251,6 @@ export default function MaintenanceTemplatesPage() {
           </div>
         ))}
       </div>
-
-      {/* Empty State */}
-      {filteredTemplates.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">
-            {filter === 'all' ? 'No Templates Found' : `No ${filter} Templates Found`}
-          </h3>
-          <p className="text-gray-400 mb-6">
-            {canManageTemplates()
-              ? 'Create your first maintenance template to standardize procedures.'
-              : 'No maintenance templates have been created yet.'
-            }
-          </p>
-          {canManageTemplates() && (
-            <button
-              onClick={() => router.push('/maintenance/templates/create')}
-              className="px-6 py-3 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#2697FF' }}
-            >
-              Create Template
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

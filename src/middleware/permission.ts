@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/server/prisma'; // Ensure this is the correct path and that the generated client includes Permission and RolePermission models.
 import { authOptions } from '@/lib/auth';
@@ -9,24 +9,24 @@ import { authOptions } from '@/lib/auth';
  */
 import { userHasPermission } from "@/lib/server/permissions";
 
-export function withPermission(handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse>, requiredPermission: string) {
-  return async (req: NextRequest, ...rest: any[]) => {
+export function withPermission(handler: (req: NextRequest, ...args: unknown[]) => Promise<Response>, requiredPermission: string) {
+  return async (req: NextRequest, ...rest: unknown[]) => {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
     const userRole = session.user.role;
     const hasPermission = await userHasPermission(userId, userRole, requiredPermission);
     if (!hasPermission) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
     // User has permission
     try {
       return await handler(req, ...rest);
     } catch (error) {
       console.error('Error in permission-protected handler:', error);
-      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+      return Response.json({ error: 'Internal Server Error' }, { status: 500 });
     }
   };
 }

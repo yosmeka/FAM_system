@@ -1,4 +1,4 @@
-import { PrismaClient, DepreciationMethod } from '@prisma/client';
+import { PrismaClient, DepreciationMethodEnum } from '@prisma/client';
 import { hash } from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -19,10 +19,10 @@ async function main() {
   const password = await hash('password123', 12);
 
   await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
+    where: { email: 'admin@zemen.com' },
     update: {},
     create: {
-      email: 'admin@example.com',
+      email: 'admin@zemen.com',
       name: 'Admin User',
       password,
       role: 'ADMIN',
@@ -41,7 +41,7 @@ async function main() {
     { name: 'Asset document delete', description: 'Delete asset documents' },
     { name: 'User view (list and detail)', description: 'View users (list and detail)' },
     { name: 'User create/invite', description: 'Create or invite users' },
-    { name: 'User edit/update', description: 'Edit or update users' },
+    { name: 'User edit', description: 'Edit or update users' },
     { name: 'Dashboard view', description: 'View dashboard' },
     { name: 'Audit view', description: 'View audit information and assignments' },
     { name: 'Audit create', description: 'Create new audit requests or assignments' },
@@ -83,7 +83,7 @@ async function main() {
   // Default permissions for ADMIN
   await assignPermissionToRole('ADMIN', 'User create/invite');
   await assignPermissionToRole('ADMIN', 'User delete');
-  await assignPermissionToRole('ADMIN', 'User edit/update');
+  await assignPermissionToRole('ADMIN', 'User edit');
   await assignPermissionToRole('ADMIN', 'User view (list and detail)');
   await assignPermissionToRole('ADMIN', 'Dashboard view');
 
@@ -116,7 +116,7 @@ async function main() {
       depreciableCost: 25000,
       salvageValue: 2500,
       usefulLifeMonths: 120, // 10 years
-      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationMethod: DepreciationMethodEnum.STRAIGHT_LINE,
       depreciationStartDate: new Date('2022-02-01'),
     },
     {
@@ -133,7 +133,7 @@ async function main() {
       depreciableCost: 15000,
       salvageValue: 1500,
       usefulLifeMonths: 180, // 15 years
-      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationMethod: DepreciationMethodEnum.STRAIGHT_LINE,
       depreciationStartDate: new Date('2021-09-01'),
     },
     {
@@ -150,7 +150,7 @@ async function main() {
       depreciableCost: 1200,
       salvageValue: 100,
       usefulLifeMonths: 36, // 3 years
-      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationMethod: DepreciationMethodEnum.STRAIGHT_LINE,
       depreciationStartDate: new Date('2023-06-01'),
     },
     {
@@ -167,7 +167,7 @@ async function main() {
       depreciableCost: 35000,
       salvageValue: 5000,
       usefulLifeMonths: 60, // 5 years
-      depreciationMethod: DepreciationMethod.STRAIGHT_LINE,
+      depreciationMethod: DepreciationMethodEnum.STRAIGHT_LINE,
       depreciationStartDate: new Date('2020-03-01'),
     },
   ];

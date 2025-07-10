@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { 
   Calendar, 
   Clock, 
   CheckCircle, 
   AlertTriangle, 
-  User, 
   FileText,
   Filter,
   Search,
@@ -58,7 +56,6 @@ interface PendingAudit {
 
 export default function AuditReviewPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [pendingAudits, setPendingAudits] = useState<PendingAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

@@ -1,43 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/server/prisma';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
-// Permission check helper
-// Permission check helper
-export async function hasPermission(user: { id: string, role: string }, permissionName: string): Promise<boolean> {
-  // ADMIN can only access user and role/permission management endpoints
-  if (user.role === 'ADMIN') {
-    if (permissionName.startsWith('User ') || permissionName.startsWith('Role ') || permissionName.startsWith('Permission ')) {
-      return true;
-    }
-    return false;
-  }
-  const permission = await prisma.permission.findUnique({ where: { name: permissionName } });
-  if (!permission) return false;
-
-  // Check for user-specific override first
-  const userPermission = await prisma.userPermission.findUnique({
-    where: { userId_permissionId: { userId: user.id, permissionId: permission.id } }
-  });
-  if (userPermission) {
-    return userPermission.granted;
-  }
-
-  // Fallback to role-based permission
-  const rolePermission = await prisma.rolePermission.findFirst({
-    where: { role: user.role, permissionId: permission.id },
-  });
-  return !!rolePermission;
-}
+import { authOptions } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
+import { Role } from '@prisma/client';
 
 // PUT /api/users/[id] -- update user info
-export async function PUT(request: NextRequest, { params: { id } }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
 
-  if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User edit/update'))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (!user || !(await hasPermission({ id: user.id, role: user.role as Role }, 'User edit/update'))) {
+    return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   try {
@@ -65,18 +40,19 @@ export async function PUT(request: NextRequest, { params: { id } }: { params: { 
     } else {
       updatedUser = null;
     }
-    return NextResponse.json(updatedUser);
+    return Response.json(updatedUser);
   } catch (error) {
     console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Internal Server Error', details: String(error) }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error', details: String(error) }, { status: 500 });
   }
 }
 
-export async function DELETE(request: NextRequest, { params: { id } }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   const user = session?.user as { id: string; role: string };
-  if (!user || !(await hasPermission({ id: user.id, role: user.role }, 'User delete'))) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  if (!user || !(await hasPermission({ id: user.id, role: user.role as Role }, 'User delete'))) {
+    return Response.json({ error: 'Unauthorized' }, { status: 403 });
   }
   try {
     // First delete notifications associated with the user
@@ -84,16 +60,16 @@ export async function DELETE(request: NextRequest, { params: { id } }: { params:
     
     // Then delete the user
     await prisma.user.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    return Response.json({ success: true });
   } catch (error: unknown) {
     console.error('Error deleting user:', error);
     // Check if it's a Prisma known request error for foreign key constraints
     // and if error is an object with a 'code' property
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2003') {
-      return NextResponse.json({ error: 'Cannot delete user. They are referenced in other records (e.g., logs, assignments). Please reassign or remove these references first.' }, { status: 409 }); // 409 Conflict
+      return Response.json({ error: 'Cannot delete user. They are referenced in other records (e.g., logs, assignments). Please reassign or remove these references first.' }, { status: 409 }); // 409 Conflict
     }
     // Check if error is an object with a 'message' property
     const details = (typeof error === 'object' && error !== null && 'message' in error) ? String(error.message) : String(error);
-    return NextResponse.json({ error: 'Internal Server Error', details }, { status: 500 });
+    return Response.json({ error: 'Internal Server Error', details }, { status: 500 });
   }
 }

@@ -12,10 +12,31 @@ interface ChecklistItem {
   notes?: string;
 }
 
+interface AssetInfo {
+  name: string;
+  serialNumber?: string;
+}
+
+interface AssignedToInfo {
+  name: string;
+}
+
+interface MaintenanceTask {
+  id: string;
+  checklistItems: string;
+  asset?: AssetInfo;
+  assignedTo?: AssignedToInfo;
+  priority?: string;
+  scheduledDate?: string;
+  workCompletedAt?: string;
+  actualHours?: number;
+  notes?: string;
+}
+
 interface ManagerReviewModalProps {
   open: boolean;
   onClose: () => void;
-  task: any;
+  task: MaintenanceTask | null;
   onReviewCompleted: () => void;
 }
 
@@ -31,7 +52,8 @@ export default function ManagerReviewModal({
 
   // Parse checklist items when task changes
   React.useEffect(() => {
-    if (task?.checklistItems) {
+    if (!task) return;
+    if (task.checklistItems) {
       try {
         const items = JSON.parse(task.checklistItems);
         setChecklist(Array.isArray(items) ? items : []);
@@ -43,6 +65,7 @@ export default function ManagerReviewModal({
   }, [task]);
 
   const handleReview = async (action: 'approve' | 'reject') => {
+    if (!task) return;
     if (action === 'reject' && !reviewNotes.trim()) {
       toast.error('Please provide a reason for rejection');
       return;
@@ -110,7 +133,7 @@ export default function ManagerReviewModal({
               <div className="space-y-2 text-sm text-gray-300">
                 <p><span className="font-medium text-white">Technician:</span> {task.assignedTo?.name}</p>
                 <p><span className="font-medium text-white">Priority:</span> {task.priority}</p>
-                <p><span className="font-medium text-white">Scheduled:</span> {new Date(task.scheduledDate).toLocaleDateString()}</p>
+                <p><span className="font-medium text-white">Scheduled:</span> {task.scheduledDate ? new Date(task.scheduledDate).toLocaleDateString() : 'N/A'}</p>
                 <p><span className="font-medium text-white">Completed:</span> {task.workCompletedAt ? new Date(task.workCompletedAt).toLocaleDateString() : 'N/A'}</p>
                 {task.actualHours && (
                   <p><span className="font-medium text-white">Actual Hours:</span> {task.actualHours}h</p>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, Camera, MapPin, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -256,7 +256,7 @@ export default function PerformAuditModal({
             </label>
             <select
               value={formData.condition}
-              onChange={(e) => setFormData({ ...formData, condition: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, condition: e.target.value as 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR' | 'CRITICAL' })}
               required
               className={`w-full px-3 py-2 border border-gray-600 rounded-md dark:bg-gray-700 bg-gray-100 text-gray-300 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${getConditionColor(formData.condition)}`}
             >

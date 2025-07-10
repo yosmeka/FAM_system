@@ -1,9 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import { Settings } from 'lucide-react';
-import { ManageDepreciationModal, DepreciationSettings } from '@/components/ManageDepreciationModal';
+import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { toast } from "react-hot-toast";
+import { Settings } from "lucide-react";
+import {
+  ManageDepreciationModal,
+  DepreciationSettings,
+} from "@/components/ManageDepreciationModal";
 
 interface Asset {
   id: string;
@@ -29,54 +33,71 @@ interface DepreciationResult {
   year: number;
   depreciation: number;
   bookValue: number;
-  method: 'STRAIGHT_LINE' | 'DECLINING_BALANCE';
+  method: "STRAIGHT_LINE" | "DECLINING_BALANCE";
 }
 
-export default function AssetDepreciationPage(props: { searchParams?: { assetId?: string } }) {
-  const searchParams = props.searchParams || {};
-  const assetId = searchParams.assetId || ""; // fallback to empty string if not provided
+export default function AssetDepreciationPage() {
+  const searchParams = useSearchParams();
+  const assetId = searchParams.get("assetId") || ""; // fallback to empty string if not provided
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [depreciationResults, setDepreciationResults] = useState<DepreciationResult[]>([]);
+  const [depreciationResults, setDepreciationResults] = useState<
+    DepreciationResult[]
+  >([]);
   const [usefulLife, setUsefulLife] = useState<number>(5);
   const [salvageValue, setSalvageValue] = useState<number>(0);
-  const [depreciationMethod, setDepreciationMethod] = useState<'STRAIGHT_LINE' | 'DECLINING_BALANCE'>('STRAIGHT_LINE');
+  const [depreciationMethod, setDepreciationMethod] = useState<
+    "STRAIGHT_LINE" | "DECLINING_BALANCE"
+  >("STRAIGHT_LINE");
   const [depreciationRate, setDepreciationRate] = useState<number>(20); // Default 20% for declining balance
   const [isManagingDepreciation, setIsManagingDepreciation] = useState(false);
-  const [depreciationSettings, setDepreciationSettings] = useState<DepreciationSettings>({
-    isDepreciable: true,
-    depreciableCost: 0,
-    salvageValue: 0,
-    usefulLifeMonths: 60,
-    depreciationMethod: 'STRAIGHT_LINE',
-    dateAcquired: new Date().toISOString().split('T')[0]
-  });
+  const [depreciationSettings, setDepreciationSettings] =
+    useState<DepreciationSettings>({
+      isDepreciable: true,
+      depreciableCost: 0,
+      salvageValue: 0,
+      usefulLifeMonths: 60,
+      depreciationMethod: "STRAIGHT_LINE",
+      dateAcquired: new Date().toISOString().split("T")[0],
+    });
 
-  const fetchAssetAndDepreciation = async () => {
+  const fetchAssetAndDepreciation = useCallback(async () => {
     try {
       // First fetch the asset
       if (!assetId) return;
       const assetResponse = await fetch(`/api/assets/${assetId}`);
       if (!assetResponse.ok) {
-        throw new Error('Failed to fetch asset');
+        throw new Error("Failed to fetch asset");
       }
       const assetData = await assetResponse.json();
       setAsset(assetData);
 
       // Then fetch the depreciation data
-      const depreciationResponse = await fetch(`/api/assets/${assetId}/depreciation`);
+      const depreciationResponse = await fetch(
+        `/api/assets/${assetId}/depreciation`
+      );
       if (!depreciationResponse.ok) {
-        throw new Error('Failed to fetch depreciation data');
+        throw new Error("Failed to fetch depreciation data");
       }
       const depreciationData = await depreciationResponse.json();
 
       // Update state with the fetched depreciation settings
       setSalvageValue(depreciationData.depreciationSettings.salvageValue);
       setUsefulLife(depreciationData.depreciationSettings.usefulLifeYears);
-      setDepreciationMethod(depreciationData.depreciationSettings.depreciationMethod === 'STRAIGHT_LINE' ? 'STRAIGHT_LINE' : 'DECLINING_BALANCE');
+      setDepreciationMethod(
+        depreciationData.depreciationSettings.depreciationMethod ===
+          "STRAIGHT_LINE"
+          ? "STRAIGHT_LINE"
+          : "DECLINING_BALANCE"
+      );
 
-      if (depreciationData.depreciationSettings.depreciationMethod !== 'STRAIGHT_LINE') {
-        setDepreciationRate(depreciationData.depreciationSettings.depreciationRate || 20);
+      if (
+        depreciationData.depreciationSettings.depreciationMethod !==
+        "STRAIGHT_LINE"
+      ) {
+        setDepreciationRate(
+          depreciationData.depreciationSettings.depreciationRate || 20
+        );
       }
 
       // Set the depreciation results
@@ -87,66 +108,56 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
         isDepreciable: true,
         depreciableCost: depreciationData.depreciationSettings.depreciableCost,
         salvageValue: depreciationData.depreciationSettings.salvageValue,
-        usefulLifeMonths: depreciationData.depreciationSettings.usefulLifeMonths,
-        depreciationMethod: depreciationData.depreciationSettings.depreciationMethod,
-        dateAcquired: new Date(depreciationData.depreciationSettings.startDate).toISOString().split('T')[0]
+        usefulLifeMonths:
+          depreciationData.depreciationSettings.usefulLifeMonths,
+        depreciationMethod:
+          depreciationData.depreciationSettings.depreciationMethod,
+        dateAcquired: new Date(depreciationData.depreciationSettings.startDate)
+          .toISOString()
+          .split("T")[0],
       });
     } catch (error) {
-      toast.error('Failed to fetch asset details');
-      console.error('Error fetching asset:', error);
+      toast.error("Failed to fetch asset details");
+      console.error("Error fetching asset:", error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [assetId]);
 
-  // Suppress exhaustive-deps warning for fetchAssetAndDepreciation
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(function fetchAssetAndDepreciationEffect() {
-    if (searchParams.assetId) {
-      fetchAssetAndDepreciation();
-    }
-  }, [searchParams.assetId]);
-
-  // Suppress exhaustive-deps warning for calculateDepreciation
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(function calculateDepreciationEffect() {
-    if (asset && !isLoading) {
-      calculateDepreciation();
-    }
-  }, [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, searchParams.assetId]);
-
-  const calculateDepreciation = async () => {
+  const calculateDepreciation = useCallback(async () => {
     if (!asset) return;
 
     try {
       // Call the API with the current settings
       if (!assetId) return;
-      const response = await fetch(`/api/assets/${assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`);
+      const response = await fetch(
+        `/api/assets/${assetId}/depreciation?usefulLife=${usefulLife}&salvageValue=${salvageValue}&method=${depreciationMethod}&depreciationRate=${depreciationRate}`
+      );
 
-      if (!response.ok) throw new Error('Failed to fetch depreciation data');
+      if (!response.ok) throw new Error("Failed to fetch depreciation data");
 
       const data = await response.json();
       setDepreciationResults(data.depreciationResults);
 
-      toast.success('Depreciation recalculated successfully');
+      toast.success("Depreciation recalculated successfully");
     } catch (error) {
-      console.error('Error calculating depreciation:', error);
-      toast.error('Failed to calculate depreciation');
+      console.error("Error calculating depreciation:", error);
+      toast.error("Failed to calculate depreciation");
 
       // Fallback to client-side calculation if API fails
       const results: DepreciationResult[] = [];
       const purchasePrice = asset.purchasePrice;
 
-      if (depreciationMethod === 'STRAIGHT_LINE') {
+      if (depreciationMethod === "STRAIGHT_LINE") {
         const annualDepreciation = (purchasePrice - salvageValue) / usefulLife;
 
         for (let year = 1; year <= usefulLife; year++) {
-          const bookValue = purchasePrice - (annualDepreciation * year);
+          const bookValue = purchasePrice - annualDepreciation * year;
           results.push({
             year,
             depreciation: annualDepreciation,
             bookValue: Math.max(bookValue, salvageValue),
-            method: 'STRAIGHT_LINE'
+            method: "STRAIGHT_LINE",
           });
         }
       } else {
@@ -165,7 +176,7 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
             year,
             depreciation,
             bookValue: currentBookValue,
-            method: 'DECLINING_BALANCE'
+            method: "DECLINING_BALANCE",
           });
 
           if (currentBookValue <= salvageValue) break;
@@ -174,9 +185,29 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
 
       setDepreciationResults(results);
     }
-  };
+  }, [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, assetId]);
 
-  const handleSaveDepreciationSettings = async (settings: DepreciationSettings) => {
+  useEffect(
+    function fetchAssetAndDepreciationEffect() {
+      if (assetId) {
+        fetchAssetAndDepreciation();
+      }
+    },
+    [assetId, fetchAssetAndDepreciation]
+  );
+
+  useEffect(
+    function calculateDepreciationEffect() {
+      if (asset && !isLoading) {
+        calculateDepreciation();
+      }
+    },
+    [asset, isLoading, usefulLife, salvageValue, depreciationMethod, depreciationRate, assetId, calculateDepreciation]
+  );
+
+  const handleSaveDepreciationSettings = async (
+    settings: DepreciationSettings
+  ) => {
     if (!asset) return;
 
     try {
@@ -186,16 +217,23 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
       // Call the API with the new settings using PUT method to update the asset
       if (!assetId) return;
       const response = await fetch(
-        `/api/assets/${assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${settings.salvageValue}&method=${settings.depreciationMethod}&depreciationRate=${settings.depreciationMethod === 'DOUBLE_DECLINING' ? 40 : 20}&depreciableCost=${settings.depreciableCost}&dateAcquired=${settings.dateAcquired}`,
+        `/api/assets/${assetId}/depreciation?usefulLife=${usefulLifeYears}&salvageValue=${
+          settings.salvageValue
+        }&method=${settings.depreciationMethod}&depreciationRate=${
+          settings.depreciationMethod === "DOUBLE_DECLINING" ? 40 : 20
+        }&depreciableCost=${settings.depreciableCost}&dateAcquired=${
+          settings.dateAcquired
+        }`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
         }
       );
 
-      if (!response.ok) throw new Error('Failed to update depreciation settings');
+      if (!response.ok)
+        throw new Error("Failed to update depreciation settings");
 
       // Refetch asset and depreciation data to ensure UI is up-to-date
       await fetchAssetAndDepreciation();
@@ -203,10 +241,10 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
       // Close the modal
       setIsManagingDepreciation(false);
 
-      toast.success('Depreciation settings updated successfully');
+      toast.success("Depreciation settings updated successfully");
     } catch (error) {
-      console.error('Error updating depreciation settings:', error);
-      toast.error('Failed to update depreciation settings');
+      console.error("Error updating depreciation settings:", error);
+      toast.error("Failed to update depreciation settings");
     }
   };
 
@@ -222,7 +260,9 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
             <h2 className="text-xl font-semibold mb-4">Asset Details</h2>
             <p>Name: {asset.name}</p>
             <p>Purchase Price: ${asset.purchasePrice.toFixed(2)}</p>
-            <p>Purchase Date: {new Date(asset.purchaseDate).toLocaleDateString()}</p>
+            <p>
+              Purchase Date: {new Date(asset.purchaseDate).toLocaleDateString()}
+            </p>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
@@ -246,21 +286,35 @@ export default function AssetDepreciationPage(props: { searchParams?: { assetId?
           />
 
           <div className="bg-white p-6 rounded-lg shadow overflow-x-auto">
-            <h2 className="text-xl font-semibold mb-4">Depreciation Schedule</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Depreciation Schedule
+            </h2>
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Depreciation</th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book Value</th>
+                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Year
+                  </th>
+                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Depreciation
+                  </th>
+                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Book Value
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {depreciationResults.map((result) => (
                   <tr key={result.year}>
-                    <td className="px-6 py-4 whitespace-nowrap">{result.year}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">${result.depreciation.toFixed(2)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">${result.bookValue.toFixed(2)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {result.year}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      ${result.depreciation.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      ${result.bookValue.toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

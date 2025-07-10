@@ -1,12 +1,11 @@
 'use client';
 
-import React from 'react';
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { RoleBasedBadge } from '@/components/ui/RoleBasedBadge';
 import { RoleBasedButton } from '@/components/ui/RoleBasedButton';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 
 interface TransferDetails {
   id: string;
@@ -38,39 +37,35 @@ interface TransferDetails {
   };
 }
 
-import { useSession } from 'next-auth/react';
-
-export default function TransferDetailsPage({ params }: { params: any }) {
-  const { data: session } = useSession();
-  const { id } = React.use(params) as { id: string };
+export default function TransferDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const [transfer, setTransfer] = useState<TransferDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleted, setDeleted] = useState(false);
-
+  const { data: session } = useSession();
   const router = useRouter();
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!deleted) {
-      fetchTransferDetails();
-    }
-  }, [id, deleted]);
+    params.then(({ id }) => setResolvedId(id));
+  }, [params]);
 
-  const fetchTransferDetails = async () => {
+  const fetchTransferDetails = useCallback(async () => {
+    if (!resolvedId) return;
     try {
       // Fetch transfer details
-      const response = await fetch(`/api/transfers/${id}`);
+      const response = await fetch(`/api/transfers/${resolvedId}`);
       if (!response.ok) throw new Error('Failed to fetch transfer details');
       const data = await response.json();
 
       // If transfer is approved or rejected, check for document
       if (data.status === 'APPROVED' || data.status === 'REJECTED') {
         try {
-          console.log(`Fetching document for transfer ${id}`);
-          const docResponse = await fetch(`/api/transfers/${id}/document`);
+          console.log(`Fetching document for transfer ${resolvedId}`);
+          const docResponse = await fetch(`/api/transfers/${resolvedId}/document`);
 
           if (docResponse.ok) {
             const docData = await docResponse.json();
-            console.log(`Document data for transfer ${id}:`, docData);
+            console.log(`Document data for transfer ${resolvedId}:`, docData);
 
             if (docData.documentUrl) {
               data.document = {
@@ -79,17 +74,17 @@ export default function TransferDetailsPage({ params }: { params: any }) {
                 fileName: `transfer_${data.status.toLowerCase()}_${data.id}.pdf`,
                 type: data.status === 'APPROVED' ? 'TRANSFER_APPROVAL' : 'TRANSFER_REJECTION'
               };
-              console.log(`Document found and set for transfer ${id}`);
+              console.log(`Document found and set for transfer ${resolvedId}`);
             } else {
               console.log('Document URL not found in response:', docData);
             }
           } else {
-            console.log(`Document not found for transfer ${id}, status: ${docResponse.status}`);
+            console.log(`Document not found for transfer ${resolvedId}, status: ${docResponse.status}`);
             // Try to get the error message
             try {
               const errorData = await docResponse.json();
               console.log(`Error details:`, errorData);
-            } catch (e) {
+            } catch {
               console.log(`Could not parse error response`);
             }
           }
@@ -100,16 +95,19 @@ export default function TransferDetailsPage({ params }: { params: any }) {
       }
 
       setTransfer(data);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      console.error('Error:', err);
       toast.error('Failed to load transfer details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedId]);
 
-
-
+  useEffect(() => {
+    if (!deleted) {
+      fetchTransferDetails();
+    }
+  }, [resolvedId, deleted, fetchTransferDetails]);
 
   useEffect(() => {
     if (deleted) {
@@ -139,7 +137,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
     if (!window.confirm('Are you sure you want to delete this transfer request?')) return;
     try {
       setLoading(true);
-      const response = await fetch(`/api/transfers/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/transfers/${resolvedId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete transfer');
       toast.success('Transfer request deleted');
       setDeleted(true);
@@ -154,7 +152,7 @@ export default function TransferDetailsPage({ params }: { params: any }) {
   async function handleCompleteTransfer() {
     try {
       setLoading(true);
-      const response = await fetch(`/api/transfers/${id}/complete`, { method: 'POST' });
+      const response = await fetch(`/api/transfers/${resolvedId}/complete`, { method: 'POST' });
       if (!response.ok) throw new Error('Failed to complete transfer');
       toast.success('Transfer marked as completed.');
       fetchTransferDetails();
