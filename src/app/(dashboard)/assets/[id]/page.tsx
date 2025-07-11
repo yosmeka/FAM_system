@@ -17,7 +17,8 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'rec
 import { usePDF } from 'react-to-pdf';
 import {
   DepreciationMethod,
-  DepreciationResult
+  DepreciationResult,
+  MonthlyDepreciationResult
 } from '@/utils/depreciation';
 import type { LinkedAsset } from '@/types';
 
@@ -115,6 +116,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
     depreciationMethod: 'STRAIGHT_LINE',
     dateAcquired: new Date().toISOString().split('T')[0]
   });
+  const [monthlyDepreciationResults, setMonthlyDepreciationResults] = useState<MonthlyDepreciationResult[]>([]);
+  const [depreciationTableTab, setDepreciationTableTab] = useState<'yearly' | 'monthly'>('yearly');
 
   // Unwrap params Promise for Next.js App Router
   const resolvedParams = React.use(params);
@@ -198,6 +201,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
           // Update depreciation results and chart data
           setDepreciationResults(data.depreciationResults);
+          setMonthlyDepreciationResults(data.monthlyDepreciationResults || []);
           setDepreciationData(data.chartData);
 
           // Update depreciation settings
@@ -320,6 +324,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
       const data = await response.json();
       setDepreciationResults(data.depreciationResults);
+      setMonthlyDepreciationResults(data.monthlyDepreciationResults || []);
       setDepreciationData(data.chartData);
 
       // Update local state
@@ -679,30 +684,72 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
-            {/* Yearly Depreciation Table */}
-            <div className="overflow-x-auto text-sm mb-6 dark:bg-gray-800">
-              <h3 className="text-md font-medium mb-2 dark:text-gray-500">Yearly Depreciation Schedule</h3>
-              <table className="w-full border text-left">
-                <thead className="bg-gray-100 dark:bg-gray-800">
-                  <tr>
-                    <th className="p-2 border font-semibold">Year</th>
-                    <th className="p-2 border font-semibold">Depreciation Expense</th>
-                    <th className="p-2 border font-semibold">Accumulated Depreciation</th>
-                    <th className="p-2 border font-semibold">Book Value</th>
-                  </tr>
-                </thead>
-                <tbody className="dark:bg-gray-800">
-                  {depreciationResults.map((result, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
-                      <td className="p-2 border">{result.year}</td>
-                      <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
-                      <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
-                      <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Yearly/Monthly Tabs */}
+            <div className="flex gap-2 mb-2">
+              <button
+                className={`px-4 py-2 rounded-t ${depreciationTableTab === 'yearly' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                onClick={() => setDepreciationTableTab('yearly')}
+              >
+                Yearly
+              </button>
+              <button
+                className={`px-4 py-2 rounded-t ${depreciationTableTab === 'monthly' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}
+                onClick={() => setDepreciationTableTab('monthly')}
+              >
+                Monthly
+              </button>
             </div>
+            {depreciationTableTab === 'yearly' ? (
+              <div className="overflow-x-auto text-sm mb-6 dark:bg-gray-800">
+                <h3 className="text-md font-medium mb-2 dark:text-gray-500">Yearly Depreciation Schedule</h3>
+                <table className="w-full border text-left">
+                  <thead className="bg-gray-100 dark:bg-gray-800">
+                    <tr>
+                      <th className="p-2 border font-semibold">Year</th>
+                      <th className="p-2 border font-semibold">Depreciation Expense</th>
+                      <th className="p-2 border font-semibold">Accumulated Depreciation</th>
+                      <th className="p-2 border font-semibold">Book Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="dark:bg-gray-800">
+                    {depreciationResults.map((result, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
+                        <td className="p-2 border">{result.year}</td>
+                        <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
+                        <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
+                        <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="overflow-x-auto text-sm mb-6 dark:bg-gray-800">
+                <h3 className="text-md font-medium mb-2 dark:text-gray-500">Monthly Depreciation Schedule</h3>
+                <table className="w-full border text-left">
+                  <thead className="bg-gray-100 dark:bg-gray-800">
+                    <tr>
+                      <th className="p-2 border font-semibold">Year</th>
+                      <th className="p-2 border font-semibold">Month</th>
+                      <th className="p-2 border font-semibold">Depreciation Expense</th>
+                      <th className="p-2 border font-semibold">Accumulated Depreciation</th>
+                      <th className="p-2 border font-semibold">Book Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="dark:bg-gray-800">
+                    {monthlyDepreciationResults.map((result, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
+                        <td className="p-2 border">{result.year}</td>
+                        <td className="p-2 border">{result.month}</td>
+                        <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
+                        <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
+                        <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       case 'photos':

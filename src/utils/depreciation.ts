@@ -249,3 +249,218 @@ export function generateChartData(results: DepreciationResult[]): Array<{year: n
     value: result.bookValue
   }));
 }
+
+export interface MonthlyDepreciationResult {
+  year: number;
+  month: number; // 1-12
+  depreciationExpense: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+}
+
+function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}
+
+function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
+  const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
+  const start = new Date(sivDate);
+  const usefulLifeMonths = usefulLifeYears * 12;
+  const depreciableAmount = unitPrice - salvageValue;
+  const monthlyDepreciation = depreciableAmount / usefulLifeMonths;
+
+  const results: MonthlyDepreciationResult[] = [];
+  let accumulatedDepreciation = 0;
+
+  for (let m = 0; m < usefulLifeMonths; m++) {
+    accumulatedDepreciation += monthlyDepreciation;
+    const date = addMonths(start, m);
+    results.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      depreciationExpense: monthlyDepreciation,
+      accumulatedDepreciation,
+      bookValue: unitPrice - accumulatedDepreciation,
+    });
+  }
+  return results;
+}
+
+function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
+  const { unitPrice, sivDate, usefulLifeYears, salvageValue, depreciationRate = 20 } = input;
+  const start = new Date(sivDate);
+  const usefulLifeMonths = usefulLifeYears * 12;
+  const rate = depreciationRate / 100;
+  const monthlyRate = 1 - Math.pow(1 - rate, 1 / 12); // Convert annual rate to monthly
+
+  const results: MonthlyDepreciationResult[] = [];
+  let bookValue = unitPrice;
+  let accumulatedDepreciation = 0;
+
+  for (let m = 0; m < usefulLifeMonths; m++) {
+    if (bookValue <= salvageValue) {
+      const date = addMonths(start, m);
+      results.push({
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        depreciationExpense: 0,
+        accumulatedDepreciation,
+        bookValue: salvageValue,
+      });
+      break;
+    }
+    let depreciationExpense = monthlyRate * bookValue;
+    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
+      depreciationExpense = bookValue - salvageValue;
+    }
+    accumulatedDepreciation += depreciationExpense;
+    bookValue -= depreciationExpense;
+    const date = addMonths(start, m);
+    results.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      depreciationExpense,
+      accumulatedDepreciation,
+      bookValue: bookValue,
+    });
+    if (bookValue <= salvageValue) break;
+  }
+  return results;
+}
+
+function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
+  const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
+  const start = new Date(sivDate);
+  const usefulLifeMonths = usefulLifeYears * 12;
+  const annualRate = 2 / usefulLifeYears;
+  const monthlyRate = 1 - Math.pow(1 - annualRate, 1 / 12);
+
+  const results: MonthlyDepreciationResult[] = [];
+  let bookValue = unitPrice;
+  let accumulatedDepreciation = 0;
+
+  for (let m = 0; m < usefulLifeMonths; m++) {
+    if (bookValue <= salvageValue) {
+      const date = addMonths(start, m);
+      results.push({
+        year: date.getFullYear(),
+        month: date.getMonth() + 1,
+        depreciationExpense: 0,
+        accumulatedDepreciation,
+        bookValue: salvageValue,
+      });
+      break;
+    }
+    let depreciationExpense = monthlyRate * bookValue;
+    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
+      depreciationExpense = bookValue - salvageValue;
+    }
+    accumulatedDepreciation += depreciationExpense;
+    bookValue -= depreciationExpense;
+    const date = addMonths(start, m);
+    results.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      depreciationExpense,
+      accumulatedDepreciation,
+      bookValue: bookValue,
+    });
+    if (bookValue <= salvageValue) break;
+  }
+  return results;
+}
+
+function calculateSumOfYearsDigitsMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
+  const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
+  const start = new Date(sivDate);
+  const usefulLifeMonths = usefulLifeYears * 12;
+  const depreciableAmount = unitPrice - salvageValue;
+  const sumOfMonths = (usefulLifeMonths * (usefulLifeMonths + 1)) / 2;
+
+  const results: MonthlyDepreciationResult[] = [];
+  let accumulatedDepreciation = 0;
+
+  for (let m = 0; m < usefulLifeMonths; m++) {
+    const fraction = (usefulLifeMonths - m) / sumOfMonths;
+    const depreciationExpense = depreciableAmount * fraction;
+    accumulatedDepreciation += depreciationExpense;
+    const date = addMonths(start, m);
+    results.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      depreciationExpense,
+      accumulatedDepreciation,
+      bookValue: unitPrice - accumulatedDepreciation,
+    });
+  }
+  return results;
+}
+
+function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
+  // For simplicity, spread each year's units evenly across 12 months
+  const { unitPrice, sivDate, usefulLifeYears, salvageValue, totalUnits, unitsPerYear } = input;
+  if (!totalUnits || !unitsPerYear || unitsPerYear.length === 0) {
+    throw new Error('Total units and units per year are required for Units of Activity method');
+  }
+  const start = new Date(sivDate);
+  const usefulLifeMonths = usefulLifeYears * 12;
+  const depreciableAmount = unitPrice - salvageValue;
+  const depreciationPerUnit = depreciableAmount / totalUnits;
+  const results: MonthlyDepreciationResult[] = [];
+  let accumulatedDepreciation = 0;
+  // Expand unitsPerYear to months
+  const unitsPerMonth: number[] = [];
+  for (let y = 0; y < usefulLifeYears; y++) {
+    const unitsThisYear = unitsPerYear[y] || unitsPerYear[unitsPerYear.length - 1];
+    for (let m = 0; m < 12; m++) {
+      unitsPerMonth.push(unitsThisYear / 12);
+    }
+  }
+  for (let m = 0; m < usefulLifeMonths; m++) {
+    const unitsThisMonth = unitsPerMonth[m];
+    const depreciationExpense = depreciationPerUnit * unitsThisMonth;
+    accumulatedDepreciation += depreciationExpense;
+    const cappedAccumulatedDepreciation = Math.min(accumulatedDepreciation, depreciableAmount);
+    const date = addMonths(start, m);
+    results.push({
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      depreciationExpense: m === 0 ? depreciationExpense :
+        (cappedAccumulatedDepreciation === depreciableAmount ?
+          depreciableAmount - results[m - 1].accumulatedDepreciation :
+          depreciationExpense),
+      accumulatedDepreciation: cappedAccumulatedDepreciation,
+      bookValue: unitPrice - cappedAccumulatedDepreciation,
+    });
+    if (cappedAccumulatedDepreciation >= depreciableAmount) break;
+  }
+  return results;
+}
+
+export function calculateMonthlyDepreciation(input: DepreciationInput): MonthlyDepreciationResult[] {
+  if (!input.unitPrice || input.unitPrice <= 0) {
+    throw new Error('Purchase price must be greater than zero');
+  }
+  if (input.salvageValue < 0 || input.salvageValue >= input.unitPrice) {
+    throw new Error('Salvage value must be non-negative and less than purchase price');
+  }
+  if (!input.usefulLifeYears || input.usefulLifeYears <= 0) {
+    throw new Error('Useful life must be greater than zero');
+  }
+  switch (input.method) {
+    case 'STRAIGHT_LINE':
+      return calculateStraightLineMonthly(input);
+    case 'DECLINING_BALANCE':
+      return calculateDecliningBalanceMonthly(input);
+    case 'DOUBLE_DECLINING':
+      return calculateDoubleDecliningBalanceMonthly(input);
+    case 'SUM_OF_YEARS_DIGITS':
+      return calculateSumOfYearsDigitsMonthly(input);
+    case 'UNITS_OF_ACTIVITY':
+      return calculateUnitsOfActivityMonthly(input);
+    default:
+      throw new Error(`Unsupported depreciation method: ${input.method}`);
+  }
+}

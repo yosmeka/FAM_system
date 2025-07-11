@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { calculateDepreciation, generateChartData } from '@/utils/depreciation';
+import { calculateDepreciation, generateChartData, calculateMonthlyDepreciation } from '@/utils/depreciation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
@@ -80,6 +80,15 @@ export async function GET(
       depreciationRate: depreciationRate,
       // totalUnits and unitsPerYear can be added here if needed for Units of Activity
     });
+    const monthlyDepreciationResults = calculateMonthlyDepreciation({
+      unitPrice: depreciableCost,
+      sivDate: startDate.toISOString ? startDate.toISOString() : startDate,
+      usefulLifeYears: usefulLifeYears,
+      salvageValue: salvageValue,
+      method: depreciationMethod,
+      depreciationRate: depreciationRate,
+      // totalUnits and unitsPerYear can be added here if needed for Units of Activity
+    });
     const chartData = generateChartData(depreciationResults);
     return Response.json({
       asset,
@@ -92,6 +101,7 @@ export async function GET(
         startDate: startDate,
       },
       depreciationResults,
+      monthlyDepreciationResults,
       chartData,
     });
   } catch (error) {
