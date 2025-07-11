@@ -84,14 +84,22 @@ model Notification {
 model Asset {
   id                  String         @id @default(cuid())
   name                String
-  description         String?
-  serialNumber        String         @unique
-  purchaseDate        DateTime
-  purchasePrice       Float
+  itemDescription     String?        // Item Description (renamed from description)
+  serialNumber        String         @unique // Serial # (kept as is)
+  oldTagNumber        String?        // Old Tag # (new field)
+  newTagNumber        String?        // New Tag # (new field)
+  grnNumber           String?        // GRN # (new field)
+  grnDate             DateTime?      // GRN Date (new field)
+  unitPrice           Float?         // Unit Price (renamed from purchasePrice)
+  sivNumber           String?        // SIV # (new field)
+  sivDate             DateTime?      // SIV Date (renamed from purchaseDate)
+  currentDepartment   String?        // Current Department (renamed from department)
+  remark              String?        // Remark (new field)
+  usefulLifeYears     Int?           // Useful Life In Years (renamed from usefulLifeMonths)
+  residualPercentage  Float?         // Residual Percentage (new field)
   currentValue        Float
   status              String         @default("ACTIVE")
   location            String?
-  department          String?
   category            String?
   type                String?
   supplier            String?
@@ -99,8 +107,7 @@ model Asset {
   lastMaintenance     DateTime?
   nextMaintenance     DateTime?
   depreciableCost     Float?
-  salvageValue        Float?
-  usefulLifeMonths    Int?
+  salvageValue        Float?         // Keep as is
   depreciationMethod  DepreciationMethodEnum?
   depreciationStartDate DateTime?
   lastAuditDate       DateTime?

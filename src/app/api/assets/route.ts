@@ -47,36 +47,39 @@ export const POST = withPermission(async function POST(request: Request) {
     const asset = await prisma.asset.create({
       data: {
         name: body.name,
+        itemDescription: body.itemDescription,
         serialNumber: body.serialNumber,
-        purchaseDate: new Date(body.purchaseDate),
-        purchasePrice: parseFloat(body.purchasePrice),
-        // Set currentValue to purchasePrice if not provided
-        currentValue: body.currentValue ? parseFloat(body.currentValue) : parseFloat(body.purchasePrice),
+        oldTagNumber: body.oldTagNumber,
+        newTagNumber: body.newTagNumber,
+        grnNumber: body.grnNumber,
+        grnDate: body.grnDate ? new Date(body.grnDate) : null,
+        unitPrice: body.unitPrice,
+        sivNumber: body.sivNumber,
+        sivDate: body.sivDate ? new Date(body.sivDate) : null,
+        currentDepartment: body.currentDepartment,
+        remark: body.remark,
+        usefulLifeYears: body.usefulLifeYears,
+        residualPercentage: body.residualPercentage,
+        currentValue: body.currentValue ?? body.unitPrice ?? 0,
         status: body.status,
         location: body.location,
-        department: "Zemen Bank", // Always set to Zemen Bank regardless of form input
         category: body.category,
-        type: body.type,
         supplier: body.supplier,
-        description: body.description,
         warrantyExpiry: body.warrantyExpiry ? new Date(body.warrantyExpiry) : null,
         lastMaintenance: body.lastMaintenance ? new Date(body.lastMaintenance) : null,
         nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
-        // Depreciation fields
-        depreciableCost: body.depreciableCost ? parseFloat(body.depreciableCost) : null,
-        salvageValue: body.salvageValue ? parseFloat(body.salvageValue) : null,
-        usefulLifeMonths: body.usefulLifeMonths ? parseInt(body.usefulLifeMonths) : null,
-        depreciationMethod: body.depreciationMethod || null,
+        salvageValue: body.salvageValue,
+        depreciationMethod: body.depreciationMethod,
         depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
       },
     });
 
     // Track initial asset creation in history
     const fields = [
-      'name', 'serialNumber', 'purchaseDate', 'purchasePrice', 'currentValue',
-      'status', 'location', 'department', 'category', 'type', 'supplier', 'description',
-      'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciableCost',
-      'salvageValue', 'usefulLifeMonths', 'depreciationMethod', 'depreciationStartDate'
+      'name', 'itemDescription', 'serialNumber', 'oldTagNumber', 'newTagNumber', 'grnNumber', 'grnDate',
+      'unitPrice', 'sivNumber', 'sivDate', 'currentDepartment', 'remark', 'usefulLifeYears', 'residualPercentage',
+      'currentValue', 'status', 'location', 'category', 'supplier', 'warrantyExpiry', 'lastMaintenance',
+      'nextMaintenance', 'salvageValue', 'depreciationMethod', 'depreciationStartDate'
     ];
 
     console.log('New asset created:', asset);

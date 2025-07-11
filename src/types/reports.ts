@@ -44,7 +44,7 @@ export interface AssetValueData {
 }
 
 export interface AssetDepartmentData {
-  department: string;
+  currentDepartment: string;
   count: number;
 }
 
@@ -102,7 +102,7 @@ export interface AuditAssetData {
   assetId: string;
   assetName: string;
   serialNumber: string;
-  department: string;
+  currentDepartment: string;
   category: string;
   totalAudits: number;
   lastAuditDate: string | null;
@@ -172,7 +172,7 @@ export interface TransferTrendData {
 }
 
 export interface DepartmentTransferData {
-  department: string;
+  currentDepartment: string;
   outgoing: number;
   incoming: number;
   avgProcessingDays: number;

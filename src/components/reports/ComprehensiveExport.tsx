@@ -79,7 +79,7 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
           exportData = {
             ...data,
             byCategory: [],
-            byDepartment: [],
+            byCurrentDepartment: [],
             statusDistribution: [],
             depreciation: [],
             assets: data.assets,
@@ -106,7 +106,7 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
 
       let title = 'Asset Report';
       let exportData = data.byCategory;
-      const pdfType: 'category' | 'department' = 'category';
+      const pdfType: 'category' | 'currentDepartment' = 'category';
 
       switch (type) {
         case 'summary':
@@ -115,7 +115,7 @@ export function ComprehensiveExport({ data, isLoading = false, filterSummary = '
           break;
         case 'detailed':
           title = 'Detailed Assets Report';
-          exportData = data.byDepartment.length > 0 ? data.byDepartment : data.byCategory;
+          exportData = data.byCurrentDepartment.length > 0 ? data.byCurrentDepartment : data.byCategory;
           break;
         case 'complete':
           title = 'Complete Asset Report';

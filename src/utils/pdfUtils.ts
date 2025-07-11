@@ -18,7 +18,7 @@ export interface TransferStats {
 }
 
 export interface DepartmentTransfer {
-  department: string;
+  currentDepartment: string;
   outgoing: number;
   incoming: number;
   avgProcessingDays: number;
@@ -95,7 +95,7 @@ export const generateTransferReportPDF = (data: TransferReportData): void => {
     doc.text('Location Transfer Summary', 14, finalY1 + 15);
 
     const locationData = data.departmentTransfers.map(loc => [
-      loc.department || 'Unknown',
+      loc.currentDepartment || 'Unknown',
       loc.outgoing.toString(),
       loc.incoming.toString(),
       (loc.incoming - loc.outgoing).toString(),

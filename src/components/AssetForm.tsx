@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, FormProvider } from "react-hook-form"
 import { z } from "zod"
 import { format, isValid } from "date-fns"
 import { useDebounce } from "use-debounce"
@@ -50,7 +50,7 @@ const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -75,55 +75,31 @@ const ASSET_CATEGORIES = [
 ] as const;
 
 const assetFormSchema = z.object({
-  // Basic Information
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  description: z.string().optional().nullable(),
+  itemDescription: z.string().optional().nullable(),
   serialNumber: z.string().min(1, { message: "Serial number is required." }),
-
-  // Financial Information
-  purchaseDate: z.date({
-    required_error: "Purchase date is required.",
-    invalid_type_error: "Please select a valid date.",
-  }).refine((date) => isValid(date), {
-    message: "Please select a valid date.",
-  }),
-  purchasePrice: z.coerce.number().min(0, { message: "Purchase price must be a positive number." }),
-  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }).optional(),
-  depreciableCost: z.coerce.number().min(0, { message: "Depreciable cost must be a positive number." }).optional(),
-
-  // Classification
+  oldTagNumber: z.string().optional().nullable(),
+  newTagNumber: z.string().optional().nullable(),
+  grnNumber: z.string().optional().nullable(),
+  grnDate: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
+  unitPrice: z.coerce.number().min(0, { message: "Unit price must be a positive number." }),
+  sivNumber: z.string().optional().nullable(),
+  sivDate: z.date({ required_error: "SIV date is required.", invalid_type_error: "Please select a valid date." }).refine((date) => isValid(date), { message: "Please select a valid date." }),
   status: z.string().default("ACTIVE"),
   location: z.string().optional().nullable(),
-  department: z.string().default("Zemen Bank"), // This is now used as Company Name
+  currentDepartment: z.string().optional().nullable(),
   category: z.string().optional().nullable(),
   supplier: z.string().optional().nullable(),
-
-  // Maintenance & Warranty
-  warrantyExpiry: z.date({
-    invalid_type_error: "Please select a valid date.",
-  }).optional().nullable().refine((date) => !date || isValid(date), {
-    message: "Please select a valid date.",
-  }),
-  lastMaintenance: z.date({
-    invalid_type_error: "Please select a valid date.",
-  }).optional().nullable().refine((date) => !date || isValid(date), {
-    message: "Please select a valid date.",
-  }),
-  nextMaintenance: z.date({
-    invalid_type_error: "Please select a valid date.",
-  }).optional().nullable().refine((date) => !date || isValid(date), {
-    message: "Please select a valid date.",
-  }),
-
-  // Depreciation
-  depreciationMethod: z.string().optional().nullable(),
-  usefulLifeMonths: z.coerce.number().min(1, { message: "Useful life must be at least 1 month." }).optional().nullable(),
-  depreciationStartDate: z.date({
-    invalid_type_error: "Please select a valid date.",
-  }).optional().nullable().refine((date) => !date || isValid(date), {
-    message: "Please select a valid date.",
-  }),
+  remark: z.string().optional().nullable(),
+  usefulLifeYears: z.coerce.number().min(1, { message: "Useful life must be at least 1 year." }).optional().nullable(),
+  residualPercentage: z.coerce.number().min(0).max(100, { message: "Residual percentage must be between 0 and 100." }).optional().nullable(),
+  currentValue: z.coerce.number().min(0, { message: "Current value must be a positive number." }).optional(),
   salvageValue: z.coerce.number().min(0, { message: "Salvage value must be a positive number." }).optional().nullable(),
+  warrantyExpiry: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
+  lastMaintenance: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
+  nextMaintenance: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
+  depreciationMethod: z.string().optional().nullable(),
+  depreciationStartDate: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
 })
 
 export type AssetFormValues = z.infer<typeof assetFormSchema>
@@ -151,7 +127,8 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   const formattedInitialData = initialData
     ? {
         ...initialData,
-        purchaseDate: initialData.purchaseDate ? new Date(initialData.purchaseDate as unknown as string) : undefined,
+        sivDate: initialData.sivDate ? new Date(initialData.sivDate as unknown as string) : undefined,
+        grnDate: initialData.grnDate ? new Date(initialData.grnDate as unknown as string) : undefined,
         warrantyExpiry: initialData.warrantyExpiry ? new Date(initialData.warrantyExpiry as unknown as string) : undefined,
         lastMaintenance: initialData.lastMaintenance ? new Date(initialData.lastMaintenance as unknown as string) : undefined,
         nextMaintenance: initialData.nextMaintenance ? new Date(initialData.nextMaintenance as unknown as string) : undefined,
@@ -161,8 +138,8 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
   const defaultValues: Partial<AssetFormValues> = {
     status: "ACTIVE",
-    purchaseDate: new Date(),
-    department: "Zemen Bank", // Set default department to Zemen Bank
+    sivDate: new Date(),
+    currentDepartment: "Zemen Bank",
     ...formattedInitialData,
   }
 
@@ -248,9 +225,9 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
       // Define which fields to validate for each tab
       const fieldsToValidate = {
         basic: ["name", "serialNumber"],
-        financial: ["purchaseDate", "purchasePrice"],
-        classification: ["status"],
-        maintenance: [] // No required fields in the last tab
+        financial: ["sivDate", "unitPrice"],
+        classification: ["status", "location", "currentDepartment", "category", "supplier"],
+        maintenance: ["warrantyExpiry", "lastMaintenance", "nextMaintenance"]
       }
 
       // Get the fields for the current tab
@@ -386,10 +363,10 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   const calculateProgress = () => {
     // Define required fields for each tab
     const tabFields = {
-      basic: ["name", "serialNumber", "description"],
-      financial: ["purchaseDate", "purchasePrice", "salvageValue"],
-      classification: ["status", "location", "department", "category", "type"],
-      maintenance: ["supplier", "warrantyExpiry"]
+      basic: ["name", "serialNumber", "itemDescription"],
+      financial: ["sivDate", "unitPrice", "salvageValue"],
+      classification: ["status", "location", "currentDepartment", "category", "supplier", "remark"],
+      maintenance: ["warrantyExpiry", "lastMaintenance", "nextMaintenance"]
     };
 
     // Count total required fields and filled fields
@@ -419,8 +396,32 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
   // In the AssetForm component, add this watch for category
   const selectedCategory = form.watch("category");
 
+  // Auto-calculate salvageValue when unitPrice or residualPercentage changes
+  const unitPrice = form.watch('unitPrice') || 0;
+  const residualPercentage = form.watch('residualPercentage') || 0;
+  const usefulLifeYears = form.watch('usefulLifeYears') || 1;
+  const salvageValue = unitPrice * (residualPercentage / 100);
+  useEffect(() => {
+    form.setValue('salvageValue', salvageValue);
+  }, [unitPrice, residualPercentage]);
+  // Calculate monthly depreciation
+  const monthlyDepreciation = usefulLifeYears > 0 ? ((unitPrice - salvageValue) / usefulLifeYears) / 12 : 0;
+
+  // Add this near the top of the AssetForm component
+  const [departments, setDepartments] = useState([
+    "Finance",
+    "HR",
+    "IT",
+    "Procurement",
+    "Operations",
+    "Logistics",
+    "Other"
+  ]);
+  const [showAddDept, setShowAddDept] = useState(false);
+  const [newDept, setNewDept] = useState("");
+
   return (
-    <Form {...form}>
+    <FormProvider {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Enhanced Progress indicator */}
         <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
@@ -550,10 +551,47 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
                 <FormField
                   control={form.control}
-                  name="description"
+                  name="oldTagNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-900 dark:text-gray-100">Description</FormLabel>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Old Tag #</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter old tag number"
+                          {...field}
+                          value={field.value || ""}
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="newTagNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">New Tag #</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter new tag number"
+                          {...field}
+                          value={field.value || ""}
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="itemDescription"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">Item Description</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Enter a detailed description of the asset"
@@ -594,10 +632,10 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
-                    name="purchaseDate"
+                    name="sivDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-900 dark:text-gray-100">Purchase Date *</FormLabel>
+                        <FormLabel className="text-gray-900 dark:text-gray-100">SIV Date *</FormLabel>
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-red-500" aria-hidden="true" />
@@ -623,17 +661,15 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
                   <FormField
                     control={form.control}
-                    name="purchasePrice"
+                    name="sivNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Purchase Price</FormLabel>
+                        <FormLabel className="text-gray-900 dark:text-gray-100">SIV #</FormLabel>
                         <FormControl>
                           <Input
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00"
+                            placeholder="Enter SIV number"
                             {...field}
-                            value={field.value ?? ""}
+                            value={field.value || ""}
                             className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                           />
                         </FormControl>
@@ -642,6 +678,74 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="unitPrice"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          {...field}
+                          value={field.value ?? ""}
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="grnNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">GRN #</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter GRN number"
+                          {...field}
+                          value={field.value || ""}
+                          className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="grnDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-900 dark:text-gray-100">GRN Date</FormLabel>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-red-500" aria-hidden="true" />
+                        </div>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              field.onChange(value ? new Date(value) : null);
+                            }}
+                            className="pl-10 transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
@@ -738,33 +842,54 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
                   <FormField
                     control={form.control}
-                    name="department"
+                    name="currentDepartment"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Name</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
+                        <FormLabel className="text-gray-900 dark:text-gray-100">Current Department</FormLabel>
+                        <div className="flex gap-2 items-center">
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="border-red-200 dark:border-red-800 shadow-lg bg-white dark:bg-gray-800 rounded-lg p-1 max-h-[300px] overflow-y-auto">
+                              {departments.map((dept) => (
+                                <SelectItem key={dept} value={dept} className="hover:bg-red-100 dark:hover:bg-red-900 focus:bg-red-100 dark:focus:bg-red-900 rounded-md my-1 cursor-pointer text-gray-900 dark:text-gray-100">
+                                  {dept}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="sm" onClick={() => setShowAddDept(true)}>
+                            Add
+                          </Button>
+                        </div>
+                        {showAddDept && (
+                          <div className="flex gap-2 mt-2">
                             <Input
-                              placeholder="Company Name"
-                              {...field}
-                              value="Zemen Bank"
-                              disabled={true}
-                              className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                              placeholder="New department name"
+                              value={newDept}
+                              onChange={e => setNewDept(e.target.value)}
+                              className="flex-1"
                             />
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <div className="ml-2 cursor-help">
-                                    <InfoIcon className="h-4 w-4 text-red-500" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>All assets belong to Zemen Bank</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => {
+                                if (newDept.trim() && !departments.includes(newDept.trim())) {
+                                  setDepartments([...departments, newDept.trim()]);
+                                  form.setValue("currentDepartment", newDept.trim());
+                                }
+                                setShowAddDept(false);
+                                setNewDept("");
+                              }}
+                            >
+                              Save
+                            </Button>
+                            <Button type="button" size="sm" variant="ghost" onClick={() => { setShowAddDept(false); setNewDept(""); }}>Cancel</Button>
                           </div>
-                        </FormControl>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -818,6 +943,24 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                           {...field}
                           value={field.value || ""}
                           className="transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="remark"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Remark</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Enter any remarks for the asset"
+                          {...field}
+                          value={field.value || ""}
+                          className="min-h-[120px] transition-all duration-300 hover:border-red-300 dark:hover:border-red-700 focus:shadow-md transform focus:translate-y-[-2px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                         />
                       </FormControl>
                       <FormMessage />
@@ -888,64 +1031,6 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                     </FormItem>
                   )}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="lastMaintenance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-900 dark:text-gray-100">Last Maintenance Date</FormLabel>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                        </div>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value ? new Date(value) : null);
-                            }}
-                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                          />
-                        </FormControl>
-                      </div>
-                      <FormDescription>The date of the last maintenance</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="nextMaintenance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-900 dark:text-gray-100">Next Maintenance Date</FormLabel>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                        </div>
-                        <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              field.onChange(value ? new Date(value) : null);
-                            }}
-                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                          />
-                        </FormControl>
-                      </div>
-                      <FormDescription>The date of the next scheduled maintenance</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </CardContent>
             </Card>
 
@@ -1010,14 +1095,14 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
-                    name="usefulLifeMonths"
+                    name="usefulLifeYears"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Useful Life (Months)</FormLabel>
+                        <FormLabel>Useful Life (Years)</FormLabel>
                         <FormControl>
                           <Input
                             type="number"
-                            placeholder="Enter months"
+                            placeholder="Enter years"
                             {...field}
                             value={field.value || ""}
                             className="border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-200 transition-all"
@@ -1030,19 +1115,19 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
                     <FormField
                       control={form.control}
-                      name="salvageValue"
+                      name="residualPercentage"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
                             <div className="flex items-center gap-2">
-                              Salvage Value
+                              Residual Percentage
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
                                     <InfoIcon className="h-4 w-4 text-muted-foreground" />
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Estimated value at the end of useful life.</p>
+                                    <p>Estimated percentage of value retained at the end of useful life.</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -1066,28 +1151,34 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
                   <FormField
                     control={form.control}
-                    name="depreciationStartDate"
+                    name="salvageValue"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Depreciation Start Date</FormLabel>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <CalendarIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                        <FormLabel>
+                          <div className="flex items-center gap-2">
+                            Salvage Value
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <InfoIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Estimated value at the end of useful life.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
-                            <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              value={field.value && !isNaN(new Date(field.value).getTime()) ? format(new Date(field.value), 'yyyy-MM-dd') : ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                field.onChange(value ? new Date(value) : null);
-                              }}
-                              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                            />
-                          </FormControl>
-                        </div>
-                        <FormDescription>The date when depreciation begins</FormDescription>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value || ""}
+                            className="border-red-200 focus:border-red-400 focus:ring-2 focus:ring-red-200 transition-all"
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1150,6 +1241,6 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
           </div>
         )} */}
       </form>
-    </Form>
+    </FormProvider>
   )
 }

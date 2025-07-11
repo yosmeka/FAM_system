@@ -16,14 +16,32 @@ export async function GET(
       select: {
         id: true,
         name: true,
-        purchaseDate: true,
-        purchasePrice: true,
+        itemDescription: true,
+        serialNumber: true,
+        oldTagNumber: true,
+        newTagNumber: true,
+        grnNumber: true,
+        grnDate: true,
+        unitPrice: true,
+        sivNumber: true,
+        sivDate: true,
+        currentDepartment: true,
+        remark: true,
+        usefulLifeYears: true,
+        residualPercentage: true,
         currentValue: true,
-        depreciableCost: true,
+        status: true,
+        location: true,
+        category: true,
+        supplier: true,
+        warrantyExpiry: true,
+        lastMaintenance: true,
+        nextMaintenance: true,
         salvageValue: true,
-        usefulLifeMonths: true,
         depreciationMethod: true,
         depreciationStartDate: true,
+        createdAt: true,
+        updatedAt: true,
         capitalImprovements: {
           select: {
             id: true,
@@ -45,33 +63,33 @@ export async function GET(
     const queryMethod = url.searchParams.get('method');
     const queryDepreciationRate = url.searchParams.get('depreciationRate');
 
-    const depreciableCost = asset.depreciableCost || asset.purchasePrice;
+    const depreciableCost = asset.unitPrice || asset.currentValue;
     const salvageValue = querySalvageValue ? parseFloat(querySalvageValue) : (asset.salvageValue || 0);
-    const usefulLifeYears = queryUsefulLife ? parseInt(queryUsefulLife) : (asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : 5);
+    const usefulLifeYears = queryUsefulLife ? parseInt(queryUsefulLife) : (asset.usefulLifeYears || 5);
     const depreciationMethod = (queryMethod || asset.depreciationMethod || 'STRAIGHT_LINE') as 'STRAIGHT_LINE' | 'DECLINING_BALANCE' | 'DOUBLE_DECLINING' | 'SUM_OF_YEARS_DIGITS' | 'UNITS_OF_ACTIVITY';
     const depreciationRate = queryDepreciationRate ? parseFloat(queryDepreciationRate) : undefined;
 
+    // Use sivDate as the start date for depreciation, fallback to createdAt if missing
+    const startDate = asset.sivDate ? asset.sivDate : asset.createdAt;
     const depreciationResults = calculateDepreciation({
-      purchasePrice: depreciableCost,
-      purchaseDate: (asset.depreciationStartDate || asset.purchaseDate).toISOString(),
-      usefulLife: usefulLifeYears,
+      unitPrice: depreciableCost,
+      sivDate: startDate.toISOString ? startDate.toISOString() : startDate,
+      usefulLifeYears: usefulLifeYears,
       salvageValue: salvageValue,
       method: depreciationMethod,
       depreciationRate: depreciationRate,
+      // totalUnits and unitsPerYear can be added here if needed for Units of Activity
     });
-
     const chartData = generateChartData(depreciationResults);
-
     return Response.json({
       asset,
       depreciationSettings: {
         depreciableCost,
         salvageValue,
         usefulLifeYears,
-        usefulLifeMonths: asset.usefulLifeMonths || usefulLifeYears * 12,
         depreciationMethod,
         depreciationRate,
-        startDate: asset.depreciationStartDate || asset.purchaseDate,
+        startDate: startDate,
       },
       depreciationResults,
       chartData,
@@ -207,9 +225,9 @@ export async function PUT(
     const startDateValue = (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate);
 
     const depreciationResults = calculateDepreciation({
-      purchasePrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
-      purchaseDate: startDateValue.toISOString(),
-      usefulLife: usefulLifeValue,
+      unitPrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
+      sivDate: startDateValue.toISOString(),
+      usefulLifeYears: usefulLifeValue,
       salvageValue: updatedAsset.salvageValue || 0,
       method: calculationMethodPut,
       depreciationRate: effectivePutDepreciationRate,

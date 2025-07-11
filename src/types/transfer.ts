@@ -19,6 +19,8 @@ export interface Transfer {
     status?: string | null;
     location?: string | null;
     currentValue?: number | null;
+    currentDepartment?: string | null;
+    itemDescription?: string | null;
   };
   requester?: {
     id?: string;

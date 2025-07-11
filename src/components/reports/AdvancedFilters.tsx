@@ -14,7 +14,7 @@ export interface FilterValues {
   startDate: string;
   endDate: string;
   category: string;
-  department: string;
+  currentDepartment: string;
   location: string;
   status: string;
   minValue: string;
@@ -39,7 +39,7 @@ export function AdvancedFilters({
     startDate: '',
     endDate: '',
     category: 'all',
-    department: 'all',
+    currentDepartment: 'all',
     location: 'all',
     status: 'all',
     minValue: '',
@@ -116,7 +116,7 @@ export function AdvancedFilters({
       startDate: '',
       endDate: '',
       category: 'all',
-      department: 'all',
+      currentDepartment: 'all',
       location: 'all',
       status: 'all',
       minValue: '',
@@ -167,8 +167,8 @@ export function AdvancedFilters({
       activeFilters.push(`Status: ${filters.status}`);
     }
 
-    if (filters.department && filters.department !== 'all') {
-      activeFilters.push(`Department: ${filters.department}`);
+    if (filters.currentDepartment && filters.currentDepartment !== 'all') {
+      activeFilters.push(`Department: ${filters.currentDepartment}`);
     }
 
     if (filters.location && filters.location !== 'all') {
@@ -353,21 +353,20 @@ export function AdvancedFilters({
         <h4 className="text-md font-medium text-black dark:text-white mb-4">⚙️ Additional Filters</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Department Filter */}
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Department
-              </label>
+            <div>
+              <label htmlFor="currentDepartment">Department</label>
               <select
-                value={pendingFilters.department}
-                onChange={(e) => handleFilterChange('department', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                id="currentDepartment"
+                value={pendingFilters.currentDepartment}
+                onChange={(e) => handleFilterChange('currentDepartment', e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
               >
                 <option value="all">All Departments</option>
                 {filterOptions.departments.map(department => (
                   <option key={department} value={department}>{department}</option>
                 ))}
               </select>
-            </div> */}
+            </div>
 
             {/* Location Filter */}
             <div>

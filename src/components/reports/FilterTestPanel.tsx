@@ -20,7 +20,7 @@ export function FilterTestPanel({ currentFilters, apiResponse, onRunTest }: Filt
         startDate: '',
         endDate: '',
         category: 'all',
-        department: 'all',
+        currentDepartment: 'all',
         location: 'all',
         status: 'all',
         minValue: '',

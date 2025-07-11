@@ -28,6 +28,12 @@ export interface ExcelExportData {
     count: number;
     value: number;
   }>;
+  byCurrentDepartment?: Array<{
+    category: string;
+    status: string;
+    count: number;
+    value: number;
+  }>;
   statusDistribution: Array<{
     status: string;
     count: number;
@@ -131,14 +137,14 @@ export async function exportToExcel(data: ExcelExportData, filename: string = 'a
 
     // Assets by Department Sheet
     const departmentData = [
-      ['Assets by Department', '', '', ''],
-      ['Department', 'Status', 'Count', 'Total Value (USD)'],
-      ...data.byDepartment.map(item => [
+      ['Assets by Current Department', '', '', ''],
+      ['Current Department', 'Status', 'Count', 'Total Value (USD)'],
+      ...((data.byCurrentDepartment && data.byCurrentDepartment.length > 0 ? data.byCurrentDepartment : data.byDepartment).map(item => [
         item.category,
         item.status,
         item.count,
         item.value
-      ])
+      ]))
     ];
 
     const departmentSheet = XLSX.utils.aoa_to_sheet(departmentData);
@@ -149,7 +155,7 @@ export async function exportToExcel(data: ExcelExportData, filename: string = 'a
       { width: 15 }
     ];
 
-    XLSX.utils.book_append_sheet(workbook, departmentSheet, 'By Department');
+    XLSX.utils.book_append_sheet(workbook, departmentSheet, 'By Current Department');
 
     // Status Distribution Sheet
     const statusData = [

@@ -64,9 +64,9 @@ export function ExportButtons({ data, isLoading = false, onEmailReport }: Export
           headers: ['Category', 'Status', 'Count', 'Total Value']
         },
         {
-          data: data.byDepartment,
-          filename: 'assets-by-department',
-          headers: ['Department', 'Status', 'Count', 'Total Value']
+          data: data.byCurrentDepartment,
+          filename: 'assets-by-current-department',
+          headers: ['Current Department', 'Status', 'Count', 'Total Value']
         },
         {
           data: data.statusDistribution,

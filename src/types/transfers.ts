@@ -12,7 +12,10 @@ export interface TransferRequest {
   createdAt: Date;
   updatedAt: Date;
   requester?: User;
-  asset?: Asset;
+  asset?: Asset & {
+    currentDepartment?: string | null;
+    itemDescription?: string | null;
+  };
 }
 
 export type TransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';

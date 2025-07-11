@@ -26,33 +26,36 @@ import type { LinkedAsset } from '@/types';
 interface Asset {
   id: string;
   name: string;
-  description: string;
+  itemDescription?: string | null;
   serialNumber: string;
-  purchaseDate: string;
-  purchasePrice: number;
+  oldTagNumber?: string | null;
+  newTagNumber?: string | null;
+  grnNumber?: string | null;
+  grnDate?: string | null;
+  unitPrice: number;
+  sivNumber?: string | null;
+  sivDate?: string | null;
+  currentDepartment?: string | null;
+  remark?: string | null;
+  usefulLifeYears?: number | null;
+  residualPercentage?: number | null;
   currentValue: number;
-  depreciableCost?: number;
-  salvageValue?: number;
-  usefulLifeMonths?: number;
-  depreciationMethod?: string;
-  depreciationStartDate?: string;
   status: string;
-  location: string;
-  department: string;
-  category: string;
-  type: string;
-  supplier: string;
-  warrantyExpiry: string | null;
-  lastMaintenance: string | null;
-  nextMaintenance: string | null;
+  location?: string | null;
+  category?: string | null;
+  supplier?: string | null;
+  warrantyExpiry?: string | null;
+  lastMaintenance?: string | null;
+  nextMaintenance?: string | null;
+  salvageValue?: number | null;
+  depreciationMethod?: string | null;
+  depreciationStartDate?: string | null;
   createdAt: string;
   updatedAt: string;
   linkedTo: LinkedAsset[];
   linkedFrom: LinkedAsset[];
   capitalImprovements?: CapitalImprovement[];
-  depreciations: Array<{
-    usefulLife: number;
-  }>;
+  depreciations: Array<{ usefulLife: number }>;
 }
 
 
@@ -142,18 +145,18 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
       // Update depreciation settings based on asset data
       setDepreciationSettings({
         isDepreciable: true,
-        depreciableCost: asset.depreciableCost || asset.purchasePrice || 0,
+        depreciableCost: asset.currentValue || 0,
         salvageValue: asset.salvageValue || 0,
-        usefulLifeMonths: asset.usefulLifeMonths || 60,
+        usefulLifeMonths: asset.usefulLifeYears || 60,
         depreciationMethod: asset.depreciationMethod || 'STRAIGHT_LINE',
         dateAcquired: asset.depreciationStartDate
           ? new Date(asset.depreciationStartDate).toISOString().split('T')[0]
-          : (asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+          : (asset.createdAt ? new Date(asset.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
       });
 
       // Update other depreciation state variables
       setSalvageValue(asset.salvageValue || 0);
-      setUsefulLife(Math.ceil((asset.usefulLifeMonths || 60) / 12));
+      setUsefulLife(Math.ceil((asset.usefulLifeYears || 60) / 12));
       setDepreciationMethod(asset.depreciationMethod === 'DECLINING_BALANCE' ? 'DECLINING_BALANCE' : 'STRAIGHT_LINE');
     }
   }, [asset]);
@@ -205,13 +208,13 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
 
             setDepreciationSettings({
               isDepreciable: true,
-              depreciableCost: data.depreciationSettings.depreciableCost || asset.purchasePrice || 0,
+              depreciableCost: data.depreciationSettings.depreciableCost || asset.currentValue || 0,
               salvageValue: data.depreciationSettings.salvageValue || 0,
               usefulLifeMonths: data.depreciationSettings.usefulLifeMonths || 60,
               depreciationMethod: data.depreciationSettings.depreciationMethod || 'STRAIGHT_LINE',
               dateAcquired: data.depreciationSettings.startDate
                 ? new Date(data.depreciationSettings.startDate).toISOString().split('T')[0]
-                : (asset.purchaseDate ? new Date(asset.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
+                : (asset.createdAt ? new Date(asset.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
             });
           }
         } catch (error) {
@@ -594,19 +597,17 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                 <table className="w-full border text-left">
                   <thead className="bg-gray-100 dark:bg-gray-800">
                     <tr>
-                      <th className="p-2 border">Date Acquired</th>
                       <th className="p-2 border">Depreciable Cost</th>
                       <th className="p-2 border">Salvage Value</th>
-                      <th className="p-2 border">Asset Life (months)</th>
+                      <th className="p-2 border">Asset Life (years)</th>
                       <th className="p-2 border">Depr. Method</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td className="p-2 border">{formatDate(asset?.purchaseDate)}</td>
-                      <td className="p-2 border">{formatCurrency(depreciationSettings.depreciableCost || asset?.depreciableCost || asset?.purchasePrice || 0)}</td>
+                      <td className="p-2 border">{formatCurrency(depreciationSettings.depreciableCost || asset?.currentValue || 0)}</td>
                       <td className="p-2 border">{formatCurrency(salvageValue || 0)}</td>
-                      <td className="p-2 border">{usefulLife * 12} months</td>
+                      <td className="p-2 border">{usefulLife} years</td>
                       <td className="p-2 border">{
   (() => {
     const method = depreciationSettings.depreciationMethod || depreciationMethod;
@@ -837,17 +838,17 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         </div>
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
           <div>
-            <p><span className="font-semibold">Asset Tag ID:</span> {asset.serialNumber}</p>
-            <p><span className="font-semibold">Purchase Date:</span> {formatDate(asset.purchaseDate)}</p>
-            <p><span className="font-semibold">Purchase Price:</span> {formatCurrency(asset.purchasePrice)}</p>
-            <p><span className="font-semibold">Brand:</span> {asset.supplier || 'Not specified'}</p>
+            <p><span className="font-semibold">serialNumber:</span> {asset.serialNumber}</p>
+            <p><span className="font-semibold">SIV Date:</span> {formatDate(asset.sivDate || asset.createdAt)}</p>
+            <p><span className="font-semibold">Unit Price:</span> {formatCurrency(asset.unitPrice)}</p>
+            <p><span className="font-semibold">Supplier:</span> {asset.supplier || 'Not specified'}</p>
             <p><span className="font-semibold">Model:</span> {asset.name}</p>
           </div>
           <div>
             <p><span className="font-semibold">Site:</span> {asset.location || 'Not specified'}</p>
             <p><span className="font-semibold">Location:</span> {asset.location || 'Not specified'}</p>
             <p><span className="font-semibold">Category:</span> {asset.category || 'Not specified'}</p>
-            <p><span className="font-semibold">Department:</span> {asset.department || 'Not specified'}</p>
+            <p><span className="font-semibold">Department:</span> {asset.currentDepartment || 'Not specified'}</p>
             <p><span className="font-semibold">Status:</span> <span className={`${getStatusColor(asset.status)} font-semibold`}>{asset.status.replace('_', ' ')}</span></p>
           </div>
         </div>
