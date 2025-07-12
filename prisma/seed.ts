@@ -1,7 +1,93 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, DepreciationMethodEnum } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { calculateMonthlyDepreciation } from '../src/utils/depreciation';
 
 const prisma = new PrismaClient();
+
+async function seedAssetsWithDepreciation() {
+  console.log('Seeding 100 sample assets with depreciation schedules...');
+
+  // Clear existing data
+  await prisma.depreciationSchedule.deleteMany({});
+  await prisma.asset.deleteMany({});
+
+  const departments = ['IT', 'Operations', 'Logistics', 'Finance', 'HR', 'Facilities'];
+  const categories = ['EQUIPMENT', 'IT_EQUIPMENT', 'VEHICLE', 'FURNITURE', 'APPLIANCE'];
+  const types = ['Laptop', 'Generator', 'Van', 'Desk', 'Printer', 'Chair', 'HVAC'];
+
+  const assetsToCreate = Array.from({ length: 100 }).map((_, i) => {
+    const dept = departments[i % departments.length];
+    const cat = categories[i % categories.length];
+    const type = types[i % types.length];
+    const baseDate = new Date(2020 + (i % 5), (i % 12), 1 + (i % 28));
+    return {
+      name: `${type} Asset ${i + 1}`,
+      itemDescription: `Sample ${type} asset for ${dept} department.`,
+      serialNumber: `${type.toUpperCase()}-${i + 1}`,
+      oldTagNumber: `OLD-${type.toUpperCase()}-${i + 1}`,
+      newTagNumber: `NEW-${type.toUpperCase()}-${i + 1}`,
+      grnNumber: `GRN-${1000 + i}`,
+      grnDate: new Date(baseDate.getTime() - 7 * 24 * 60 * 60 * 1000), // 1 week before SIV
+      unitPrice: 1000 + (i * 100),
+      sivNumber: `SIV-${2000 + i}`,
+      sivDate: baseDate,
+      currentDepartment: dept,
+      remark: `Seeded asset #${i + 1}`,
+      usefulLifeYears: 3 + (i % 8),
+      residualPercentage: 5 + (i % 10),
+      currentValue: 1000 + (i * 90),
+      status: 'ACTIVE',
+      location: `${dept} Room ${1 + (i % 10)}`,
+      category: cat,
+      type: type,
+      depreciableCost: 1000 + (i * 100),
+      salvageValue: 100 + (i * 10),
+      depreciationMethod: DepreciationMethodEnum.STRAIGHT_LINE,
+    };
+  });
+
+  for (const assetData of assetsToCreate) {
+    try {
+      console.log('Creating asset:', assetData.serialNumber);
+      const asset = await prisma.asset.create({ data: assetData });
+      const schedule = calculateMonthlyDepreciation({
+        unitPrice: asset.unitPrice!,
+        sivDate: asset.sivDate!.toISOString(),
+        usefulLifeYears: asset.usefulLifeYears!,
+        salvageValue: asset.salvageValue ?? 0,
+        method: asset.depreciationMethod as unknown as import('../src/utils/depreciation').DepreciationMethod,
+      });
+      if (schedule.length > 0) {
+        console.log(`First depreciation schedule for ${asset.name}:`, schedule[0]);
+        await prisma.depreciationSchedule.createMany({
+          data: schedule.map(row => ({
+            assetId: asset.id,
+            year: row.year,
+            month: row.month,
+            bookValue: row.bookValue,
+          })),
+        });
+      } else {
+        console.warn(`No depreciation schedule generated for asset: ${asset.name}`);
+      }
+      console.log(`Seeded asset and depreciation schedule for: ${asset.name}`);
+    } catch (err) {
+      console.error('Error creating asset:', assetData.serialNumber, err);
+      break; // Stop on first error for easier debugging
+    }
+  }
+
+  console.log('Seeding complete.');
+}
+
+seedAssetsWithDepreciation()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
 
 async function main() {
   console.log('Starting seed process...');
@@ -99,120 +185,6 @@ async function main() {
   await assignPermissionToRole('USER', 'Asset document upload/view');
 
   console.log('Default role permissions assigned.');
-
-  console.log('Seeding assets...');
-  const assetsToCreate = [
-    {
-      name: 'Main Power Generator',
-      itemDescription: 'Primary backup power generator for the main facility.',
-      serialNumber: 'GEN-001',
-      oldTagNumber: 'OLD-GEN-001',
-      newTagNumber: 'NEW-GEN-001',
-      grnNumber: 'GRN-1001',
-      grnDate: new Date('2022-01-10'),
-      unitPrice: 25000,
-      sivNumber: 'SIV-2001',
-      sivDate: new Date('2022-01-15'),
-      currentDepartment: 'Operations',
-      remark: 'Installed in 2022',
-      usefulLifeYears: 10,
-      residualPercentage: 10,
-      currentValue: 22000,
-      status: 'ACTIVE',
-      location: 'Utility Room 1',
-      category: 'EQUIPMENT',
-      type: 'Generator',
-      depreciableCost: 25000,
-      salvageValue: 2500,
-      depreciationMethod: 'STRAIGHT_LINE' as any,
-      depreciationStartDate: new Date('2022-02-01'),
-    },
-    {
-      name: 'HVAC Unit - North Wing',
-      itemDescription: 'Main HVAC unit for the north side of the building.',
-      serialNumber: 'HVAC-001',
-      oldTagNumber: 'OLD-HVAC-001',
-      newTagNumber: 'NEW-HVAC-001',
-      grnNumber: 'GRN-1002',
-      grnDate: new Date('2021-08-15'),
-      unitPrice: 15000,
-      sivNumber: 'SIV-2002',
-      sivDate: new Date('2021-08-20'),
-      currentDepartment: 'Facilities',
-      remark: 'Annual maintenance required',
-      usefulLifeYears: 15,
-      residualPercentage: 10,
-      currentValue: 13000,
-      status: 'ACTIVE',
-      location: 'Rooftop Sector A',
-      category: 'EQUIPMENT',
-      type: 'HVAC',
-      depreciableCost: 15000,
-      salvageValue: 1500,
-      depreciationMethod: 'STRAIGHT_LINE' as any,
-      depreciationStartDate: new Date('2021-09-01'),
-    },
-    {
-      name: 'Dell Latitude 7420',
-      itemDescription: 'Standard issue laptop for employees.',
-      serialNumber: 'LT-DELL-001',
-      oldTagNumber: 'OLD-LT-001',
-      newTagNumber: 'NEW-LT-001',
-      grnNumber: 'GRN-1003',
-      grnDate: new Date('2023-05-05'),
-      unitPrice: 1200,
-      sivNumber: 'SIV-2003',
-      sivDate: new Date('2023-05-10'),
-      currentDepartment: 'IT',
-      remark: 'Assigned to IT staff',
-      usefulLifeYears: 3,
-      residualPercentage: 8,
-      currentValue: 1000,
-      status: 'ACTIVE',
-      location: 'IT Storage',
-      category: 'IT_EQUIPMENT',
-      type: 'Laptop',
-      depreciableCost: 1200,
-      salvageValue: 100,
-      depreciationMethod: 'STRAIGHT_LINE' as any,
-      depreciationStartDate: new Date('2023-06-01'),
-    },
-    {
-      name: 'Ford Transit Van',
-      itemDescription: 'Company van for deliveries and transport.',
-      serialNumber: 'VAN-FORD-001',
-      oldTagNumber: 'OLD-VAN-001',
-      newTagNumber: 'NEW-VAN-001',
-      grnNumber: 'GRN-1004',
-      grnDate: new Date('2020-02-20'),
-      unitPrice: 35000,
-      sivNumber: 'SIV-2004',
-      sivDate: new Date('2020-02-28'),
-      currentDepartment: 'Logistics',
-      remark: 'Used for company deliveries',
-      usefulLifeYears: 5,
-      residualPercentage: 12,
-      currentValue: 28000,
-      status: 'ACTIVE',
-      location: 'Company Garage',
-      category: 'VEHICLE',
-      type: 'Van',
-      depreciableCost: 35000,
-      salvageValue: 5000,
-      depreciationMethod: 'STRAIGHT_LINE' as any,
-      depreciationStartDate: new Date('2020-03-01'),
-    },
-  ];
-
-  for (const assetData of assetsToCreate) {
-    await prisma.asset.upsert({
-      where: { serialNumber: assetData.serialNumber },
-      update: {},
-      create: assetData,
-    });
-  }
-
-  console.log(`Seeded ${assetsToCreate.length} assets.`);
 }
 
 main()
