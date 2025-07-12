@@ -112,11 +112,10 @@ model Asset {
   depreciationStartDate DateTime?
   lastAuditDate       DateTime?
   nextAuditDate       DateTime?
-  assetDepreciations  AssetDepreciation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   history             AssetHistory[]
-  depreciations       Depreciation[]
+  
   disposalRequests    Disposal[]
   documents           Document[]
   photos              AssetPhoto[]
@@ -129,6 +128,7 @@ model Asset {
   audits              AssetAudit[]
   auditAssignments    AuditAssignment[]
   auditRequests       AuditRequest[]
+  depreciationSchedules DepreciationSchedule[]
 }
 
 model Transfer {
@@ -236,39 +236,6 @@ model Document {
   asset     Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
   meta      Json?        // Metadata for the document (e.g., transferId, status)
 }
-
-model Depreciation {
-  id               String   @id @default(cuid())
-  assetId          String
-  amount           Float
-  date             DateTime
-  createdAt        DateTime @default(now())
-  depreciationRate Float
-  description      String?
-  method           String
-  salvageValue     Float
-  updatedAt        DateTime @updatedAt
-  usefulLife       Int
-  asset            Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
-}
-
-model AssetDepreciation {
-  id               String   @id @default(cuid())
-  asset            Asset    @relation(fields: [assetId], references: [id])
-  assetId          String
-  amount           Float
-  date             DateTime
-  method           String
-  usefulLife       Int
-  salvageValue     Float
-  depreciationRate Float?
-  description      String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  @@map("asset_depreciations")
-}
-
 model AssetHistory {
   id        String   @id @default(cuid())
   assetId   String
@@ -704,4 +671,15 @@ model Session {
 
   @@index([userId])
   @@index([sessionToken])
+}
+
+model DepreciationSchedule {
+  id        String   @id @default(uuid())
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  assetId   String
+  year      Int
+  month     Int
+  bookValue Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -213,6 +213,32 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       data: updateData,
     });
 
+    // Regenerate and store monthly depreciation schedule
+    try {
+      const { calculateMonthlyDepreciation } = await import('@/utils/depreciation');
+      // Use updated asset fields for depreciation calculation
+      const schedule = calculateMonthlyDepreciation({
+        unitPrice: updatedAsset.unitPrice,
+        sivDate: updatedAsset.sivDate?.toISOString() || new Date().toISOString(),
+        usefulLifeYears: updatedAsset.usefulLifeYears,
+        salvageValue: updatedAsset.salvageValue ?? 0,
+        method: updatedAsset.depreciationMethod ?? 'STRAIGHT_LINE',
+      });
+      // Remove old schedule
+      await prisma.depreciationSchedule.deleteMany({ where: { assetId: id } });
+      // Insert new schedule
+      await prisma.depreciationSchedule.createMany({
+        data: schedule.map(row => ({
+          assetId: id,
+          year: row.year,
+          month: row.month,
+          bookValue: row.bookValue,
+        })),
+      });
+    } catch (err) {
+      console.error('Error generating/storing depreciation schedule:', err);
+    }
+
     // Track changes in asset history
     const changes = [];
     // Use the keys from updateData to track changes more accurately
