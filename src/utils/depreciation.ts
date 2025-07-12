@@ -264,6 +264,11 @@ function addMonths(date: Date, months: number): Date {
   return d;
 }
 
+function getDaysInMonth(year: number, month: number): number {
+  // month: 1-12
+  return new Date(year, month, 0).getDate();
+}
+
 function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDepreciationResult[] {
   const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
   const start = new Date(sivDate);
@@ -275,12 +280,19 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
-    accumulatedDepreciation += monthlyDepreciation;
     const date = addMonths(start, m);
+    let depreciationExpense = monthlyDepreciation;
+    if (m === 0) {
+      // Prorate for first month
+      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
+      const startDay = start.getDate();
+      depreciationExpense = monthlyDepreciation * (daysInMonth - (startDay - 1)) / daysInMonth;
+    }
+    accumulatedDepreciation += depreciationExpense;
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
-      depreciationExpense: monthlyDepreciation,
+      depreciationExpense,
       accumulatedDepreciation,
       bookValue: unitPrice - accumulatedDepreciation,
     });
@@ -300,24 +312,19 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
-    if (bookValue <= salvageValue) {
-      const date = addMonths(start, m);
-      results.push({
-        year: date.getFullYear(),
-        month: date.getMonth() + 1,
-        depreciationExpense: 0,
-        accumulatedDepreciation,
-        bookValue: salvageValue,
-      });
-      break;
-    }
+    const date = addMonths(start, m);
     let depreciationExpense = monthlyRate * bookValue;
     if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
       depreciationExpense = bookValue - salvageValue;
     }
+    if (m === 0) {
+      // Prorate for first month
+      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
+      const startDay = start.getDate();
+      depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
+    }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
-    const date = addMonths(start, m);
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
@@ -342,24 +349,19 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
-    if (bookValue <= salvageValue) {
-      const date = addMonths(start, m);
-      results.push({
-        year: date.getFullYear(),
-        month: date.getMonth() + 1,
-        depreciationExpense: 0,
-        accumulatedDepreciation,
-        bookValue: salvageValue,
-      });
-      break;
-    }
+    const date = addMonths(start, m);
     let depreciationExpense = monthlyRate * bookValue;
     if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
       depreciationExpense = bookValue - salvageValue;
     }
+    if (m === 0) {
+      // Prorate for first month
+      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
+      const startDay = start.getDate();
+      depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
+    }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
-    const date = addMonths(start, m);
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
@@ -383,10 +385,16 @@ function calculateSumOfYearsDigitsMonthly(input: DepreciationInput): MonthlyDepr
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
-    const fraction = (usefulLifeMonths - m) / sumOfMonths;
-    const depreciationExpense = depreciableAmount * fraction;
-    accumulatedDepreciation += depreciationExpense;
     const date = addMonths(start, m);
+    const fraction = (usefulLifeMonths - m) / sumOfMonths;
+    let depreciationExpense = depreciableAmount * fraction;
+    if (m === 0) {
+      // Prorate for first month
+      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
+      const startDay = start.getDate();
+      depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
+    }
+    accumulatedDepreciation += depreciationExpense;
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
@@ -419,11 +427,17 @@ function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepre
     }
   }
   for (let m = 0; m < usefulLifeMonths; m++) {
+    const date = addMonths(start, m);
     const unitsThisMonth = unitsPerMonth[m];
-    const depreciationExpense = depreciationPerUnit * unitsThisMonth;
+    let depreciationExpense = depreciationPerUnit * unitsThisMonth;
+    if (m === 0) {
+      // Prorate for first month
+      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
+      const startDay = start.getDate();
+      depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
+    }
     accumulatedDepreciation += depreciationExpense;
     const cappedAccumulatedDepreciation = Math.min(accumulatedDepreciation, depreciableAmount);
-    const date = addMonths(start, m);
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
