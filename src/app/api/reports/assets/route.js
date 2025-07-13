@@ -142,6 +142,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     let bookValueMap = {};
     let bookValueByDepartment = [];
     let bookValueByCategory = [];
+    let bookValuesByAsset = {};
     if (year && month) {
       const assetIds = assets.map(a => a.id);
       const bookValues = await prisma.depreciationSchedule.findMany({
@@ -171,6 +172,22 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         categoryTotals[cat] = (categoryTotals[cat] || 0) + (bv.bookValue || 0);
       }
       bookValueByCategory = Object.entries(categoryTotals).map(([category, totalBookValue]) => ({ category, totalBookValue }));
+    } else if (year && !month) {
+      // Fetch all months for the selected year
+      const assetIds = assets.map(a => a.id);
+      const allBookValues = await prisma.depreciationSchedule.findMany({
+        where: {
+          assetId: { in: assetIds },
+          year,
+        },
+        select: { assetId: true, month: true, bookValue: true }
+      });
+      // Build a map: { assetId: { 1: value, 2: value, ..., 12: value } }
+      bookValuesByAsset = {};
+      allBookValues.forEach(({ assetId, month, bookValue }) => {
+        if (!bookValuesByAsset[assetId]) bookValuesByAsset[assetId] = {};
+        bookValuesByAsset[assetId][month] = bookValue;
+      });
     }
 
     // Calculate actual depreciation data for each asset
@@ -398,7 +415,8 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         age: asset.sivDate ? Math.floor((now - asset.sivDate) / (1000 * 60 * 60 * 24 * 365.25)) : 0,
         depreciationRate: asset.unitPrice > 0 ?
           ((asset.unitPrice - asset.currentValue) / asset.unitPrice * 100).toFixed(1) : 0,
-        bookValue: (year && month) ? (bookValueMap[asset.id] ?? null) : asset.currentValue,
+        ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
+        ...(year && !month ? { bookValuesByMonth: bookValuesByAsset[asset.id] || {} } : {}),
       })),
       filterOptions: {
         categories: uniqueCategories,
