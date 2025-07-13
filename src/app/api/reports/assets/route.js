@@ -22,17 +22,19 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     const minValue = url.searchParams.get('minValue');
     const maxValue = url.searchParams.get('maxValue');
     const depreciationMethod = url.searchParams.get('depreciationMethod');
+    const year = url.searchParams.get('year') ? parseInt(url.searchParams.get('year')) : null;
+    const month = url.searchParams.get('month') ? parseInt(url.searchParams.get('month')) : null;
 
     // Debug logging
     console.log('🔍 API Debug: Received query parameters:', {
-      startDate, endDate, category, department, location, status, minValue, maxValue, depreciationMethod
+      startDate, endDate, category, department, location, status, minValue, maxValue, depreciationMethod, year, month
     });
 
     // Build where clause for filtering
     const whereClause = {};
 
     if (startDate && endDate) {
-      whereClause.purchaseDate = {
+      whereClause.sivDate = {
         gte: new Date(startDate),
         lte: new Date(endDate)
       };
@@ -43,7 +45,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     }
 
     if (department && department !== 'all') {
-      whereClause.department = department;
+      whereClause.currentDepartment = department;
     }
 
     if (location && location !== 'all') {
@@ -85,7 +87,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
 
     // Assets by department with filters
     const assetsByDepartment = await prisma.asset.groupBy({
-      by: ['department', 'status'],
+      by: ['currentDepartment', 'status'],
       where: whereClause,
       _count: { id: true },
       _sum: { currentValue: true }
@@ -104,21 +106,31 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       select: {
         id: true,
         name: true,
+        itemDescription: true,
         serialNumber: true,
-        category: true,
+        oldTagNumber: true,
+        newTagNumber: true,
+        grnNumber: true,
+        grnDate: true,
+        unitPrice: true,
+        sivNumber: true,
+        sivDate: true,
+        currentDepartment: true,
+        remark: true,
+        usefulLifeYears: true,
+        residualPercentage: true,
+        currentValue: true,
         status: true,
         location: true,
-        department: true,
-        purchaseDate: true,
-        purchasePrice: true,
-        currentValue: true,
+        category: true,
+        type: true,
+        supplier: true,
+        warrantyExpiry: true,
         depreciableCost: true,
         salvageValue: true,
-        usefulLifeMonths: true,
         depreciationMethod: true,
         depreciationStartDate: true,
-        supplier: true,
-        warrantyExpiry: true
+        createdAt: true,
       },
       orderBy: [
         { category: 'asc' },
@@ -126,16 +138,51 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       ]
     });
 
+    // Fetch book values for all assets for the selected year/month
+    let bookValueMap = {};
+    let bookValueByDepartment = [];
+    let bookValueByCategory = [];
+    if (year && month) {
+      const assetIds = assets.map(a => a.id);
+      const bookValues = await prisma.depreciationSchedule.findMany({
+        where: {
+          assetId: { in: assetIds },
+          year,
+          month,
+        },
+        select: { assetId: true, bookValue: true }
+      });
+      bookValueMap = Object.fromEntries(bookValues.map(bv => [bv.assetId, bv.bookValue]));
+
+      // Aggregate book value by department
+      const assetIdToDepartment = Object.fromEntries(assets.map(a => [a.id, a.currentDepartment || 'Unassigned']));
+      const departmentTotals = {};
+      for (const bv of bookValues) {
+        const dept = assetIdToDepartment[bv.assetId] || 'Unassigned';
+        departmentTotals[dept] = (departmentTotals[dept] || 0) + (bv.bookValue || 0);
+      }
+      bookValueByDepartment = Object.entries(departmentTotals).map(([department, totalBookValue]) => ({ department, totalBookValue }));
+
+      // Aggregate book value by category
+      const assetIdToCategory = Object.fromEntries(assets.map(a => [a.id, a.category || 'Uncategorized']));
+      const categoryTotals = {};
+      for (const bv of bookValues) {
+        const cat = assetIdToCategory[bv.assetId] || 'Uncategorized';
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + (bv.bookValue || 0);
+      }
+      bookValueByCategory = Object.entries(categoryTotals).map(([category, totalBookValue]) => ({ category, totalBookValue }));
+    }
+
     // Calculate actual depreciation data for each asset
     const monthlyDepreciation = new Map();
 
     for (const asset of assets) {
       try {
-        const depreciableCost = asset.depreciableCost || asset.purchasePrice;
+        const depreciableCost = asset.depreciableCost || asset.unitPrice;
         const salvageValue = asset.salvageValue || 0;
-        const usefulLifeYears = asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : 5;
+        const usefulLifeYears = asset.usefulLifeYears || 5;
         const method = asset.depreciationMethod || 'STRAIGHT_LINE';
-        const startDate = asset.depreciationStartDate || asset.purchaseDate;
+        const startDate = asset.depreciationStartDate || asset.sivDate;
 
         const depreciationResults = calculateDepreciation({
           purchasePrice: depreciableCost,
@@ -186,10 +233,10 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       _sum: { currentValue: true }
     });
 
-    // Total purchase value with filters
+    // Total purchase value with filters (using unitPrice instead of purchasePrice)
     const totalPurchaseValue = await prisma.asset.aggregate({
       where: whereClause,
-      _sum: { purchasePrice: true }
+      _sum: { unitPrice: true }
     });
 
     // Total maintenance cost with filters (skip if maintenance table doesn't exist)
@@ -242,20 +289,24 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     try {
       if (Object.keys(whereClause).length === 0) {
         averageAssetAge = await prisma.$queryRaw`
-          SELECT AVG(EXTRACT(YEAR FROM AGE(NOW(), "purchaseDate"))) as avg_age
+          SELECT AVG(EXTRACT(YEAR FROM AGE(NOW(), "sivDate"))) as avg_age
           FROM "Asset"
+          WHERE "sivDate" IS NOT NULL
         `;
       } else {
         // For filtered queries, calculate age manually
         const assetsForAge = await prisma.asset.findMany({
           where: whereClause,
-          select: { purchaseDate: true }
+          select: { sivDate: true }
         });
 
         if (assetsForAge.length > 0) {
           const totalAge = assetsForAge.reduce((sum, asset) => {
-            const ageInYears = (now.getTime() - asset.purchaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-            return sum + ageInYears;
+            if (asset.sivDate) {
+              const ageInYears = (now.getTime() - asset.sivDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+              return sum + ageInYears;
+            }
+            return sum;
           }, 0);
           averageAssetAge = [{ avg_age: totalAge / assetsForAge.length }];
         }
@@ -269,23 +320,23 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     const utilizationRate = totalAssets > 0 ? (activeAssets / totalAssets) * 100 : 0;
 
     // ROI calculation (simplified)
-    const totalROI = totalPurchaseValue._sum.purchasePrice > 0
-      ? ((totalValue._sum.currentValue - (maintenanceCost._sum.cost || 0)) / totalPurchaseValue._sum.purchasePrice) * 100
+    const totalROI = totalPurchaseValue._sum.unitPrice > 0
+      ? ((totalValue._sum.currentValue - (maintenanceCost._sum.cost || 0)) / totalPurchaseValue._sum.unitPrice) * 100
       : 0;
 
     // Get unique filter options for frontend
     const filterOptions = await prisma.asset.findMany({
       select: {
         category: true,
-        department: true,
+        currentDepartment: true,
         location: true,
         depreciationMethod: true
       },
-      distinct: ['category', 'department', 'location', 'depreciationMethod']
+      distinct: ['category', 'currentDepartment', 'location', 'depreciationMethod']
     });
 
     const uniqueCategories = [...new Set(filterOptions.map(item => item.category).filter(Boolean))];
-    const uniqueDepartments = [...new Set(filterOptions.map(item => item.department).filter(Boolean))];
+    const uniqueDepartments = [...new Set(filterOptions.map(item => item.currentDepartment).filter(Boolean))];
     const uniqueLocations = [...new Set(filterOptions.map(item => item.location).filter(Boolean))];
     const uniqueDepreciationMethods = [...new Set(filterOptions.map(item => item.depreciationMethod).filter(Boolean))];
 
@@ -294,7 +345,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         totalAssets,
         activeAssets,
         totalValue: totalValue._sum.currentValue ?? 0,
-        totalPurchaseValue: totalPurchaseValue._sum.purchasePrice ?? 0,
+        totalPurchaseValue: totalPurchaseValue._sum.unitPrice ?? 0,
         maintenanceCost: maintenanceCost._sum.cost ?? 0,
         assetGrowth,
         valueGrowth,
@@ -310,7 +361,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         value: item._sum.currentValue ?? 0
       })),
       byDepartment: assetsByDepartment.map(item => ({
-        category: item.department || 'Unassigned',
+        department: item.currentDepartment || 'Unassigned',
         status: item.status,
         count: item._count.id,
         value: item._sum.currentValue ?? 0
@@ -324,21 +375,30 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       assets: assets.map(asset => ({
         id: asset.id,
         name: asset.name,
+        itemDescription: asset.itemDescription,
         serialNumber: asset.serialNumber,
+        oldTagNumber: asset.oldTagNumber,
+        newTagNumber: asset.newTagNumber,
+        grnNumber: asset.grnNumber,
+        grnDate: asset.grnDate ? asset.grnDate.toISOString().split('T')[0] : null,
+        unitPrice: asset.unitPrice,
+        sivNumber: asset.sivNumber,
+        sivDate: asset.sivDate ? asset.sivDate.toISOString().split('T')[0] : null,
+        currentDepartment: asset.currentDepartment,
+        remark: asset.remark,
+        usefulLifeYears: asset.usefulLifeYears,
+        residualPercentage: asset.residualPercentage,
         category: asset.category,
         status: asset.status,
         location: asset.location,
-        department: asset.department,
-        purchaseDate: asset.purchaseDate.toISOString().split('T')[0],
-        purchasePrice: asset.purchasePrice,
         currentValue: asset.currentValue,
         depreciationMethod: asset.depreciationMethod,
         supplier: asset.supplier,
         warrantyExpiry: asset.warrantyExpiry ? asset.warrantyExpiry.toISOString().split('T')[0] : null,
-        usefulLifeYears: asset.usefulLifeMonths ? Math.ceil(asset.usefulLifeMonths / 12) : null,
-        age: asset.purchaseDate ? Math.floor((now - asset.purchaseDate) / (1000 * 60 * 60 * 24 * 365.25)) : 0,
-        depreciationRate: asset.purchasePrice > 0 ?
-          ((asset.purchasePrice - asset.currentValue) / asset.purchasePrice * 100).toFixed(1) : 0
+        age: asset.sivDate ? Math.floor((now - asset.sivDate) / (1000 * 60 * 60 * 24 * 365.25)) : 0,
+        depreciationRate: asset.unitPrice > 0 ?
+          ((asset.unitPrice - asset.currentValue) / asset.unitPrice * 100).toFixed(1) : 0,
+        bookValue: (year && month) ? (bookValueMap[asset.id] ?? null) : asset.currentValue,
       })),
       filterOptions: {
         categories: uniqueCategories,
@@ -349,11 +409,13 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       analytics: {
         depreciationTrend: sortedDepreciationData.length > 1 ?
           sortedDepreciationData[sortedDepreciationData.length - 1].depreciation - sortedDepreciationData[0].depreciation : 0,
-        averageDepreciationRate: totalPurchaseValue._sum.purchasePrice > 0 ?
-          (totalDepreciation / totalPurchaseValue._sum.purchasePrice) * 100 : 0,
-        assetTurnover: totalPurchaseValue._sum.purchasePrice > 0 ?
-          (totalValue._sum.currentValue / totalPurchaseValue._sum.purchasePrice) : 0
-      }
+        averageDepreciationRate: totalPurchaseValue._sum.unitPrice > 0 ?
+          (totalDepreciation / totalPurchaseValue._sum.unitPrice) * 100 : 0,
+        assetTurnover: totalPurchaseValue._sum.unitPrice > 0 ?
+          (totalValue._sum.currentValue / totalPurchaseValue._sum.unitPrice) : 0
+      },
+      bookValueByDepartment,
+      bookValueByCategory,
     };
 
     return Response.json(formattedData);

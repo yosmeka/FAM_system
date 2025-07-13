@@ -11,10 +11,10 @@ export async function GET() {
             where: { status: 'DISPOSED' }
         });
 
-        // Calculate total purchase price
+        // Calculate total purchase value
         const totalValue = await prisma.asset.aggregate({
             _sum: {
-                purchasePrice: true
+                unitPrice: true
             }
         });
 
@@ -23,15 +23,15 @@ export async function GET() {
         sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
         const monthlyDepreciation = await prisma.asset.groupBy({
-            by: ['purchaseDate'],
+            by: ['sivDate'],
             where: {
-                purchaseDate: {
+                sivDate: {
                     gte: sixMonthsAgo
                 }
             },
             _sum: {
                 currentValue: true,
-                purchasePrice: true
+                unitPrice: true
             }
         });
 
@@ -47,18 +47,18 @@ export async function GET() {
         const categoryDistribution = await prisma.asset.groupBy({
             by: ['category'],
             _count: {
-                id: true
+                id: true,
             },
             _sum: {
-                purchasePrice: true
+                unitPrice: true
             }
         });
 
         // Get asset value trend (last 6 months)
         const valueTrend = await prisma.asset.groupBy({
-            by: ['purchaseDate'],
+            by: ['sivDate'],
             where: {
-                purchaseDate: {
+                sivDate: {
                     gte: sixMonthsAgo
                 }
             },
@@ -73,17 +73,17 @@ export async function GET() {
                 totalAssets,
                 activeAssets,
                 disposedAssets,
-                totalValue: totalValue._sum.purchasePrice || 0
+                totalValue: totalValue._sum.unitPrice || 0
             },
             monthlyDepreciation: monthlyDepreciation.map((item: {
-                purchaseDate: Date;
+                sivDate: Date;
                 _sum: {
                     currentValue: number | null;
-                    purchasePrice: number | null;
+                    unitPrice: number | null;
                 }
             }) => ({
-                month: item.purchaseDate.toISOString().split('T')[0],
-                depreciation: (item._sum.purchasePrice || 0) - (item._sum.currentValue || 0)
+                month: item.sivDate.toISOString().split('T')[0],
+                depreciation: (item._sum.unitPrice || 0) - (item._sum.currentValue || 0)
             })),
             statusDistribution: statusDistribution.map((item: {
                 status: string;
@@ -100,20 +100,20 @@ export async function GET() {
                     id: number;
                 };
                 _sum: {
-                    purchasePrice: number | null;
+                    unitPrice: number | null;
                 }
             }) => ({
                 category: item.category || 'Uncategorized',
                 count: item._count.id,
-                value: item._sum.purchasePrice || 0
+                value: item._sum.unitPrice || 0
             })),
             valueTrend: valueTrend.map((item: {
-                purchaseDate: Date;
+                sivDate: Date;
                 _sum: {
                     currentValue: number | null;
                 }
             }) => ({
-                month: item.purchaseDate.toISOString().split('T')[0],
+                month: item.sivDate.toISOString().split('T')[0],
                 value: item._sum.currentValue || 0
             }))
         };

@@ -20,6 +20,8 @@ export interface FilterValues {
   minValue: string;
   maxValue: string;
   depreciationMethod: string;
+  year?: string;
+  month?: string;
 }
 
 interface AdvancedFiltersProps {
@@ -44,7 +46,9 @@ export function AdvancedFilters({
     status: 'all',
     minValue: '',
     maxValue: '',
-    depreciationMethod: 'all'
+    depreciationMethod: 'all',
+    year: '',
+    month: '',
   });
 
 
@@ -121,7 +125,9 @@ export function AdvancedFilters({
       status: 'all',
       minValue: '',
       maxValue: '',
-      depreciationMethod: 'all'
+      depreciationMethod: 'all',
+      year: '',
+      month: '',
     };
     setPendingFilters(clearedFilters);
     setFilters(clearedFilters);
@@ -198,8 +204,7 @@ export function AdvancedFilters({
         }}
         onReset={(e) => {
           e.preventDefault();
-          e.stopPropagation();
-          return false;
+          resetPendingFilters();
         }}
       >
       <div className="flex items-center justify-between mb-4">
@@ -312,6 +317,42 @@ export function AdvancedFilters({
           </div>
         </div>
 
+        {/* Book Value As Of (Year/Month Dropdowns) */}
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">
+              Year
+            </label>
+            <select
+              value={pendingFilters.year || ''}
+              onChange={e => handleFilterChange('year', e.target.value)}
+              className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white"
+            >
+              <option value="">Year</option>
+              {Array.from({ length: 10 }, (_, i) => {
+                const year = new Date().getFullYear() - i;
+                return <option key={year} value={year}>{year}</option>;
+              })}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-black dark:text-white mb-1">
+              Month
+            </label>
+            <select
+              value={pendingFilters.month || ''}
+              onChange={e => handleFilterChange('month', e.target.value)}
+              className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white"
+            >
+              <option value="">Month</option>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         {/* Category Filter */}
         <div>
           <label className="block text-sm font-medium text-black dark:text-white mb-1">
@@ -328,7 +369,6 @@ export function AdvancedFilters({
             ))}
           </select>
         </div>
-
         {/* Status Filter */}
         <div>
           <label className="block text-sm font-medium text-black dark:text-white mb-1">

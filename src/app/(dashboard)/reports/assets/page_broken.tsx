@@ -124,6 +124,7 @@ export default function AssetReportsPage() {
   const fetchLinkedAssets = async () => {
     try {
       setLoadingLinkedAssets(true);
+      console.log('Fetching linked assets...');
       const response = await fetch('/api/test/linked-assets', {
         method: 'GET',
         headers: {
@@ -131,10 +132,18 @@ export default function AssetReportsPage() {
         },
       });
       
+      console.log('Response status:', response.status);
       const data = await response.json();
+      console.log('Linked assets response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch linked assets');
+      }
+
+      if (!data.linkedAssets || data.linkedAssets.length === 0) {
+        console.log('No linked assets found in response');
+      } else {
+        console.log(`Found ${data.linkedAssets.length} linked assets`);
       }
 
       setLinkedAssets(data.linkedAssets || []);
@@ -191,22 +200,21 @@ export default function AssetReportsPage() {
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
       
-      const doc = new jsPDF('landscape'); // Use landscape for more columns
+      const doc = new jsPDF();
       
       doc.setFontSize(16);
       doc.text('Asset Report', 14, 15);
       doc.setFontSize(10);
       doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
 
-      // Summary Statistics
       doc.setFontSize(12);
       doc.text('Summary Statistics', 14, 35);
       
       const statsData: string[][] = [
         ['Total Assets', (assetStats?.totalAssets || 0).toString()],
         ['Active Assets', (assetStats?.activeAssets || 0).toString()],
-        ['Total Value', `$${Number(assetStats?.totalValue || 0).toLocaleString()}`],
-        ['Total Depreciation', `$${Number(assetStats?.totalDepreciation || 0).toLocaleString()}`]
+        ['Transferred Assets', (assetStats?.transferredAssets || 0).toString()],
+        ['Disposed Assets', (assetStats?.disposedAssets || 0).toString()]
       ];
 
       autoTable(doc, {
@@ -214,37 +222,58 @@ export default function AssetReportsPage() {
         head: [['Metric', 'Value']],
         body: statsData,
         theme: 'grid',
-        styles: { fontSize: 10, cellPadding: 5 },
-        headStyles: { fillColor: [255, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
       });
 
-      // Detailed Asset List
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Category Distribution', 14, 20);
+
+      const categoryData: string[][] = assetsByCategory.map(item => [
+        item.category || '',
+        item.status || '',
+        String(item.count || 0),
+        String(Number(item.value || 0).toFixed(2))
+      ]);
+
+      autoTable(doc, {
+        startY: 25,
+        head: [['Category', 'Status', 'Count', 'Total Value']],
+        body: categoryData,
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          cellPadding: 5,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
       doc.addPage();
       doc.setFontSize(12);
       doc.text('Detailed Asset List', 14, 20);
 
-      const tableHeaders: string[] = [
-        'Description', 'Serial #', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date', 
-        'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life', 'Residual %', 'Book Value', 'Status'
-      ];
-      
+      const tableHeaders: string[] = ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'];
       const tableRows: string[][] = detailedAssets.map(asset => [
-        asset.itemDescription || '',
+        asset.name || '',
         asset.serialNumber || '',
-        asset.oldTagNumber || '',
-        asset.newTagNumber || '',
-        asset.grnNumber || '',
-        asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-        asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
-        asset.sivNumber || '',
-        asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-        asset.department || asset.currentDepartment || '',
-        asset.remark || '',
-        asset.usefulLifeYears?.toString() || '',
-        asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-        asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : '',
-        asset.status || ''
+        asset.category || '',
+        asset.status || '',
+        asset.location || 'Not specified',
+        new Date(asset.purchaseDate).toLocaleDateString(),
+        `$${Number(asset.purchasePrice).toFixed(2)}`,
+        asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
       ]);
 
       autoTable(doc, {
@@ -252,12 +281,47 @@ export default function AssetReportsPage() {
         head: [tableHeaders],
         body: tableRows,
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 2 },
-        headStyles: { fillColor: [255, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+      });
+
+      doc.addPage();
+      doc.setFontSize(12);
+      doc.text('Linked Assets', 14, 20);
+
+      const linkedAssetsHeaders: string[] = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
+      const linkedAssetsRows: string[][] = linkedAssets.map(asset => [
+        asset.fromAsset.name || '',
+        asset.fromAsset.serialNumber || '',
+        asset.toAsset.name || '',
+        asset.toAsset.serialNumber || '',
+        new Date(asset.createdAt).toLocaleDateString()
+      ]);
+
+      autoTable(doc, {
+        startY: 25,
+        head: [linkedAssetsHeaders],
+        body: linkedAssetsRows,
+        theme: 'grid',
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 0, 0],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
       });
 
       doc.save(`asset-report-${new Date().toISOString().split('T')[0]}.pdf`);
-      toast.success('PDF report exported successfully!');
     } catch (error) {
       console.error('Error exporting to PDF:', error);
       toast.error('Failed to export PDF');
@@ -270,19 +334,17 @@ export default function AssetReportsPage() {
       
       const workbook = XLSX.utils.book_new();
 
-      // Summary Statistics
       const statsData: (string | number)[][] = [
         ['Summary Statistics', ''],
         ['Metric', 'Value'],
         ['Total Assets', assetStats?.totalAssets || 0],
         ['Active Assets', assetStats?.activeAssets || 0],
-        ['Total Value', assetStats?.totalValue || 0],
-        ['Total Depreciation', assetStats?.totalDepreciation || 0]
+        ['Transferred Assets', assetStats?.transferredAssets || 0],
+        ['Disposed Assets', assetStats?.disposedAssets || 0]
       ];
       const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
       XLSX.utils.book_append_sheet(workbook, statsSheet, 'Summary');
 
-      // Category Distribution
       const categoryData: (string | number)[][] = [
         ['Category Distribution', '', '', ''],
         ['Category', 'Status', 'Count', 'Total Value'],
@@ -296,36 +358,23 @@ export default function AssetReportsPage() {
       const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
 
-      // Detailed Asset List
       const assetsData: (string | number)[][] = [
-        ['Detailed Asset List', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        [
-          'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
-          'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-          'Useful Life (Years)', 'Residual %', 'Book Value', 'Status'
-        ],
+        ['Detailed Asset List', '', '', '', '', '', '', ''],
+        ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'],
         ...detailedAssets.map(asset => [
-          asset.itemDescription || '',
+          asset.name || '',
           asset.serialNumber || '',
-          asset.oldTagNumber || '',
-          asset.newTagNumber || '',
-          asset.grnNumber || '',
-          asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-          asset.unitPrice ? Number(asset.unitPrice).toFixed(2) : '',
-          asset.sivNumber || '',
-          asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-          asset.department || asset.currentDepartment || '',
-          asset.remark || '',
-          asset.usefulLifeYears || '',
-          asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-          asset.bookValue ? Number(asset.bookValue).toFixed(2) : '',
-          asset.status || ''
+          asset.category || '',
+          asset.status || '',
+          asset.location || 'Not specified',
+          new Date(asset.purchaseDate).toLocaleDateString(),
+          `$${Number(asset.purchasePrice).toFixed(2)}`,
+          asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
         ])
       ];
       const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
       XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
 
-      // Linked Assets
       const linkedAssetsData: (string | number)[][] = [
         ['Linked Assets', '', '', '', ''],
         ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'],
@@ -341,7 +390,6 @@ export default function AssetReportsPage() {
       XLSX.utils.book_append_sheet(workbook, linkedAssetsSheet, 'Linked Assets');
 
       XLSX.writeFile(workbook, `asset-report-${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Excel report exported successfully!');
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       toast.error('Failed to export Excel file');
@@ -350,13 +398,12 @@ export default function AssetReportsPage() {
 
   const exportToCSV = () => {
     try {
-      // Summary Statistics CSV
       const statsHeaders = ['Metric', 'Value'];
       const statsRows = [
         ['Total Assets', assetStats?.totalAssets || 0],
         ['Active Assets', assetStats?.activeAssets || 0],
-        ['Total Value', assetStats?.totalValue || 0],
-        ['Total Depreciation', assetStats?.totalDepreciation || 0]
+        ['Transferred Assets', assetStats?.transferredAssets || 0],
+        ['Disposed Assets', assetStats?.disposedAssets || 0]
       ];
       const statsContent = [statsHeaders, ...statsRows].map(row => row.join(',')).join('\n');
       const statsBlob = new Blob([statsContent], { type: 'text/csv;charset=utf-8;' });
@@ -365,7 +412,6 @@ export default function AssetReportsPage() {
       statsLink.download = `asset-report-summary-${new Date().toISOString().split('T')[0]}.csv`;
       statsLink.click();
 
-      // Category Distribution CSV
       const categoryHeaders = ['Category', 'Status', 'Count', 'Total Value'];
       const categoryRows = assetsByCategory.map(item => [
         item.category || '',
@@ -380,28 +426,16 @@ export default function AssetReportsPage() {
       categoryLink.download = `asset-report-categories-${new Date().toISOString().split('T')[0]}.csv`;
       categoryLink.click();
 
-      // Detailed Assets CSV
-      const assetHeaders = [
-        'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
-        'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life (Years)', 'Residual %', 'Book Value', 'Status'
-      ];
+      const assetHeaders = ['Asset Name', 'Serial Number', 'Category', 'Status', 'Location', 'Purchase Date', 'Purchase Price', 'Warranty Expiry'];
       const assetRows = detailedAssets.map(asset => [
-        asset.itemDescription || '',
+        asset.name || '',
         asset.serialNumber || '',
-        asset.oldTagNumber || '',
-        asset.newTagNumber || '',
-        asset.grnNumber || '',
-        asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-        asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
-        asset.sivNumber || '',
-        asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-        asset.department || asset.currentDepartment || '',
-        asset.remark || '',
-        asset.usefulLifeYears || '',
-        asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-        asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : '',
-        asset.status || ''
+        asset.category || '',
+        asset.status || '',
+        asset.location || 'Not specified',
+        new Date(asset.purchaseDate).toLocaleDateString(),
+        `$${Number(asset.purchasePrice).toFixed(2)}`,
+        asset.warrantyExpiry ? new Date(asset.warrantyExpiry).toLocaleDateString() : 'Not specified'
       ]);
       const assetContent = [assetHeaders, ...assetRows].map(row => row.join(',')).join('\n');
       const assetBlob = new Blob([assetContent], { type: 'text/csv;charset=utf-8;' });
@@ -410,7 +444,6 @@ export default function AssetReportsPage() {
       assetLink.download = `asset-report-detailed-${new Date().toISOString().split('T')[0]}.csv`;
       assetLink.click();
 
-      // Linked Assets CSV
       const linkedAssetsHeaders = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
       const linkedAssetsRows = linkedAssets.map(asset => [
         asset.fromAsset.name || '',
@@ -430,7 +463,8 @@ export default function AssetReportsPage() {
     } catch (error) {
       console.error('Error exporting CSV:', error);
       toast.error('Failed to export CSV files');
-    }
+
+      }
   };
 
   if (loading) {
@@ -447,6 +481,7 @@ export default function AssetReportsPage() {
         <div className="flex items-center gap-4">
           <BackButton href="/reports" className='text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300' />
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Advanced Asset Reports</h1>
+
         </div>
         <div className="flex gap-2">
           <button
@@ -635,7 +670,7 @@ export default function AssetReportsPage() {
                   options={{
                     labels: assetsByCategory.map((item) => item.category),
                     values: assetsByCategory.map((item) => item.count),
-                    customColors: ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981']
+                    customColors: ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899']
                   }}
                 />
               ) : (
@@ -710,6 +745,11 @@ export default function AssetReportsPage() {
                       key: 'value',
                       render: (_, item) => `$${Number(item.value).toFixed(2)}`,
                     },
+                    // {
+                    //   header: 'Average Value',
+                    //   key: 'value',
+                    //   render: (_, item) => `$${(Number(item.value) / Number(item.count)).toFixed(2)}`,
+                    // },
                   ]}
                   className="bg-white dark:bg-gray-800"
                 />
@@ -739,14 +779,6 @@ export default function AssetReportsPage() {
                       { header: 'Location', key: 'location' },
                       { header: 'Purchase Date', key: 'purchaseDate' },
                       { header: 'Purchase Price', key: 'purchasePrice' },
-                      { header: 'GRN Number', key: 'grnNumber' },
-                      { header: 'GRN Date', key: 'grnDate' },
-                      { header: 'SIV Number', key: 'sivNumber' },
-                      { header: 'SIV Date', key: 'sivDate' },
-                      { header: 'Remark', key: 'remark' },
-                      { header: 'Useful Life (Years)', key: 'usefulLifeYears' },
-                      { header: 'Residual Percentage', key: 'residualPercentage' },
-                      { header: 'Book Value', key: 'bookValue' },
                       { header: 'Warranty Expiry', key: 'warrantyExpiry' }
                     ]}
                     title="Detailed Asset List"
@@ -825,118 +857,130 @@ export default function AssetReportsPage() {
                         key: 'residualPercentage',
                         render: (_, item) => item.residualPercentage !== undefined && item.residualPercentage !== null ? `${item.residualPercentage}%` : '—',
                       },
+                      // Book Value columns (conditional)
+                      ...((currentFilters.year && !currentFilters.month)
+                        ? Array.from({ length: 12 }, (_, i) => {
+                            const monthNum = i + 1;
+                            const monthLabel = new Date(0, i).toLocaleString('default', { month: 'short' });
+                            return {
+                              header: `Book Value (${monthLabel})`,
+                              key: `bookValueMonth${monthNum}`,
+                              render: (_, item) => {
+                                const value = item.bookValuesByMonth ? item.bookValuesByMonth[monthNum] : undefined;
+                                return value !== undefined && value !== null
+                                  ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : '—';
+                              },
+                            };
+                          })
+                        : [
+                            {
+                              header: 'Book Value',
+                              key: 'bookValue',
+                              render: (_, item) => item.bookValue !== undefined && item.bookValue !== null ? `$${Number(item.bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—',
+                            },
+                          ]),
+                      ]}
+                      className="bg-white dark:bg-gray-800"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                    No assets found for current filters
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'linkedAssets' && (
+          <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-black dark:text-white">
+                  Linked Assets Report{getFilterDisplayText()}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {linkedAssets.length} linked assets found
+                  </span>
+                  <TableExportDropdown
+                    data={linkedAssets.map((asset: LinkedAsset) => ({
+                      'Parent Asset': asset.fromAsset.name,
+                      'Parent Serial': asset.fromAsset.serialNumber,
+                      'Child Asset': asset.toAsset.name,
+                      'Child Serial': asset.toAsset.serialNumber,
+                      'Linked Date': new Date(asset.createdAt).toLocaleDateString()
+                    }))}
+                    columns={[
+                      { header: 'Parent Asset', key: 'Parent Asset' },
+                      { header: 'Parent Serial', key: 'Parent Serial' },
+                      { header: 'Child Asset', key: 'Child Asset' },
+                      { header: 'Child Serial', key: 'Child Serial' },
+                      { header: 'Linked Date', key: 'Linked Date' }
+                    ]}
+                    title="Linked Assets Report"
+                    type="linked"
+                    filterSummary={getFilterDisplayText()}
+                  />
+                </div>
+              </div>
+              {loadingLinkedAssets ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                </div>
+              ) : linkedAssets.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <RoleBasedTable
+                    data={linkedAssets}
+                    columns={[
                       {
-                        header: 'Book Value',
-                        key: 'bookValue',
-                        render: (_, item) => {
-                          const bookValue = item.bookValue || item.currentValue;
-                          return bookValue !== undefined && bookValue !== null 
-                            ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                            : '—';
-                        },
+                        header: 'Parent Asset',
+                        key: 'fromAsset',
+                        render: (_: unknown, item: LinkedAsset) => (
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{item.fromAsset.name}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{item.fromAsset.serialNumber}</div>
+                          </div>
+                        ),
                       },
                       {
-                        header: 'Status',
-                        key: 'status',
-                        render: (_, item) => item.status || '—',
+                        header: 'Child Asset',
+                        key: 'toAsset',
+                        render: (_: unknown, item: LinkedAsset) => (
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100">{item.toAsset.name}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{item.toAsset.serialNumber}</div>
+                          </div>
+                        ),
                       },
+                      {
+                        header: 'Linked Date',
+                        key: 'createdAt',
+                        render: (_: unknown, item: LinkedAsset) => new Date(item.createdAt).toLocaleDateString(),
+                      }
                     ]}
                     className="bg-white dark:bg-gray-800"
                   />
                 </div>
               ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400">No assets found for current filters</div>
+                <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+                  No linked assets found
+                </div>
               )}
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {activeTab === 'linkedAssets' && (
-        <div className="bg-white rounded-lg shadow dark:bg-gray-900 mb-8">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-black dark:text-white">
-                Linked Assets Report
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {linkedAssets.length} linked assets found
-                </span>
-                <TableExportDropdown
-                  data={linkedAssets.map((asset: LinkedAsset) => ({
-                    'Parent Asset': asset.fromAsset.name,
-                    'Parent Serial': asset.fromAsset.serialNumber,
-                    'Child Asset': asset.toAsset.name,
-                    'Child Serial': asset.toAsset.serialNumber,
-                    'Linked Date': new Date(asset.createdAt).toLocaleDateString()
-                  }))}
-                  columns={[
-                    { header: 'Parent Asset', key: 'Parent Asset' },
-                    { header: 'Parent Serial', key: 'Parent Serial' },
-                    { header: 'Child Asset', key: 'Child Asset' },
-                    { header: 'Child Serial', key: 'Child Serial' },
-                    { header: 'Linked Date', key: 'Linked Date' }
-                  ]}
-                  title="Linked Assets Report"
-                  type="linked"
-                  filterSummary={getFilterDisplayText()}
-                />
-              </div>
-            </div>
-            {loadingLinkedAssets ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-              </div>
-            ) : linkedAssets.length > 0 ? (
-              <div className="overflow-x-auto">
-                <RoleBasedTable
-                  data={linkedAssets}
-                  columns={[
-                    {
-                      header: 'Parent Asset',
-                      key: 'fromAsset',
-                      render: (_, item) => item.fromAsset.name,
-                    },
-                    {
-                      header: 'Parent Serial',
-                      key: 'fromAsset',
-                      render: (_, item) => item.fromAsset.serialNumber,
-                    },
-                    {
-                      header: 'Child Asset',
-                      key: 'toAsset',
-                      render: (_, item) => item.toAsset.name,
-                    },
-                    {
-                      header: 'Child Serial',
-                      key: 'toAsset',
-                      render: (_, item) => item.toAsset.serialNumber,
-                    },
-                    {
-                      header: 'Linked Date',
-                      key: 'createdAt',
-                      render: (_, item) => new Date(item.createdAt).toLocaleDateString(),
-                    },
-                  ]}
-                  className="bg-white dark:bg-gray-800"
-                />
-              </div>
-            ) : (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No linked assets found
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <DepreciationScheduleModal
-        open={scheduleModalOpen}
-        onClose={() => setScheduleModalOpen(false)}
-        assetId={selectedAssetId || ''}
-        assetName={selectedAssetName || ''}
-      />
+        {/* Depreciation Schedule Modal */}
+        <DepreciationScheduleModal
+          open={scheduleModalOpen}
+          onClose={() => setScheduleModalOpen(false)}
+          assetId={selectedAssetId || ''}
+          assetName={selectedAssetName || ''}
+        />
+      </div>
     </div>
   );
 }
