@@ -223,29 +223,47 @@ export default function AssetReportsPage() {
       doc.setFontSize(12);
       doc.text('Detailed Asset List', 14, 20);
 
-      const tableHeaders: string[] = [
+      // Dynamic headers based on filter selection
+      const baseHeaders = [
         'Description', 'Serial #', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date', 
         'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life', 'Residual %', 'Book Value', 'Status'
+        'Useful Life', 'Residual %'
       ];
+
+      const bookValueHeaders = (currentFilters.year && !currentFilters.month)
+        ? Array.from({ length: 12 }, (_, i) => 
+            `BV ${new Date(0, i).toLocaleString('default', { month: 'short' })}`
+          )
+        : ['Book Value'];
+
+      const tableHeaders = [...baseHeaders, ...bookValueHeaders, 'Status'];
       
-      const tableRows: string[][] = detailedAssets.map(asset => [
-        asset.itemDescription || '',
-        asset.serialNumber || '',
-        asset.oldTagNumber || '',
-        asset.newTagNumber || '',
-        asset.grnNumber || '',
-        asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-        asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
-        asset.sivNumber || '',
-        asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-        asset.department || asset.currentDepartment || '',
-        asset.remark || '',
-        asset.usefulLifeYears?.toString() || '',
-        asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-        asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : '',
-        asset.status || ''
-      ]);
+      const tableRows: string[][] = detailedAssets.map(asset => {
+        const baseRow = [
+          asset.itemDescription || '',
+          asset.serialNumber || '',
+          asset.oldTagNumber || '',
+          asset.newTagNumber || '',
+          asset.grnNumber || '',
+          asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
+          asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
+          asset.sivNumber || '',
+          asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
+          asset.department || asset.currentDepartment || '',
+          asset.remark || '',
+          asset.usefulLifeYears?.toString() || '',
+          asset.residualPercentage ? `${asset.residualPercentage}%` : ''
+        ];
+
+        const bookValueCells = (currentFilters.year && !currentFilters.month)
+          ? Array.from({ length: 12 }, (_, i) => {
+              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
+              return monthValue ? `$${Number(monthValue).toFixed(2)}` : '';
+            })
+          : [asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : ''];
+
+        return [...baseRow, ...bookValueCells, asset.status || ''];
+      });
 
       autoTable(doc, {
         startY: 25,
@@ -297,30 +315,50 @@ export default function AssetReportsPage() {
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
 
       // Detailed Asset List
+      const baseAssetHeaders = [
+        'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
+        'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
+        'Useful Life (Years)', 'Residual %'
+      ];
+
+      const bookValueHeaders = (currentFilters.year && !currentFilters.month)
+        ? Array.from({ length: 12 }, (_, i) => 
+            `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`
+          )
+        : ['Book Value'];
+
+      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders, 'Status'];
+      const headerPadding = Array(assetHeaders.length - 1).fill('');
+
       const assetsData: (string | number)[][] = [
-        ['Detailed Asset List', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
-        [
-          'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
-          'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-          'Useful Life (Years)', 'Residual %', 'Book Value', 'Status'
-        ],
-        ...detailedAssets.map(asset => [
-          asset.itemDescription || '',
-          asset.serialNumber || '',
-          asset.oldTagNumber || '',
-          asset.newTagNumber || '',
-          asset.grnNumber || '',
-          asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-          asset.unitPrice ? Number(asset.unitPrice).toFixed(2) : '',
-          asset.sivNumber || '',
-          asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-          asset.department || asset.currentDepartment || '',
-          asset.remark || '',
-          asset.usefulLifeYears || '',
-          asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-          asset.bookValue ? Number(asset.bookValue).toFixed(2) : '',
-          asset.status || ''
-        ])
+        ['Detailed Asset List', ...headerPadding],
+        assetHeaders,
+        ...detailedAssets.map(asset => {
+          const baseRow = [
+            asset.itemDescription || '',
+            asset.serialNumber || '',
+            asset.oldTagNumber || '',
+            asset.newTagNumber || '',
+            asset.grnNumber || '',
+            asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
+            asset.unitPrice ? Number(asset.unitPrice).toFixed(2) : '',
+            asset.sivNumber || '',
+            asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
+            asset.department || asset.currentDepartment || '',
+            asset.remark || '',
+            asset.usefulLifeYears || '',
+            asset.residualPercentage ? `${asset.residualPercentage}%` : ''
+          ];
+
+          const bookValueCells = (currentFilters.year && !currentFilters.month)
+            ? Array.from({ length: 12 }, (_, i) => {
+                const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
+                return monthValue ? Number(monthValue).toFixed(2) : '';
+              })
+            : [asset.bookValue ? Number(asset.bookValue).toFixed(2) : ''];
+
+          return [...baseRow, ...bookValueCells, asset.status || ''];
+        })
       ];
       const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
       XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
@@ -381,28 +419,46 @@ export default function AssetReportsPage() {
       categoryLink.click();
 
       // Detailed Assets CSV
-      const assetHeaders = [
+      const baseAssetHeaders = [
         'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
         'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life (Years)', 'Residual %', 'Book Value', 'Status'
+        'Useful Life (Years)', 'Residual %'
       ];
-      const assetRows = detailedAssets.map(asset => [
-        asset.itemDescription || '',
-        asset.serialNumber || '',
-        asset.oldTagNumber || '',
-        asset.newTagNumber || '',
-        asset.grnNumber || '',
-        asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-        asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
-        asset.sivNumber || '',
-        asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-        asset.department || asset.currentDepartment || '',
-        asset.remark || '',
-        asset.usefulLifeYears || '',
-        asset.residualPercentage ? `${asset.residualPercentage}%` : '',
-        asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : '',
-        asset.status || ''
-      ]);
+
+      const bookValueHeaders = (currentFilters.year && !currentFilters.month)
+        ? Array.from({ length: 12 }, (_, i) => 
+            `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`
+          )
+        : ['Book Value'];
+
+      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders, 'Status'];
+
+      const assetRows = detailedAssets.map(asset => {
+        const baseRow = [
+          asset.itemDescription || '',
+          asset.serialNumber || '',
+          asset.oldTagNumber || '',
+          asset.newTagNumber || '',
+          asset.grnNumber || '',
+          asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
+          asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
+          asset.sivNumber || '',
+          asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
+          asset.department || asset.currentDepartment || '',
+          asset.remark || '',
+          asset.usefulLifeYears || '',
+          asset.residualPercentage ? `${asset.residualPercentage}%` : ''
+        ];
+
+        const bookValueCells = (currentFilters.year && !currentFilters.month)
+          ? Array.from({ length: 12 }, (_, i) => {
+              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
+              return monthValue ? `$${Number(monthValue).toFixed(2)}` : '';
+            })
+          : [asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : ''];
+
+        return [...baseRow, ...bookValueCells, asset.status || ''];
+      });
       const assetContent = [assetHeaders, ...assetRows].map(row => row.join(',')).join('\n');
       const assetBlob = new Blob([assetContent], { type: 'text/csv;charset=utf-8;' });
       const assetLink = document.createElement('a');
@@ -737,8 +793,6 @@ export default function AssetReportsPage() {
                       { header: 'Category', key: 'category' },
                       { header: 'Status', key: 'status' },
                       { header: 'Location', key: 'location' },
-                      { header: 'Purchase Date', key: 'purchaseDate' },
-                      { header: 'Purchase Price', key: 'purchasePrice' },
                       { header: 'GRN Number', key: 'grnNumber' },
                       { header: 'GRN Date', key: 'grnDate' },
                       { header: 'SIV Number', key: 'sivNumber' },
@@ -746,8 +800,16 @@ export default function AssetReportsPage() {
                       { header: 'Remark', key: 'remark' },
                       { header: 'Useful Life (Years)', key: 'usefulLifeYears' },
                       { header: 'Residual Percentage', key: 'residualPercentage' },
-                      { header: 'Book Value', key: 'bookValue' },
-                      { header: 'Warranty Expiry', key: 'warrantyExpiry' }
+                      { header: 'Unit Price', key: 'unitPrice' },
+                      { header: 'Warranty Expiry', key: 'warrantyExpiry' },
+                      // Conditional book value columns
+                      ...((currentFilters.year && !currentFilters.month)
+                        ? Array.from({ length: 12 }, (_, i) => ({
+                            header: `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`,
+                            key: `bookValueMonth${i + 1}`
+                          }))
+                        : [{ header: 'Book Value', key: 'bookValue' }]
+                      )
                     ]}
                     title="Detailed Asset List"
                     type="detailed"
@@ -825,16 +887,33 @@ export default function AssetReportsPage() {
                         key: 'residualPercentage',
                         render: (_, item) => item.residualPercentage !== undefined && item.residualPercentage !== null ? `${item.residualPercentage}%` : '—',
                       },
-                      {
-                        header: 'Book Value',
-                        key: 'bookValue',
-                        render: (_, item) => {
-                          const bookValue = item.bookValue || item.currentValue;
-                          return bookValue !== undefined && bookValue !== null 
-                            ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-                            : '—';
-                        },
-                      },
+                      // Book Value columns (conditional)
+                      ...((currentFilters.year && !currentFilters.month)
+                        ? Array.from({ length: 12 }, (_, i) => {
+                            const monthNum = i + 1;
+                            const monthLabel = new Date(0, i).toLocaleString('default', { month: 'short' });
+                            return {
+                              header: `Book Value (${monthLabel})`,
+                              key: `bookValueMonth${monthNum}`,
+                              render: (_, item) => {
+                                const value = item.bookValuesByMonth ? item.bookValuesByMonth[monthNum] : undefined;
+                                return value !== undefined && value !== null
+                                  ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : '—';
+                              },
+                            };
+                          })
+                        : [{
+                            header: 'Book Value',
+                            key: 'bookValue',
+                            render: (_, item) => {
+                              const bookValue = item.bookValue || item.currentValue;
+                              return bookValue !== undefined && bookValue !== null 
+                                ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                                : '—';
+                            },
+                          }]
+                      ),
                       {
                         header: 'Status',
                         key: 'status',
