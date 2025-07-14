@@ -59,6 +59,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { toast } from "react-hot-toast"
+import { Upload } from "lucide-react"
 
 const ASSET_CATEGORIES = [
   "Electronics",
@@ -422,6 +423,31 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
 
   return (
     <FormProvider {...form}>
+      {/* Bulk Upload Option */}
+      {!isEditing && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100">
+                Need to add multiple assets?
+              </h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Save time by importing multiple assets from an Excel spreadsheet. Only SIV Date and Unit Price are required!
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push('/assets/bulk-upload')}
+              className="flex items-center gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-800"
+            >
+              <Upload className="h-4 w-4" />
+              Bulk Import
+            </Button>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Enhanced Progress indicator */}
         <div className="mb-8 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
