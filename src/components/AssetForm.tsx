@@ -100,7 +100,7 @@ const assetFormSchema = z.object({
   lastMaintenance: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
   nextMaintenance: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
   depreciationMethod: z.string().optional().nullable(),
-  depreciationStartDate: z.date({ invalid_type_error: "Please select a valid date." }).optional().nullable().refine((date) => !date || isValid(date), { message: "Please select a valid date." }),
+  // depreciationStartDate removed - using sivDate only
 })
 
 export type AssetFormValues = z.infer<typeof assetFormSchema>
@@ -133,7 +133,7 @@ export function AssetForm({ initialData, isEditing = false, assetId }: AssetForm
         warrantyExpiry: initialData.warrantyExpiry ? new Date(initialData.warrantyExpiry as unknown as string) : undefined,
         lastMaintenance: initialData.lastMaintenance ? new Date(initialData.lastMaintenance as unknown as string) : undefined,
         nextMaintenance: initialData.nextMaintenance ? new Date(initialData.nextMaintenance as unknown as string) : undefined,
-        depreciationStartDate: initialData.depreciationStartDate ? new Date(initialData.depreciationStartDate as unknown as string) : undefined,
+        // depreciationStartDate removed - using sivDate only
       }
     : {}
 

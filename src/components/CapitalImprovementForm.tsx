@@ -134,8 +134,8 @@ export function CapitalImprovementForm({
       // Calculate years from months
       const usefulLifeYears = Math.ceil(asset.usefulLifeMonths / 12);
 
-      // Use the purchase date if no specific depreciation start date
-      const startDate = asset.depreciationStartDate || asset.purchaseDate;
+      // Use sivDate as the single source for depreciation start date
+      const startDate = asset.sivDate || asset.purchaseDate;
 
       // Calculate depreciation
       const depreciationInput = {

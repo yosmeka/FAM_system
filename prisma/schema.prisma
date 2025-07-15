@@ -109,7 +109,7 @@ model Asset {
   depreciableCost     Float?
   salvageValue        Float?         // Keep as is
   depreciationMethod  DepreciationMethodEnum?
-  depreciationStartDate DateTime?
+  // depreciationStartDate removed - using sivDate as single source for depreciation start
   lastAuditDate       DateTime?
   nextAuditDate       DateTime?
   createdAt           DateTime       @default(now())
@@ -128,7 +128,7 @@ model Asset {
   audits              AssetAudit[]
   auditAssignments    AuditAssignment[]
   auditRequests       AuditRequest[]
-  depreciationSchedules DepreciationSchedule[]
+  // depreciationSchedules removed - using on-the-fly calculations instead
 }
 
 model Transfer {
@@ -673,13 +673,6 @@ model Session {
   @@index([sessionToken])
 }
 
-model DepreciationSchedule {
-  id        String   @id @default(uuid())
-  asset     Asset    @relation(fields: [assetId], references: [id])
-  assetId   String
-  year      Int
-  month     Int
-  bookValue Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+// DepreciationSchedule model removed - using on-the-fly calculations instead
+// This eliminates millions of derived data rows and improves performance
+// Book values are now calculated dynamically using the depreciation utility

@@ -78,7 +78,7 @@ export const POST = withPermission(async function POST(request: Request) {
         nextMaintenance: body.nextMaintenance ? new Date(body.nextMaintenance) : null,
         salvageValue: body.salvageValue,
         depreciationMethod: body.depreciationMethod,
-        depreciationStartDate: body.depreciationStartDate ? new Date(body.depreciationStartDate) : null,
+        // depreciationStartDate removed - using sivDate only
       },
     });
 

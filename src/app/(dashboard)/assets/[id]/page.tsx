@@ -152,8 +152,8 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
         salvageValue: asset.salvageValue || 0,
         usefulLifeMonths: asset.usefulLifeYears || 60,
         depreciationMethod: asset.depreciationMethod || 'STRAIGHT_LINE',
-        dateAcquired: asset.depreciationStartDate
-          ? new Date(asset.depreciationStartDate).toISOString().split('T')[0]
+        dateAcquired: asset.sivDate
+          ? new Date(asset.sivDate).toISOString().split('T')[0]
           : (asset.createdAt ? new Date(asset.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
       });
 

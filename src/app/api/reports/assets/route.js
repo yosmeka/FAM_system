@@ -1,6 +1,7 @@
 //import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calculateDepreciation, calculateMonthlyDepreciation } from '@/utils/depreciation';
+// Using the correct depreciation calculation from utils/depreciation.ts
 
 // GET /api/reports/assets
 import { withRole } from '@/middleware/rbac';
@@ -191,7 +192,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         depreciableCost: true,
         salvageValue: true,
         depreciationMethod: true,
-        depreciationStartDate: true,
+        // depreciationStartDate removed - using sivDate only
         createdAt: true,
       },
       orderBy: [
@@ -202,21 +203,101 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       take: limit
     });
 
-    // Fetch book values for all assets for the selected year/month
+    // Calculate book values for all assets for the selected year/month using on-the-fly calculations
     let bookValueMap = {};
     let bookValueByDepartment = [];
     let bookValueByCategory = [];
     let bookValuesByAsset = {};
+
+    console.log('🔍 API Debug: Calculating book values for', assets.length, 'assets');
+
     if (year && month) {
-      const assetIds = assets.map(a => a.id);
-      const bookValues = await prisma.depreciationSchedule.findMany({
-        where: {
-          assetId: { in: assetIds },
-          year,
-          month,
-        },
-        select: { assetId: true, bookValue: true }
-      });
+      console.log('🔍 API Debug: Calculating book values for specific month:', year, month);
+
+      // Calculate book values for specific month/year using the correct depreciation utility
+      const bookValues = [];
+      for (const asset of assets) {
+        try {
+          const depreciableCost = asset.depreciableCost || asset.unitPrice;
+          const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
+          const usefulLifeYears = asset.usefulLifeYears || 5;
+          const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+          const sivDate = asset.sivDate; // Single source for depreciation start date
+
+          if (depreciableCost && depreciableCost > 0 && sivDate) {
+            // Ensure sivDate is properly formatted
+            const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
+
+            console.log(`🔍 API Debug: Preparing calculation for asset ${asset.id}`);
+            console.log(`  - depreciableCost: ${depreciableCost}`);
+            console.log(`  - salvageValue: ${salvageValue}`);
+            console.log(`  - usefulLifeYears: ${usefulLifeYears}`);
+            console.log(`  - method: ${method}`);
+            console.log(`  - sivDate: ${sivDate} -> ${sivDateString}`);
+
+            // Use the correct depreciation calculation from utils/depreciation.ts
+            const monthlyResults = calculateMonthlyDepreciation({
+              unitPrice: depreciableCost,
+              sivDate: sivDateString,
+              usefulLifeYears: usefulLifeYears,
+              salvageValue: salvageValue,
+              method: method,
+            });
+
+            // Determine book value for the specific year and month with proper blank handling
+            const sivDateObj = new Date(sivDateString);
+            const sivYear = sivDateObj.getFullYear();
+            const sivMonth = sivDateObj.getMonth() + 1; // 1-based month
+
+            // Calculate when useful life ends
+            const usefulLifeMonths = usefulLifeYears * 12;
+            const endDate = new Date(sivDateObj);
+            endDate.setMonth(endDate.getMonth() + usefulLifeMonths);
+            const endYear = endDate.getFullYear();
+            const endMonth = endDate.getMonth() + 1; // 1-based month
+
+            console.log(`🔍 API Debug: Asset ${asset.id} (${asset.name || 'Unknown'})`);
+            console.log(`  - Unit Price: $${depreciableCost}`);
+            console.log(`  - Salvage Value: $${salvageValue}`);
+            console.log(`  - SIV Date: ${sivDate} (${sivYear}-${sivMonth})`);
+            console.log(`  - Target: ${year}-${month}`);
+            console.log(`  - End Date: ${endYear}-${endMonth}`);
+            console.log(`  - Monthly results count: ${monthlyResults.length}`);
+
+            let bookValue = null;
+
+            if (year < sivYear || (year === sivYear && month < sivMonth)) {
+              // Before asset was put in service - no book value (will be null)
+              console.log(`  - Target month is before SIV date - no book value`);
+            } else if (year > endYear || (year === endYear && month >= endMonth)) {
+              // After useful life ends - show salvage value
+              bookValue = salvageValue;
+              console.log(`  - Target month is after useful life - salvage value $${salvageValue.toFixed(2)}`);
+            } else {
+              // During useful life - find calculated book value
+              const targetResult = monthlyResults.find(result =>
+                result.year === year && result.month === month
+              );
+              if (targetResult) {
+                bookValue = targetResult.bookValue;
+                console.log(`  - Book Value for ${year}-${month}: $${targetResult.bookValue.toFixed(2)}`);
+              } else {
+                console.log(`  - No calculation result found for ${year}-${month}`);
+                // Show available results for debugging
+                const availableResults = monthlyResults.slice(0, 5).map(r => `${r.year}-${r.month}: $${r.bookValue.toFixed(2)}`);
+                console.log(`  - Available results (first 5): ${availableResults.join(', ')}`);
+              }
+            }
+
+            if (bookValue !== null) {
+              bookValues.push({ assetId: asset.id, bookValue });
+            }
+          }
+        } catch (error) {
+          console.error('🔍 API Debug: Error calculating book value for asset', asset.id, ':', error.message);
+        }
+      }
+
       bookValueMap = Object.fromEntries(bookValues.map(bv => [bv.assetId, bv.bookValue]));
 
       // Aggregate book value by department
@@ -237,61 +318,82 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       }
       bookValueByCategory = Object.entries(categoryTotals).map(([category, totalBookValue]) => ({ category, totalBookValue }));
     } else if (year && !month) {
-      // Fetch all months for the selected year
-      const assetIds = assets.map(a => a.id);
-      const allBookValues = await prisma.depreciationSchedule.findMany({
-        where: {
-          assetId: { in: assetIds },
-          year,
-        },
-        select: { assetId: true, month: true, bookValue: true }
-      });
+      // Calculate all monthly book values for the selected year using our optimized utility
+      console.log('🔍 API Debug: Calculating monthly book values for year:', year);
 
-      // Build a map: { assetId: { 1: value, 2: value, ..., 12: value } }
-      bookValuesByAsset = {};
-      allBookValues.forEach(({ assetId, month, bookValue }) => {
-        if (!bookValuesByAsset[assetId]) bookValuesByAsset[assetId] = {};
-        bookValuesByAsset[assetId][month] = bookValue;
-      });
-
-      console.log('🔍 API Debug: Found book values from database for', allBookValues.length, 'asset-month combinations');
-
-      // For assets that don't have book values in the database, calculate them dynamically
       for (const asset of assets) {
-        if (!bookValuesByAsset[asset.id] || Object.keys(bookValuesByAsset[asset.id]).length === 0) {
-          console.log('🔍 API Debug: Calculating monthly book values for asset', asset.id, asset.name);
+        try {
+          const depreciableCost = asset.depreciableCost || asset.unitPrice;
+          const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
+          const usefulLifeYears = asset.usefulLifeYears || 5;
+          const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+          const sivDate = asset.sivDate; // Single source for depreciation start date
 
-          try {
-            const depreciableCost = asset.depreciableCost || asset.unitPrice;
-            const salvageValue = asset.salvageValue || 0;
-            const usefulLifeYears = asset.usefulLifeYears || 5;
-            const method = asset.depreciationMethod || 'STRAIGHT_LINE';
-            const startDate = asset.depreciationStartDate || asset.sivDate;
+          if (depreciableCost && depreciableCost > 0 && sivDate) {
+            // Ensure sivDate is properly formatted
+            const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
 
-            if (depreciableCost && depreciableCost > 0 && startDate) {
-              const monthlyResults = calculateMonthlyDepreciation({
-                unitPrice: depreciableCost,
-                sivDate: startDate.toISOString(),
-                usefulLifeYears: usefulLifeYears,
-                salvageValue: salvageValue,
-                method: method,
-              });
+            // Use the correct depreciation calculation from utils/depreciation.ts
+            const monthlyResults = calculateMonthlyDepreciation({
+              unitPrice: depreciableCost,
+              sivDate: sivDateString,
+              usefulLifeYears: usefulLifeYears,
+              salvageValue: salvageValue,
+              method: method,
+            });
 
-              // Filter results for the selected year and build the monthly map
-              const yearResults = monthlyResults.filter(result => result.year === year);
-              if (yearResults.length > 0) {
-                bookValuesByAsset[asset.id] = {};
-                yearResults.forEach(result => {
-                  bookValuesByAsset[asset.id][result.month] = result.bookValue;
-                });
-                console.log('🔍 API Debug: Calculated', yearResults.length, 'monthly values for asset', asset.id);
+            // Build monthly book values for the target year with proper blank handling
+            const yearlyValues = {};
+            const sivDateObj = new Date(sivDateString);
+            const sivYear = sivDateObj.getFullYear();
+            const sivMonth = sivDateObj.getMonth() + 1; // 1-based month
+
+            // Calculate when useful life ends
+            const usefulLifeMonths = usefulLifeYears * 12;
+            const endDate = new Date(sivDateObj);
+            endDate.setMonth(endDate.getMonth() + usefulLifeMonths);
+            const endYear = endDate.getFullYear();
+            const endMonth = endDate.getMonth() + 1; // 1-based month
+
+            console.log(`🔍 API Debug: Asset ${asset.id} (${asset.name || 'Unknown'}) - Year ${year}`);
+            console.log(`  - Unit Price: $${depreciableCost}`);
+            console.log(`  - Salvage Value: $${salvageValue}`);
+            console.log(`  - SIV Date: ${sivDate} (${sivYear}-${sivMonth})`);
+            console.log(`  - Useful Life: ${usefulLifeYears} years (${usefulLifeMonths} months)`);
+            console.log(`  - End Date: ${endYear}-${endMonth}`);
+            console.log(`  - Total monthly results: ${monthlyResults.length}`);
+
+            // For each month of the target year, determine the book value
+            for (let month = 1; month <= 12; month++) {
+              if (year < sivYear || (year === sivYear && month < sivMonth)) {
+                // Before asset was put in service - leave blank (undefined)
+                console.log(`  - Month ${month}: Before SIV date - blank`);
+              } else if (year > endYear || (year === endYear && month >= endMonth)) {
+                // After useful life ends - show salvage value
+                yearlyValues[month] = salvageValue;
+                console.log(`  - Month ${month}: After useful life - salvage value $${salvageValue.toFixed(2)}`);
+              } else {
+                // During useful life - find calculated book value
+                const monthResult = monthlyResults.find(result =>
+                  result.year === year && result.month === month
+                );
+                if (monthResult) {
+                  yearlyValues[month] = monthResult.bookValue;
+                  console.log(`  - Month ${month}: Active depreciation - $${monthResult.bookValue.toFixed(2)}`);
+                } else {
+                  console.log(`  - Month ${month}: No calculation result found - blank`);
+                }
               }
             }
-          } catch (error) {
-            console.error('🔍 API Debug: Error calculating monthly depreciation for asset', asset.id, ':', error.message);
+
+            bookValuesByAsset[asset.id] = yearlyValues;
           }
+        } catch (error) {
+          console.error('🔍 API Debug: Error calculating yearly book values for asset', asset.id, ':', error.message);
         }
       }
+
+      console.log('🔍 API Debug: Calculated yearly book values for', Object.keys(bookValuesByAsset).length, 'assets');
     }
 
     // Calculate actual depreciation data for each asset
@@ -303,7 +405,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         const salvageValue = asset.salvageValue || 0;
         const usefulLifeYears = asset.usefulLifeYears || 5;
         const method = asset.depreciationMethod || 'STRAIGHT_LINE';
-        const startDate = asset.depreciationStartDate || asset.sivDate;
+        const startDate = asset.sivDate; // Single source for depreciation start
 
         // Skip assets with invalid or zero unit price
         if (!depreciableCost || depreciableCost <= 0) {
@@ -359,7 +461,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
           depreciableCost: asset.depreciableCost || asset.unitPrice,
           salvageValue: asset.salvageValue || 0,
           usefulLifeYears: asset.usefulLifeYears || 5,
-          startDate: asset.depreciationStartDate || asset.sivDate
+          startDate: asset.sivDate
         });
         // Continue processing other assets instead of crashing
         continue;
@@ -580,6 +682,8 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         age: asset.sivDate ? Math.floor((now - asset.sivDate) / (1000 * 60 * 60 * 24 * 365.25)) : 0,
         depreciationRate: asset.unitPrice > 0 ?
           ((asset.unitPrice - asset.currentValue) / asset.unitPrice * 100).toFixed(1) : 0,
+        // Add calculated salvage value if not already present
+        calculatedSalvageValue: asset.salvageValue || (asset.residualPercentage ? ((asset.unitPrice || 0) * asset.residualPercentage / 100) : 0),
         ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
         ...(year && !month ? {
           bookValuesByMonth: bookValuesByAsset[asset.id] || {},

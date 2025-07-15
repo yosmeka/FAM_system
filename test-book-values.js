@@ -122,6 +122,25 @@ const testBookValues = async () => {
     console.error('❌ Test 4 failed:', error.message);
   }
   
+  // Test 5: Performance test with larger dataset
+  try {
+    console.log('Test 5: Performance test - larger dataset');
+    const startTime = Date.now();
+    const response5 = await fetch(`${baseUrl}?page=1&limit=100&year=2024`);
+    const data5 = await response5.json();
+    const endTime = Date.now();
+
+    console.log('✅ Response received');
+    console.log('📋 Assets returned:', data5.assets?.length || 0);
+    console.log('⏱️ Response time:', endTime - startTime, 'ms');
+    console.log('📊 Performance metrics:');
+    console.log('  - Assets with book values:', data5.assets?.filter(a => a.bookValuesByMonth && Object.keys(a.bookValuesByMonth).length > 0).length || 0);
+    console.log('  - Average time per asset:', ((endTime - startTime) / (data5.assets?.length || 1)).toFixed(2), 'ms');
+    console.log('');
+  } catch (error) {
+    console.error('❌ Test 5 failed:', error.message);
+  }
+
   console.log('🎉 Book value tests completed!');
 };
 

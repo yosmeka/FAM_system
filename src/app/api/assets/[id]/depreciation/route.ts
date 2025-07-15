@@ -39,7 +39,7 @@ export async function GET(
         nextMaintenance: true,
         salvageValue: true,
         depreciationMethod: true,
-        depreciationStartDate: true,
+        // depreciationStartDate removed - using sivDate only
         createdAt: true,
         updatedAt: true,
         capitalImprovements: {
@@ -192,7 +192,7 @@ export async function PUT(
         salvageValue: salvageValue ? parseFloat(salvageValue) : null,
         usefulLifeMonths: usefulLifeYears ? parseInt(usefulLifeYears) * 12 : null,
         depreciationMethod: depreciationMethodValue,
-        depreciationStartDate: dateAcquired ? new Date(dateAcquired) : null,
+        // depreciationStartDate removed - using sivDate only
       },
     });
 
@@ -232,7 +232,7 @@ export async function PUT(
     // Calculate depreciation using the depreciableCost field
     // This already includes any capital improvements that have been added
     const usefulLifeValue = usefulLifeYears ? parseInt(usefulLifeYears) : Math.ceil((updatedAsset.usefulLifeMonths || 60) / 12);
-    const startDateValue = (updatedAsset.depreciationStartDate || updatedAsset.purchaseDate);
+    const startDateValue = updatedAsset.sivDate || updatedAsset.purchaseDate;
 
     const depreciationResults = calculateDepreciation({
       unitPrice: updatedAsset.depreciableCost || updatedAsset.purchasePrice,
@@ -279,13 +279,7 @@ export async function PUT(
           newValue: updatedAsset.depreciationMethod || null,
           changedBy: session.user?.name || 'system',
         },
-        {
-          assetId: id,
-          field: 'depreciationStartDate',
-          oldValue: asset.depreciationStartDate?.toISOString() || null,
-          newValue: updatedAsset.depreciationStartDate?.toISOString() || null,
-          changedBy: session.user?.name || 'system',
-        },
+        // depreciationStartDate history tracking removed - using sivDate only
       ].filter(change => change.oldValue !== change.newValue);
 
       if (changes.length > 0) {
@@ -315,7 +309,7 @@ export async function PUT(
         // Use the original method from the request, not the one stored in the database
         depreciationMethod: originalMethod || 'STRAIGHT_LINE',
         depreciationRate: depreciationRate ? parseInt(depreciationRate) : (originalMethod === 'DOUBLE_DECLINING' ? 40 : 20),
-        startDate: updatedAsset.depreciationStartDate || updatedAsset.purchaseDate,
+        startDate: updatedAsset.sivDate || updatedAsset.purchaseDate,
         totalUnits,
         unitsPerYear,
       },

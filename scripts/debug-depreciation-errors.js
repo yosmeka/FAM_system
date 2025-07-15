@@ -28,7 +28,7 @@ async function debugDepreciationErrors() {
             salvageValue: true,
             usefulLifeYears: true,
             depreciationMethod: true,
-            depreciationStartDate: true,
+            // depreciationStartDate removed - using sivDate only
             sivDate: true,
             currentValue: true
           }
@@ -42,14 +42,14 @@ async function debugDepreciationErrors() {
           console.log(`   Salvage Value: ${asset.salvageValue}`);
           console.log(`   Useful Life Years: ${asset.usefulLifeYears}`);
           console.log(`   Depreciation Method: ${asset.depreciationMethod}`);
-          console.log(`   Depreciation Start Date: ${asset.depreciationStartDate}`);
+          console.log(`   SIV Date (depreciation start): ${asset.sivDate}`);
           console.log(`   SIV Date: ${asset.sivDate}`);
           console.log(`   Current Value: ${asset.currentValue}`);
 
           // Check what would be used for depreciation calculation
           const depreciableCost = asset.depreciableCost || asset.unitPrice;
           const salvageValue = asset.salvageValue || 0;
-          const startDate = asset.depreciationStartDate || asset.sivDate;
+          const startDate = asset.sivDate; // Single source for depreciation start
 
           console.log(`\n   🧮 Calculated values for depreciation:`);
           console.log(`   Depreciable Cost (used): ${depreciableCost}`);
@@ -98,7 +98,7 @@ async function debugDepreciationErrors() {
         depreciableCost: true,
         salvageValue: true,
         usefulLifeYears: true,
-        depreciationStartDate: true,
+        // depreciationStartDate removed - using sivDate only
         sivDate: true
       }
     });
@@ -108,7 +108,7 @@ async function debugDepreciationErrors() {
     for (const asset of allAssets) {
       const depreciableCost = asset.depreciableCost || asset.unitPrice;
       const salvageValue = asset.salvageValue || 0;
-      const startDate = asset.depreciationStartDate || asset.sivDate;
+      const startDate = asset.sivDate; // Single source for depreciation start
 
       const hasIssues = 
         !depreciableCost || 

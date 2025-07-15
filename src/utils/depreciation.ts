@@ -259,9 +259,25 @@ export interface MonthlyDepreciationResult {
 }
 
 function addMonths(date: Date, months: number): Date {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
+  const startYear = date.getFullYear();
+  const startMonth = date.getMonth(); // 0-based
+  const startDay = date.getDate();
+
+  // Calculate target year and month
+  const totalMonths = startMonth + months;
+  const targetYear = startYear + Math.floor(totalMonths / 12);
+  const targetMonth = totalMonths % 12;
+
+  // Create new date with target year/month, keeping original day
+  const result = new Date(targetYear, targetMonth, startDay);
+
+  // Handle day overflow (e.g., Jan 31 + 1 month should be Feb 28, not Mar 3)
+  if (result.getMonth() !== targetMonth) {
+    // Day overflowed, set to last day of the target month
+    result.setDate(0);
+  }
+
+  return result;
 }
 
 function getDaysInMonth(year: number, month: number): number {
@@ -279,32 +295,38 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
   const results: MonthlyDepreciationResult[] = [];
   let accumulatedDepreciation = 0;
 
+  // Generate exactly one result per month for the useful life period
   for (let m = 0; m < usefulLifeMonths; m++) {
     const date = addMonths(start, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // 1-based month
+
     let depreciationExpense = monthlyDepreciation;
-    if (m === 0) {
-      // Prorate for first month
-      const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
-      const startDay = start.getDate();
-      depreciationExpense = monthlyDepreciation * (daysInMonth - (startDay - 1)) / daysInMonth;
+
+    // Prorate for first month if asset wasn't acquired on the 1st
+    if (m === 0 && start.getDate() > 1) {
+      const daysInMonth = getDaysInMonth(year, month);
+      const daysUsed = daysInMonth - (start.getDate() - 1);
+      depreciationExpense = monthlyDepreciation * daysUsed / daysInMonth;
     }
-    // If this is the last month, adjust so book value = salvage value
+
+    // Adjust last month to ensure book value equals salvage value exactly
     if (m === usefulLifeMonths - 1) {
       depreciationExpense = unitPrice - accumulatedDepreciation - salvageValue;
     }
+
     accumulatedDepreciation += depreciationExpense;
-    let bookValue = unitPrice - accumulatedDepreciation;
-    if (m === usefulLifeMonths - 1) {
-      bookValue = salvageValue;
-    }
+    const bookValue = Math.max(unitPrice - accumulatedDepreciation, salvageValue);
+
     results.push({
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
+      year,
+      month,
       depreciationExpense,
       accumulatedDepreciation,
       bookValue,
     });
   }
+
   return results;
 }
 
@@ -491,6 +513,24 @@ function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepre
   return results;
 }
 
+function validateMonthlyResults(results: MonthlyDepreciationResult[]): MonthlyDepreciationResult[] {
+  // Check for duplicate year-month combinations
+  const seen = new Set<string>();
+  const validated: MonthlyDepreciationResult[] = [];
+
+  for (const result of results) {
+    const key = `${result.year}-${result.month}`;
+    if (seen.has(key)) {
+      console.warn(`⚠️ Duplicate month found: ${key}, skipping duplicate`);
+      continue;
+    }
+    seen.add(key);
+    validated.push(result);
+  }
+
+  return validated;
+}
+
 export function calculateMonthlyDepreciation(input: DepreciationInput): MonthlyDepreciationResult[] {
   if (!input.unitPrice || input.unitPrice <= 0) {
     throw new Error('Purchase price must be greater than zero');
@@ -501,18 +541,29 @@ export function calculateMonthlyDepreciation(input: DepreciationInput): MonthlyD
   if (!input.usefulLifeYears || input.usefulLifeYears <= 0) {
     throw new Error('Useful life must be greater than zero');
   }
+
+  let results: MonthlyDepreciationResult[];
+
   switch (input.method) {
     case 'STRAIGHT_LINE':
-      return calculateStraightLineMonthly(input);
+      results = calculateStraightLineMonthly(input);
+      break;
     case 'DECLINING_BALANCE':
-      return calculateDecliningBalanceMonthly(input);
+      results = calculateDecliningBalanceMonthly(input);
+      break;
     case 'DOUBLE_DECLINING':
-      return calculateDoubleDecliningBalanceMonthly(input);
+      results = calculateDoubleDecliningBalanceMonthly(input);
+      break;
     case 'SUM_OF_YEARS_DIGITS':
-      return calculateSumOfYearsDigitsMonthly(input);
+      results = calculateSumOfYearsDigitsMonthly(input);
+      break;
     case 'UNITS_OF_ACTIVITY':
-      return calculateUnitsOfActivityMonthly(input);
+      results = calculateUnitsOfActivityMonthly(input);
+      break;
     default:
       throw new Error(`Unsupported depreciation method: ${input.method}`);
   }
+
+  // Validate and remove any duplicates
+  return validateMonthlyResults(results);
 }
