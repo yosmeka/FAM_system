@@ -62,16 +62,19 @@ export function AdvancedFilters({
   }, [filters]);
 
   const handleFilterChange = (key: keyof FilterValues, value: string) => {
+    console.log('🔍 AdvancedFilters Debug: Filter change:', key, '=', value);
     let processedValue = value;
 
     // Validation for date inputs
     if (key === 'endDate' && pendingFilters.startDate && value && value < pendingFilters.startDate) {
       // Don't allow end date before start date
+      console.log('🔍 AdvancedFilters Debug: End date before start date, ignoring');
       return;
     }
 
     if (key === 'startDate' && pendingFilters.endDate && value && value > pendingFilters.endDate) {
       // If start date is after end date, clear end date
+      console.log('🔍 AdvancedFilters Debug: Start date after end date, clearing end date');
       setPendingFilters({ ...pendingFilters, [key]: value, endDate: '' });
       return;
     }
@@ -106,6 +109,7 @@ export function AdvancedFilters({
 
   // Apply filters function
   const applyFilters = () => {
+    console.log('🔍 AdvancedFilters Debug: Applying filters:', pendingFilters);
     setFilters(pendingFilters);
     onFiltersChange(pendingFilters);
   };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { RoleBasedTable } from '@/components/ui/RoleBasedTable';
+import { PaginatedTable } from '@/components/ui/PaginatedTable';
 import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
@@ -47,6 +48,16 @@ export default function AssetReportsPage() {
     maxValue: '',
     depreciationMethod: 'all'
   });
+
+  // Pagination state
+  const [paginationState, setPaginationState] = useState({
+    page: 1,
+    limit: 25,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false
+  });
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedAssetName, setSelectedAssetName] = useState<string | null>(null);
@@ -62,7 +73,7 @@ export default function AssetReportsPage() {
     );
   }
 
-  const fetchAssetReports = useCallback(async (filters?: FilterValues, isRefresh = false) => {
+  const fetchAssetReports = useCallback(async (filters?: FilterValues, isRefresh = false, page = 1, limit = 25) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -70,18 +81,35 @@ export default function AssetReportsPage() {
         setLoading(true);
       }
 
-      const queryString = filters ? buildQueryString(filters) : '';
+      const queryString = buildQueryString(filters || currentFilters, page, limit);
       const url = `/api/reports/assets${queryString ? `?${queryString}` : ''}`;
+
+      console.log('🔍 Frontend Debug: Fetching from URL:', url);
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch asset reports');
       const data = await response.json();
+
+      console.log('🔍 Frontend Debug: Received data:', {
+        statsCount: data.stats?.totalAssets,
+        assetsCount: data.assets?.length,
+        filterOptions: data.filterOptions,
+        pagination: data.pagination,
+        firstAssetBookValues: data.assets?.[0]?.bookValuesByMonth,
+        hasYearFilter: !!(currentFilters.year || filters?.year),
+        hasMonthFilter: !!(currentFilters.month || filters?.month)
+      });
 
       setAssetStats(data.stats);
       setAssetsByCategory(data.byCategory);
       setStatusDistribution(data.statusDistribution);
       setDetailedAssets(data.assets || []);
       setLinkedAssets(data.linkedAssets || []);
+
+      // Update pagination state
+      if (data.pagination) {
+        setPaginationState(data.pagination);
+      }
 
       if (data.filterOptions) {
         setFilterOptions(data.filterOptions);
@@ -97,11 +125,11 @@ export default function AssetReportsPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [currentFilters]);
 
   useEffect(() => {
-    fetchAssetReports();
-  }, [fetchAssetReports]);
+    fetchAssetReports(currentFilters, false, paginationState.page, paginationState.limit);
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'linkedAssets') {
@@ -109,16 +137,25 @@ export default function AssetReportsPage() {
     }
   }, [activeTab]);
 
-  const buildQueryString = (filters: FilterValues) => {
+  const buildQueryString = (filters: FilterValues, page = 1, limit = 25) => {
     const params = new URLSearchParams();
 
+    // Add filter parameters
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value !== 'all' && value !== '') {
         params.append(key, value);
       }
     });
 
-    return params.toString();
+    // Add pagination parameters
+    params.append('page', page.toString());
+    params.append('limit', limit.toString());
+
+    const queryString = params.toString();
+    console.log('🔍 Frontend Debug: Built query string:', queryString);
+    console.log('🔍 Frontend Debug: Active filters:', filters);
+
+    return queryString;
   };
 
   const fetchLinkedAssets = async () => {
@@ -148,11 +185,24 @@ export default function AssetReportsPage() {
 
   const handleFiltersChange = (filters: FilterValues) => {
     setCurrentFilters(filters);
-    fetchAssetReports(filters);
+    // Reset to first page when filters change
+    setPaginationState(prev => ({ ...prev, page: 1 }));
+    fetchAssetReports(filters, false, 1, paginationState.limit);
   };
 
   const handleRefresh = () => {
-    fetchAssetReports(currentFilters);
+    fetchAssetReports(currentFilters, true, paginationState.page, paginationState.limit);
+  };
+
+  // Pagination handlers
+  const handlePageChange = (page: number) => {
+    setPaginationState(prev => ({ ...prev, page }));
+    fetchAssetReports(currentFilters, false, page, paginationState.limit);
+  };
+
+  const handleItemsPerPageChange = (limit: number) => {
+    setPaginationState(prev => ({ ...prev, page: 1, limit }));
+    fetchAssetReports(currentFilters, false, 1, limit);
   };
 
   const hasActiveFilters = Object.values(currentFilters).some(value =>
@@ -818,10 +868,17 @@ export default function AssetReportsPage() {
                 </div>
               </div>
               {detailedAssets.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <RoleBasedTable
-                    data={detailedAssets}
-                    columns={[
+                <PaginatedTable
+                  data={detailedAssets}
+                  defaultItemsPerPage={25}
+                  itemsPerPageOptions={[10, 25, 50, 100]}
+                  searchPlaceholder="Search assets by name, serial number, department..."
+                  serverSide={true}
+                  pagination={paginationState}
+                  onPageChange={handlePageChange}
+                  onItemsPerPageChange={handleItemsPerPageChange}
+                  loading={loading || refreshing}
+                  columns={[
                       {
                         header: 'Description',
                         key: 'itemDescription',
@@ -922,7 +979,6 @@ export default function AssetReportsPage() {
                     ]}
                     className="bg-white dark:bg-gray-800"
                   />
-                </div>
               ) : (
                 <div className="text-center text-gray-500 dark:text-gray-400">No assets found for current filters</div>
               )}

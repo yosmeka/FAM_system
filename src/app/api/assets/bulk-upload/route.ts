@@ -110,8 +110,8 @@ export const POST = withPermission(async function POST(request: Request) {
 
         // Parse and validate Unit Price
         const unitPrice = parseFloat(unitPriceRaw.toString().replace(/[,$]/g, ''));
-        if (isNaN(unitPrice) || unitPrice < 0) {
-          throw new Error('Invalid Unit Price. Must be a positive number');
+        if (isNaN(unitPrice) || unitPrice <= 0) {
+          throw new Error('Invalid Unit Price. Must be a positive number greater than zero');
         }
 
         // Check if serial number already exists (using the final generated serial number)

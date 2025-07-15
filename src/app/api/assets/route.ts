@@ -43,6 +43,14 @@ export const POST = withPermission(async function POST(request: Request) {
 
     console.log("Creating asset with data:", body);
 
+    // Validate unit price
+    if (!body.unitPrice || body.unitPrice <= 0) {
+      return Response.json(
+        { error: 'Unit price must be a positive number greater than zero' },
+        { status: 400 }
+      );
+    }
+
     // Create the asset
     const asset = await prisma.asset.create({
       data: {

@@ -1,6 +1,6 @@
 //import { Response } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { calculateDepreciation } from '@/utils/depreciation';
+import { calculateDepreciation, calculateMonthlyDepreciation } from '@/utils/depreciation';
 
 // GET /api/reports/assets
 import { withRole } from '@/middleware/rbac';
@@ -16,7 +16,7 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
     const category = url.searchParams.get('category');
-    const department = url.searchParams.get('department');
+    const currentDepartment = url.searchParams.get('currentDepartment'); // Fixed parameter name
     const location = url.searchParams.get('location');
     const status = url.searchParams.get('status');
     const minValue = url.searchParams.get('minValue');
@@ -25,27 +25,55 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     const year = url.searchParams.get('year') ? parseInt(url.searchParams.get('year')) : null;
     const month = url.searchParams.get('month') ? parseInt(url.searchParams.get('month')) : null;
 
+    // Parse pagination parameters
+    const page = parseInt(url.searchParams.get('page')) || 1;
+    const limit = parseInt(url.searchParams.get('limit')) || 25;
+    const offset = (page - 1) * limit;
+
     // Debug logging
     console.log('🔍 API Debug: Received query parameters:', {
-      startDate, endDate, category, department, location, status, minValue, maxValue, depreciationMethod, year, month
+      startDate, endDate, category, currentDepartment, location, status, minValue, maxValue, depreciationMethod, year, month, page, limit, offset
     });
 
     // Build where clause for filtering
     const whereClause = {};
 
     if (startDate && endDate) {
+      // Ensure end date includes the full day
+      const startDateTime = new Date(startDate);
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999); // Set to end of day
+
       whereClause.sivDate = {
-        gte: new Date(startDate),
-        lte: new Date(endDate)
+        gte: startDateTime,
+        lte: endDateTime
       };
+      console.log('🔍 API Debug: Date filter applied:', {
+        startDate: startDateTime.toISOString(),
+        endDate: endDateTime.toISOString()
+      });
+    } else if (startDate) {
+      // Only start date provided
+      whereClause.sivDate = {
+        gte: new Date(startDate)
+      };
+      console.log('🔍 API Debug: Start date filter applied:', new Date(startDate).toISOString());
+    } else if (endDate) {
+      // Only end date provided
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999);
+      whereClause.sivDate = {
+        lte: endDateTime
+      };
+      console.log('🔍 API Debug: End date filter applied:', endDateTime.toISOString());
     }
 
     if (category && category !== 'all') {
       whereClause.category = category;
     }
 
-    if (department && department !== 'all') {
-      whereClause.currentDepartment = department;
+    if (currentDepartment && currentDepartment !== 'all') {
+      whereClause.currentDepartment = currentDepartment;
     }
 
     if (location && location !== 'all') {
@@ -58,8 +86,27 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
 
     if (minValue || maxValue) {
       whereClause.currentValue = {};
-      if (minValue) whereClause.currentValue.gte = parseFloat(minValue);
-      if (maxValue) whereClause.currentValue.lte = parseFloat(maxValue);
+
+      if (minValue) {
+        const minVal = parseFloat(minValue);
+        if (!isNaN(minVal) && minVal >= 0) {
+          whereClause.currentValue.gte = minVal;
+          console.log('🔍 API Debug: Min value filter applied:', minVal);
+        }
+      }
+
+      if (maxValue) {
+        const maxVal = parseFloat(maxValue);
+        if (!isNaN(maxVal) && maxVal >= 0) {
+          whereClause.currentValue.lte = maxVal;
+          console.log('🔍 API Debug: Max value filter applied:', maxVal);
+        }
+      }
+
+      // If no valid values were set, remove the currentValue filter
+      if (Object.keys(whereClause.currentValue).length === 0) {
+        delete whereClause.currentValue;
+      }
     }
 
     if (depreciationMethod && depreciationMethod !== 'all') {
@@ -67,7 +114,17 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     }
 
     // Debug: Log the where clause
-    console.log('🔍 API Debug: Where clause built:', whereClause);
+    console.log('🔍 API Debug: Where clause built:', JSON.stringify(whereClause, null, 2));
+
+    // Additional debugging for each filter
+    console.log('🔍 API Debug: Filter analysis:');
+    console.log('  - Date range:', startDate && endDate ? `${startDate} to ${endDate}` : 'Not applied');
+    console.log('  - Category:', category !== 'all' ? category : 'All categories');
+    console.log('  - Department:', currentDepartment !== 'all' ? currentDepartment : 'All departments');
+    console.log('  - Location:', location !== 'all' ? location : 'All locations');
+    console.log('  - Status:', status !== 'all' ? status : 'All statuses');
+    console.log('  - Value range:', (minValue || maxValue) ? `${minValue || '0'} to ${maxValue || '∞'}` : 'Not applied');
+    console.log('  - Depreciation method:', depreciationMethod !== 'all' ? depreciationMethod : 'All methods');
 
     // Get total and active asset counts with filters
     const totalAssets = await prisma.asset.count({ where: whereClause });
@@ -100,7 +157,12 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       _count: { id: true }
     });
 
-    // Enhanced depreciation data calculation and detailed asset list
+    // Get total count for pagination
+    const totalAssetsCount = await prisma.asset.count({
+      where: whereClause
+    });
+
+    // Enhanced depreciation data calculation and detailed asset list with pagination
     const assets = await prisma.asset.findMany({
       where: whereClause,
       select: {
@@ -135,7 +197,9 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       orderBy: [
         { category: 'asc' },
         { name: 'asc' }
-      ]
+      ],
+      skip: offset,
+      take: limit
     });
 
     // Fetch book values for all assets for the selected year/month
@@ -182,12 +246,52 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         },
         select: { assetId: true, month: true, bookValue: true }
       });
+
       // Build a map: { assetId: { 1: value, 2: value, ..., 12: value } }
       bookValuesByAsset = {};
       allBookValues.forEach(({ assetId, month, bookValue }) => {
         if (!bookValuesByAsset[assetId]) bookValuesByAsset[assetId] = {};
         bookValuesByAsset[assetId][month] = bookValue;
       });
+
+      console.log('🔍 API Debug: Found book values from database for', allBookValues.length, 'asset-month combinations');
+
+      // For assets that don't have book values in the database, calculate them dynamically
+      for (const asset of assets) {
+        if (!bookValuesByAsset[asset.id] || Object.keys(bookValuesByAsset[asset.id]).length === 0) {
+          console.log('🔍 API Debug: Calculating monthly book values for asset', asset.id, asset.name);
+
+          try {
+            const depreciableCost = asset.depreciableCost || asset.unitPrice;
+            const salvageValue = asset.salvageValue || 0;
+            const usefulLifeYears = asset.usefulLifeYears || 5;
+            const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+            const startDate = asset.depreciationStartDate || asset.sivDate;
+
+            if (depreciableCost && depreciableCost > 0 && startDate) {
+              const monthlyResults = calculateMonthlyDepreciation({
+                unitPrice: depreciableCost,
+                sivDate: startDate.toISOString(),
+                usefulLifeYears: usefulLifeYears,
+                salvageValue: salvageValue,
+                method: method,
+              });
+
+              // Filter results for the selected year and build the monthly map
+              const yearResults = monthlyResults.filter(result => result.year === year);
+              if (yearResults.length > 0) {
+                bookValuesByAsset[asset.id] = {};
+                yearResults.forEach(result => {
+                  bookValuesByAsset[asset.id][result.month] = result.bookValue;
+                });
+                console.log('🔍 API Debug: Calculated', yearResults.length, 'monthly values for asset', asset.id);
+              }
+            }
+          } catch (error) {
+            console.error('🔍 API Debug: Error calculating monthly depreciation for asset', asset.id, ':', error.message);
+          }
+        }
+      }
     }
 
     // Calculate actual depreciation data for each asset
@@ -201,10 +305,28 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         const method = asset.depreciationMethod || 'STRAIGHT_LINE';
         const startDate = asset.depreciationStartDate || asset.sivDate;
 
+        // Skip assets with invalid or zero unit price
+        if (!depreciableCost || depreciableCost <= 0) {
+          console.warn(`Skipping depreciation calculation for asset ${asset.id} (${asset.name}): Invalid unit price (${depreciableCost})`);
+          continue;
+        }
+
+        // Skip assets without valid start date
+        if (!startDate) {
+          console.warn(`Skipping depreciation calculation for asset ${asset.id} (${asset.name}): No valid start date`);
+          continue;
+        }
+
+        // Additional validation
+        if (salvageValue < 0 || salvageValue >= depreciableCost) {
+          console.warn(`Skipping depreciation calculation for asset ${asset.id} (${asset.name}): Invalid salvage value (${salvageValue}) vs unit price (${depreciableCost})`);
+          continue;
+        }
+
         const depreciationResults = calculateDepreciation({
-          purchasePrice: depreciableCost,
-          purchaseDate: startDate.toISOString(),
-          usefulLife: usefulLifeYears,
+          unitPrice: depreciableCost,
+          sivDate: startDate.toISOString(),
+          usefulLifeYears: usefulLifeYears,
           salvageValue: salvageValue,
           method: method,
         });
@@ -231,7 +353,16 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
           }
         });
       } catch (e) {
-        console.error(`Error calculating depreciation for asset ${asset.id}:`, e);
+        console.error(`Error calculating depreciation for asset ${asset.id} (${asset.name || 'Unknown'}):`, {
+          error: e.message,
+          unitPrice: asset.unitPrice,
+          depreciableCost: asset.depreciableCost || asset.unitPrice,
+          salvageValue: asset.salvageValue || 0,
+          usefulLifeYears: asset.usefulLifeYears || 5,
+          startDate: asset.depreciationStartDate || asset.sivDate
+        });
+        // Continue processing other assets instead of crashing
+        continue;
       }
     }
 
@@ -341,21 +472,47 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
       ? ((totalValue._sum.currentValue - (maintenanceCost._sum.cost || 0)) / totalPurchaseValue._sum.unitPrice) * 100
       : 0;
 
-    // Get unique filter options for frontend
-    const filterOptions = await prisma.asset.findMany({
-      select: {
-        category: true,
-        currentDepartment: true,
-        location: true,
-        depreciationMethod: true
-      },
-      distinct: ['category', 'currentDepartment', 'location', 'depreciationMethod']
+    // Get unique filter options for frontend (get all unique values, not just from filtered results)
+    console.log('🔍 API Debug: Fetching filter options...');
+
+    // Get all unique categories
+    const categoriesResult = await prisma.asset.findMany({
+      select: { category: true },
+      distinct: ['category'],
+      where: { category: { not: null } }
     });
 
-    const uniqueCategories = [...new Set(filterOptions.map(item => item.category).filter(Boolean))];
-    const uniqueDepartments = [...new Set(filterOptions.map(item => item.currentDepartment).filter(Boolean))];
-    const uniqueLocations = [...new Set(filterOptions.map(item => item.location).filter(Boolean))];
-    const uniqueDepreciationMethods = [...new Set(filterOptions.map(item => item.depreciationMethod).filter(Boolean))];
+    // Get all unique departments
+    const departmentsResult = await prisma.asset.findMany({
+      select: { currentDepartment: true },
+      distinct: ['currentDepartment'],
+      where: { currentDepartment: { not: null } }
+    });
+
+    // Get all unique locations
+    const locationsResult = await prisma.asset.findMany({
+      select: { location: true },
+      distinct: ['location'],
+      where: { location: { not: null } }
+    });
+
+    // Get all unique depreciation methods
+    const depreciationMethodsResult = await prisma.asset.findMany({
+      select: { depreciationMethod: true },
+      distinct: ['depreciationMethod'],
+      where: { depreciationMethod: { not: null } }
+    });
+
+    const uniqueCategories = categoriesResult.map(item => item.category).filter(Boolean);
+    const uniqueDepartments = departmentsResult.map(item => item.currentDepartment).filter(Boolean);
+    const uniqueLocations = locationsResult.map(item => item.location).filter(Boolean);
+    const uniqueDepreciationMethods = depreciationMethodsResult.map(item => item.depreciationMethod).filter(Boolean);
+
+    console.log('🔍 API Debug: Filter options found:');
+    console.log('  - Categories:', uniqueCategories);
+    console.log('  - Departments:', uniqueDepartments);
+    console.log('  - Locations:', uniqueLocations);
+    console.log('  - Depreciation Methods:', uniqueDepreciationMethods);
 
     const formattedData = {
       stats: {
@@ -370,6 +527,14 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         averageAssetAge: averageAssetAge[0]?.avg_age ? parseFloat(averageAssetAge[0].avg_age) : 0,
         utilizationRate: parseFloat(utilizationRate.toFixed(2)),
         totalROI: parseFloat(totalROI.toFixed(2))
+      },
+      pagination: {
+        page,
+        limit,
+        total: totalAssetsCount,
+        totalPages: Math.ceil(totalAssetsCount / limit),
+        hasNextPage: page < Math.ceil(totalAssetsCount / limit),
+        hasPreviousPage: page > 1
       },
       byCategory: assetsByCategory.map(item => ({
         category: item.category || 'Uncategorized',
@@ -416,7 +581,14 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
         depreciationRate: asset.unitPrice > 0 ?
           ((asset.unitPrice - asset.currentValue) / asset.unitPrice * 100).toFixed(1) : 0,
         ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
-        ...(year && !month ? { bookValuesByMonth: bookValuesByAsset[asset.id] || {} } : {}),
+        ...(year && !month ? {
+          bookValuesByMonth: bookValuesByAsset[asset.id] || {},
+          // Add debug info for the first few assets
+          ...(assets.indexOf(asset) < 3 ? {
+            _debug_bookValuesByMonth: bookValuesByAsset[asset.id] || {},
+            _debug_hasBookValues: !!(bookValuesByAsset[asset.id] && Object.keys(bookValuesByAsset[asset.id]).length > 0)
+          } : {})
+        } : {}),
       })),
       filterOptions: {
         categories: uniqueCategories,
