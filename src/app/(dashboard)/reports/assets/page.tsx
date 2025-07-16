@@ -7,6 +7,7 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
 import { TableExportDropdown } from '@/components/reports/TableExportDropdown';
+import { DepreciationAnalytics } from '@/components/reports/DepreciationAnalytics';
 import { Download, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'react-hot-toast';
@@ -665,12 +666,15 @@ export default function AssetReportsPage() {
           className="bg-white dark:bg-gray-800"
         />
         <RoleBasedStats
-          name="Current Value"
+          name={currentFilters.year && currentFilters.month ?
+            `Book Value (${new Date(0, parseInt(currentFilters.month) - 1).toLocaleString('default', { month: 'long' })} ${currentFilters.year})` :
+            currentFilters.year ? `Book Value (${currentFilters.year})` : "Current Book Value"
+          }
           value={new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
             maximumFractionDigits: 0
-          }).format(assetStats?.totalValue || 0)}
+          }).format(assetStats?.totalBookValue || 0)}
           trend={Number(((assetStats?.valueGrowth || 0) / (assetStats?.totalValue || 1) * 100).toFixed(1))}
           trendLabel="vs last year"
           variant="success"
@@ -712,6 +716,16 @@ export default function AssetReportsPage() {
               Asset Details
             </button>
             <button
+              onClick={() => setActiveTab('depreciationAnalytics')}
+              className={`${
+                activeTab === 'depreciationAnalytics'
+                  ? 'border-red-500 text-red-600 dark:text-red-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              📊 Depreciation Analytics
+            </button>
+            <button
               onClick={() => setActiveTab('linkedAssets')}
               className={`${
                 activeTab === 'linkedAssets'
@@ -724,6 +738,94 @@ export default function AssetReportsPage() {
           </nav>
         </div>
       </div>
+
+      {/* Monthly Book Value Cards - Show when year is selected but not month */}
+      {currentFilters.year && !currentFilters.month && assetStats?.monthlyBookValueTotals && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            📊 Monthly Book Value Totals for {currentFilters.year}
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-2">
+              (Sum of all {assetStats.totalAssets || 0} filtered assets' book values per month)
+            </span>
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-3">
+            {Array.from({ length: 12 }, (_, index) => {
+              const monthNum = index + 1;
+              const monthName = new Date(0, index).toLocaleString('default', { month: 'short' });
+              const monthValue = (assetStats.monthlyBookValueTotals as any)?.[monthNum] || 0;
+
+              return (
+                <div key={monthNum} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {monthName}
+                    </div>
+                    <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        maximumFractionDigits: 0,
+                        notation: monthValue > 1000000 ? 'compact' : 'standard'
+                      }).format(monthValue)}
+                    </div>
+                    {monthValue > 0 && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {((monthValue / (assetStats.totalPurchaseValue || 1)) * 100).toFixed(1)}% of original
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Debug Information */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs">
+              <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">🔍 Debug Info:</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p><strong>Assets with monthly data:</strong> {detailedAssets.filter(asset => (asset as any).bookValuesByMonth && Object.keys((asset as any).bookValuesByMonth).length > 0).length}</p>
+                  <p><strong>Total assets:</strong> {detailedAssets.length}</p>
+                </div>
+                <div>
+                  <p><strong>Monthly totals received:</strong> {Object.keys(assetStats.monthlyBookValueTotals || {}).length}</p>
+                  <p><strong>Sample Jan total:</strong> ${((assetStats.monthlyBookValueTotals as any)?.[1] || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Summary for the year */}
+          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg border border-blue-200 dark:border-blue-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  📈 {currentFilters.year} Book Value Summary
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Total depreciation across all months for the selected year
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: 0
+                  }).format(
+                    Array.from({ length: 12 }, (_, i) => (assetStats.monthlyBookValueTotals as any)?.[i + 1] || 0)
+                      .reduce((sum, value) => sum + value, 0) / 12
+                  )}
+                </div>
+                <div className="text-xs text-blue-500 dark:text-blue-400">
+                  Average monthly book value
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'assetDetails' && (
         <>
@@ -985,6 +1087,45 @@ export default function AssetReportsPage() {
             </div>
           </div>
         </>
+      )}
+
+      {activeTab === 'depreciationAnalytics' && (
+        <div className="space-y-6">
+          {assetStats && (
+            <DepreciationAnalytics
+              stats={{
+                totalCurrentBookValue: assetStats.totalCurrentBookValue || 0,
+                totalAccumulatedDepreciation: assetStats.totalAccumulatedDepreciation || 0,
+                averageDepreciationRate: assetStats.averageDepreciationRate || 0,
+                assetsActivelyDepreciating: assetStats.assetsActivelyDepreciating || 0,
+                assetsFullyDepreciated: assetStats.assetsFullyDepreciated || 0,
+                assetsNotStarted: assetStats.assetsNotStarted || 0,
+                depreciationEndingIn12Months: assetStats.depreciationEndingIn12Months || 0,
+                depreciationByMethod: Array.isArray(assetStats.depreciationByMethod) ? assetStats.depreciationByMethod : [],
+                totalPurchaseValue: assetStats.totalPurchaseValue || 0
+              }}
+            />
+          )}
+
+          {(!assetStats || !Array.isArray(assetStats.depreciationByMethod) || assetStats.depreciationByMethod.length === 0) && (
+            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
+              <div className="text-gray-400 dark:text-gray-500 mb-4">
+                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                No Depreciation Data Available
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">
+                Depreciation analytics will appear here once assets with depreciation data are available.
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Make sure assets have SIV dates and depreciation methods configured.
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       {activeTab === 'linkedAssets' && (

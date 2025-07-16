@@ -8,6 +8,11 @@ export interface FilterOptions {
   departments: string[];
   locations: string[];
   depreciationMethods: string[];
+  // Depreciation-specific filter options
+  depreciationStatus?: Array<{ value: string; label: string }>;
+  assetAge?: Array<{ value: string; label: string }>;
+  usefulLifeRange?: Array<{ value: string; label: string }>;
+  residualPercentageRange?: Array<{ value: string; label: string }>;
 }
 
 export interface FilterValues {
@@ -22,6 +27,18 @@ export interface FilterValues {
   depreciationMethod: string;
   year?: string;
   month?: string;
+  // Depreciation-specific filters
+  depreciationStatus?: string;
+  minBookValue?: string;
+  maxBookValue?: string;
+  minDepreciationRate?: string;
+  maxDepreciationRate?: string;
+  assetAge?: string;
+  usefulLifeRange?: string;
+  sivDateFrom?: string;
+  sivDateTo?: string;
+  depreciationEndingSoon?: boolean;
+  residualPercentageRange?: string;
 }
 
 interface AdvancedFiltersProps {
@@ -49,6 +66,18 @@ export function AdvancedFilters({
     depreciationMethod: 'all',
     year: '',
     month: '',
+    // Depreciation-specific filters
+    depreciationStatus: 'all',
+    minBookValue: '',
+    maxBookValue: '',
+    minDepreciationRate: '',
+    maxDepreciationRate: '',
+    assetAge: 'all',
+    usefulLifeRange: 'all',
+    sivDateFrom: '',
+    sivDateTo: '',
+    depreciationEndingSoon: false,
+    residualPercentageRange: 'all'
   });
 
 
@@ -193,6 +222,49 @@ export function AdvancedFilters({
 
     if (filters.depreciationMethod && filters.depreciationMethod !== 'all') {
       activeFilters.push(`Method: ${filters.depreciationMethod}`);
+    }
+
+    // Depreciation-specific filters
+    if (filters.depreciationStatus && filters.depreciationStatus !== 'all') {
+      const statusLabel = filterOptions.depreciationStatus?.find(s => s.value === filters.depreciationStatus)?.label || filters.depreciationStatus;
+      activeFilters.push(`Depreciation: ${statusLabel}`);
+    }
+
+    if (filters.assetAge && filters.assetAge !== 'all') {
+      const ageLabel = filterOptions.assetAge?.find(a => a.value === filters.assetAge)?.label || filters.assetAge;
+      activeFilters.push(`Age: ${ageLabel}`);
+    }
+
+    if (filters.usefulLifeRange && filters.usefulLifeRange !== 'all') {
+      const lifeLabel = filterOptions.usefulLifeRange?.find(l => l.value === filters.usefulLifeRange)?.label || filters.usefulLifeRange;
+      activeFilters.push(`Useful Life: ${lifeLabel}`);
+    }
+
+    if (filters.minBookValue || filters.maxBookValue) {
+      const min = filters.minBookValue || '0';
+      const max = filters.maxBookValue || '∞';
+      activeFilters.push(`Book Value: $${min} - $${max}`);
+    }
+
+    if (filters.minDepreciationRate || filters.maxDepreciationRate) {
+      const min = filters.minDepreciationRate || '0';
+      const max = filters.maxDepreciationRate || '100';
+      activeFilters.push(`Depreciation Rate: ${min}% - ${max}%`);
+    }
+
+    if (filters.sivDateFrom || filters.sivDateTo) {
+      const from = filters.sivDateFrom || 'Start';
+      const to = filters.sivDateTo || 'End';
+      activeFilters.push(`SIV Date: ${from} - ${to}`);
+    }
+
+    if (filters.residualPercentageRange && filters.residualPercentageRange !== 'all') {
+      const residualLabel = filterOptions.residualPercentageRange?.find(r => r.value === filters.residualPercentageRange)?.label || filters.residualPercentageRange;
+      activeFilters.push(`Residual: ${residualLabel}`);
+    }
+
+    if (filters.depreciationEndingSoon) {
+      activeFilters.push('Depreciation ending in 12 months');
     }
 
     return activeFilters;
@@ -506,6 +578,302 @@ export function AdvancedFilters({
                     <X className="h-4 w-4" />
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Depreciation-Specific Filters Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h4 className="text-md font-semibold text-black dark:text-white mb-4 flex items-center gap-2">
+            📊 Depreciation Analytics Filters
+          </h4>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Depreciation Status */}
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                📈 Depreciation Status
+              </label>
+              <select
+                value={pendingFilters.depreciationStatus || 'all'}
+                onChange={(e) => handleFilterChange('depreciationStatus', e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              >
+                <option value="all">All Statuses</option>
+                {filterOptions.depreciationStatus?.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Asset Age */}
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                🕐 Asset Age
+              </label>
+              <select
+                value={pendingFilters.assetAge || 'all'}
+                onChange={(e) => handleFilterChange('assetAge', e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              >
+                <option value="all">All Ages</option>
+                {filterOptions.assetAge?.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Useful Life Range */}
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                ⏳ Useful Life
+              </label>
+              <select
+                value={pendingFilters.usefulLifeRange || 'all'}
+                onChange={(e) => handleFilterChange('usefulLifeRange', e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              >
+                <option value="all">All Ranges</option>
+                {filterOptions.usefulLifeRange?.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Book Value Range */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📖 Min Book Value ($)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={pendingFilters.minBookValue || ''}
+                    onChange={(e) => handleFilterChange('minBookValue', e.target.value)}
+                    placeholder="Min book value"
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.minBookValue && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('minBookValue', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear minimum book value"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📖 Max Book Value ($)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={pendingFilters.maxBookValue || ''}
+                    onChange={(e) => handleFilterChange('maxBookValue', e.target.value)}
+                    placeholder="Max book value"
+                    min={pendingFilters.minBookValue || "0"}
+                    step="0.01"
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.maxBookValue && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('maxBookValue', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear maximum book value"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Depreciation Rate Range */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📉 Min Depreciation Rate (%)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={pendingFilters.minDepreciationRate || ''}
+                    onChange={(e) => handleFilterChange('minDepreciationRate', e.target.value)}
+                    placeholder="Min rate"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.minDepreciationRate && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('minDepreciationRate', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear minimum depreciation rate"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📉 Max Depreciation Rate (%)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={pendingFilters.maxDepreciationRate || ''}
+                    onChange={(e) => handleFilterChange('maxDepreciationRate', e.target.value)}
+                    placeholder="Max rate"
+                    min={pendingFilters.minDepreciationRate || "0"}
+                    max="100"
+                    step="0.1"
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.maxDepreciationRate && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('maxDepreciationRate', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear maximum depreciation rate"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* SIV Date Range */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📅 SIV Date From
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={pendingFilters.sivDateFrom || ''}
+                    onChange={(e) => handleFilterChange('sivDateFrom', e.target.value)}
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.sivDateFrom && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('sivDateFrom', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear SIV date from"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                  📅 SIV Date To
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={pendingFilters.sivDateTo || ''}
+                    onChange={(e) => handleFilterChange('sivDateTo', e.target.value)}
+                    min={pendingFilters.sivDateFrom || undefined}
+                    className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+                  />
+                  {pendingFilters.sivDateTo && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFilterChange('sivDateTo', '');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      title="Clear SIV date to"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Residual Percentage Range */}
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                💰 Residual Percentage
+              </label>
+              <select
+                value={pendingFilters.residualPercentageRange || 'all'}
+                onChange={(e) => handleFilterChange('residualPercentageRange', e.target.value)}
+                className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              >
+                <option value="all">All Ranges</option>
+                {filterOptions.residualPercentageRange?.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Depreciation Ending Soon */}
+            <div>
+              <label className="block text-sm font-medium text-black dark:text-white mb-1">
+                ⚠️ Special Filters
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="depreciationEndingSoon"
+                  checked={pendingFilters.depreciationEndingSoon || false}
+                  onChange={(e) => handleFilterChange('depreciationEndingSoon', e.target.checked)}
+                  className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                <label htmlFor="depreciationEndingSoon" className="text-sm text-black dark:text-white">
+                  Depreciation ending in 12 months
+                </label>
               </div>
             </div>
           </div>
