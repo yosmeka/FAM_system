@@ -47,7 +47,21 @@ export default function AssetReportsPage() {
     status: 'all',
     minValue: '',
     maxValue: '',
-    depreciationMethod: 'all'
+    depreciationMethod: 'all',
+    year: '',
+    month: '',
+    // Ensure all depreciation filters are also set to defaults
+    depreciationStatus: 'all',
+    minBookValue: '',
+    maxBookValue: '',
+    minDepreciationRate: '',
+    maxDepreciationRate: '',
+    assetAge: 'all',
+    usefulLifeRange: 'all',
+    sivDateFrom: '',
+    sivDateTo: '',
+    depreciationEndingSoon: false,
+    residualPercentageRange: 'all'
   });
 
   // Pagination state
@@ -129,7 +143,21 @@ export default function AssetReportsPage() {
   }, [currentFilters]);
 
   useEffect(() => {
-    fetchAssetReports(currentFilters, false, paginationState.page, paginationState.limit);
+    // On initial load, fetch without any filters to ensure no default filters are applied
+    console.log('🔍 Frontend Debug: Initial load - fetching without filters');
+    fetchAssetReports({
+      startDate: '',
+      endDate: '',
+      category: 'all',
+      currentDepartment: 'all',
+      location: 'all',
+      status: 'all',
+      minValue: '',
+      maxValue: '',
+      depreciationMethod: 'all',
+      year: '',
+      month: ''
+    }, false, paginationState.page, paginationState.limit);
   }, []);
 
   useEffect(() => {
@@ -141,10 +169,11 @@ export default function AssetReportsPage() {
   const buildQueryString = (filters: FilterValues, page = 1, limit = 25) => {
     const params = new URLSearchParams();
 
-    // Add filter parameters
+    // Add filter parameters - only add non-default values
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all' && value !== '') {
-        params.append(key, value);
+      // Skip default values and empty values
+      if (value && value !== 'all' && value !== '' && value !== false) {
+        params.append(key, value.toString());
       }
     });
 
@@ -154,7 +183,8 @@ export default function AssetReportsPage() {
 
     const queryString = params.toString();
     console.log('🔍 Frontend Debug: Built query string:', queryString);
-    console.log('🔍 Frontend Debug: Active filters:', filters);
+    console.log('🔍 Frontend Debug: Original filters object:', filters);
+    console.log('🔍 Frontend Debug: Filters being sent:', Object.fromEntries(params.entries()));
 
     return queryString;
   };
@@ -611,6 +641,7 @@ export default function AssetReportsPage() {
 
       <AdvancedFilters
         filterOptions={filterOptions}
+        currentFilters={currentFilters}
         onFiltersChange={handleFiltersChange}
         onRefresh={handleRefresh}
         isLoading={loading || refreshing}
@@ -1066,9 +1097,12 @@ export default function AssetReportsPage() {
                             header: 'Book Value',
                             key: 'bookValue',
                             render: (_, item) => {
-                              const bookValue = item.bookValue || item.currentValue;
-                              return bookValue !== undefined && bookValue !== null 
-                                ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                              // Use currentBookValue when no year/month filter, otherwise use bookValue or currentValue
+                              const bookValue = !currentFilters.year && !currentFilters.month
+                                ? (item as any).currentBookValue || item.currentValue
+                                : item.bookValue || item.currentValue;
+                              return bookValue !== undefined && bookValue !== null
+                                ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                 : '—';
                             },
                           }]

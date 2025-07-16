@@ -52,6 +52,14 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
     // Build where clause for filtering
     const whereClause = {};
 
+    // Debug: Log all received parameters
+    console.log('🔍 API Debug: All received parameters:', {
+      startDate, endDate, category, currentDepartment, location, status, minValue, maxValue,
+      depreciationMethod, year, month, depreciationStatus, minBookValue, maxBookValue,
+      minDepreciationRate, maxDepreciationRate, assetAge, usefulLifeRange, sivDateFrom,
+      sivDateTo, depreciationEndingSoon, residualPercentageRange
+    });
+
     if (startDate && endDate) {
       // Ensure end date includes the full day
       const startDateTime = new Date(startDate);
@@ -1024,6 +1032,56 @@ export const GET = withRole([ 'MANAGER', 'USER','AUDITOR'], async function GET(r
           ((asset.unitPrice - asset.currentValue) / asset.unitPrice * 100).toFixed(1) : 0,
         // Add calculated salvage value if not already present
         calculatedSalvageValue: asset.salvageValue || (asset.residualPercentage ? ((asset.unitPrice || 0) * asset.residualPercentage / 100) : 0),
+        // Calculate current book value (as of today) when no year/month filter
+        ...(!year && !month ? {
+          currentBookValue: (() => {
+            try {
+              const sivDate = asset.sivDate;
+              const unitPrice = asset.unitPrice || 0;
+              const usefulLifeYears = asset.usefulLifeYears || 5;
+              const residualPercentage = asset.residualPercentage || 0;
+              const salvageValue = asset.salvageValue || (unitPrice * residualPercentage / 100);
+
+              if (!sivDate || unitPrice <= 0) {
+                return unitPrice; // Return original price if no depreciation data
+              }
+
+              // Calculate current book value using depreciation utility
+              const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
+
+              const depreciationInput = {
+                unitPrice,
+                sivDate: sivDate.toISOString().split('T')[0],
+                usefulLifeYears,
+                salvageValue,
+                method: asset.depreciationMethod || 'STRAIGHT_LINE',
+                residualPercentage
+              };
+
+              const monthlyResults = calculateMonthlyDepreciation(depreciationInput);
+
+              // Find the most recent month's book value (up to current date)
+              const currentDate = now;
+              const currentYear = currentDate.getFullYear();
+              const currentMonth = currentDate.getMonth() + 1;
+
+              // Find the latest applicable book value
+              let latestBookValue = unitPrice;
+              for (const result of monthlyResults) {
+                if (result.year < currentYear || (result.year === currentYear && result.month <= currentMonth)) {
+                  latestBookValue = result.bookValue;
+                } else {
+                  break; // Don't use future months
+                }
+              }
+
+              return latestBookValue;
+            } catch (error) {
+              console.warn('Error calculating current book value for asset', asset.id, ':', error.message);
+              return asset.currentValue || asset.unitPrice || 0;
+            }
+          })()
+        } : {}),
         ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
         ...(year && !month ? {
           bookValuesByMonth: bookValuesByAsset[asset.id] || {},

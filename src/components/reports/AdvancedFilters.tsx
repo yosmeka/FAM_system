@@ -43,6 +43,7 @@ export interface FilterValues {
 
 interface AdvancedFiltersProps {
   filterOptions: FilterOptions;
+  currentFilters?: FilterValues;
   onFiltersChange: (filters: FilterValues) => void;
   onRefresh: () => void;
   isLoading?: boolean;
@@ -50,11 +51,12 @@ interface AdvancedFiltersProps {
 
 export function AdvancedFilters({
   filterOptions,
+  currentFilters,
   onFiltersChange,
   onRefresh,
   isLoading = false
 }: AdvancedFiltersProps) {
-  const [filters, setFilters] = useState<FilterValues>({
+  const defaultFilters: FilterValues = {
     startDate: '',
     endDate: '',
     category: 'all',
@@ -78,17 +80,22 @@ export function AdvancedFilters({
     sivDateTo: '',
     depreciationEndingSoon: false,
     residualPercentageRange: 'all'
-  });
+  };
+
+  const [filters, setFilters] = useState<FilterValues>(currentFilters || defaultFilters);
 
 
 
   // Local state for pending filters (before submission)
   const [pendingFilters, setPendingFilters] = useState<FilterValues>(filters);
 
-  // Update pending filters when props change
+  // Sync with currentFilters prop changes
   useEffect(() => {
-    setPendingFilters(filters);
-  }, [filters]);
+    if (currentFilters) {
+      setFilters(currentFilters);
+      setPendingFilters(currentFilters);
+    }
+  }, [currentFilters]);
 
   const handleFilterChange = (key: keyof FilterValues, value: string) => {
     console.log('🔍 AdvancedFilters Debug: Filter change:', key, '=', value);
@@ -167,17 +174,40 @@ export function AdvancedFilters({
     onFiltersChange(clearedFilters);
   };
 
-  const hasActiveFilters = Object.values(filters).some(value =>
-    value !== '' && value !== 'all'
-  );
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+    // Define what constitutes an "active" (non-default) filter
+    const isActive = (() => {
+      if (typeof value === 'boolean') {
+        return value === true; // Only true boolean values are active
+      }
+      return value !== '' && value !== 'all' && value !== false;
+    })();
+
+    // Debug: Log active filters
+    if (isActive) {
+      console.log('🔍 AdvancedFilters Debug: Active filter detected:', key, '=', value);
+    }
+
+    return isActive;
+  });
+
+  // Update pending filters when filters change
+  useEffect(() => {
+    setPendingFilters(filters);
+    console.log('🔍 AdvancedFilters Debug: Current filters state:', filters);
+    console.log('🔍 AdvancedFilters Debug: Has active filters:', hasActiveFilters);
+  }, [filters, hasActiveFilters]);
 
   // Helper function to check if pending filters have changes
   const hasPendingChanges = JSON.stringify(pendingFilters) !== JSON.stringify(filters);
 
   // Helper function to check if pending filters have any values
-  const hasPendingFilters = Object.values(pendingFilters).some(value =>
-    value !== '' && value !== 'all'
-  );
+  const hasPendingFilters = Object.entries(pendingFilters).some(([key, value]) => {
+    if (typeof value === 'boolean') {
+      return value === true;
+    }
+    return value !== '' && value !== 'all' && value !== false;
+  });
 
   const getActiveFilterCount = () => {
     return Object.values(filters).filter(value => value !== '' && value !== 'all').length;
