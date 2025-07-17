@@ -64,15 +64,7 @@ export default function AssetReportsPage() {
     residualPercentageRange: 'all'
   });
 
-  // Pagination state
-  const [paginationState, setPaginationState] = useState({
-    page: 1,
-    limit: 25,
-    total: 0,
-    totalPages: 0,
-    hasNextPage: false,
-    hasPreviousPage: false
-  });
+  // Pagination removed - all filtered assets displayed
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedAssetName, setSelectedAssetName] = useState<string | null>(null);
@@ -88,7 +80,7 @@ export default function AssetReportsPage() {
     );
   }
 
-  const fetchAssetReports = useCallback(async (filters?: FilterValues, isRefresh = false, page = 1, limit = 25) => {
+  const fetchAssetReports = useCallback(async (filters?: FilterValues, isRefresh = false) => {
     try {
       if (isRefresh) {
         setRefreshing(true);
@@ -96,10 +88,11 @@ export default function AssetReportsPage() {
         setLoading(true);
       }
 
-      const queryString = buildQueryString(filters || currentFilters, page, limit);
+      const queryString = buildQueryString(filters || currentFilters);
       const url = `/api/reports/assets${queryString ? `?${queryString}` : ''}`;
 
       console.log('🔍 Frontend Debug: Fetching from URL:', url);
+      console.log('🔍 Frontend Debug: Loading ALL assets for complete reporting (no artificial limits)');
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch asset reports');
@@ -116,15 +109,12 @@ export default function AssetReportsPage() {
       });
 
       setAssetStats(data.stats);
-      setAssetsByCategory(data.byCategory);
-      setStatusDistribution(data.statusDistribution);
+      setAssetsByCategory(data.byCategory || []);
+      setStatusDistribution(data.statusDistribution || []);
       setDetailedAssets(data.assets || []);
       setLinkedAssets(data.linkedAssets || []);
 
-      // Update pagination state
-      if (data.pagination) {
-        setPaginationState(data.pagination);
-      }
+      // Pagination removed - all assets returned
 
       if (data.filterOptions) {
         setFilterOptions(data.filterOptions);
@@ -157,7 +147,7 @@ export default function AssetReportsPage() {
       depreciationMethod: 'all',
       year: '',
       month: ''
-    }, false, paginationState.page, paginationState.limit);
+    }, false);
   }, []);
 
   useEffect(() => {
@@ -166,7 +156,7 @@ export default function AssetReportsPage() {
     }
   }, [activeTab]);
 
-  const buildQueryString = (filters: FilterValues, page = 1, limit = 25) => {
+  const buildQueryString = (filters: FilterValues) => {
     const params = new URLSearchParams();
 
     // Add filter parameters - only add non-default values
@@ -177,9 +167,7 @@ export default function AssetReportsPage() {
       }
     });
 
-    // Add pagination parameters
-    params.append('page', page.toString());
-    params.append('limit', limit.toString());
+    // Pagination removed - no page/limit parameters
 
     const queryString = params.toString();
     console.log('🔍 Frontend Debug: Built query string:', queryString);
@@ -216,25 +204,14 @@ export default function AssetReportsPage() {
 
   const handleFiltersChange = (filters: FilterValues) => {
     setCurrentFilters(filters);
-    // Reset to first page when filters change
-    setPaginationState(prev => ({ ...prev, page: 1 }));
-    fetchAssetReports(filters, false, 1, paginationState.limit);
+    fetchAssetReports(filters, false);
   };
 
   const handleRefresh = () => {
-    fetchAssetReports(currentFilters, true, paginationState.page, paginationState.limit);
+    fetchAssetReports(currentFilters, true);
   };
 
-  // Pagination handlers
-  const handlePageChange = (page: number) => {
-    setPaginationState(prev => ({ ...prev, page }));
-    fetchAssetReports(currentFilters, false, page, paginationState.limit);
-  };
-
-  const handleItemsPerPageChange = (limit: number) => {
-    setPaginationState(prev => ({ ...prev, page: 1, limit }));
-    fetchAssetReports(currentFilters, false, 1, limit);
-  };
+  // Pagination removed - all filtered assets displayed
 
   const hasActiveFilters = Object.values(currentFilters).some(value =>
     value !== '' && value !== 'all'
@@ -319,7 +296,7 @@ export default function AssetReportsPage() {
 
       const tableHeaders = [...baseHeaders, ...bookValueHeaders, 'Status'];
       
-      const tableRows: string[][] = detailedAssets.map(asset => {
+      const tableRows: string[][] = safeDetailedAssets.map((asset: any) => {
         const baseRow = [
           asset.itemDescription || '',
           asset.serialNumber || '',
@@ -365,8 +342,13 @@ export default function AssetReportsPage() {
 
   const exportToExcel = async () => {
     try {
+      toast.loading('Generating Excel file...', { id: 'excel-export' });
+
+      // Use detailedAssets directly (contains ALL filtered data since pagination is removed)
+      const allFilteredAssets = safeDetailedAssets;
+      console.log(`🔍 Export Debug: Exporting ${allFilteredAssets.length} assets`);
+
       const XLSX = await import('xlsx');
-      
       const workbook = XLSX.utils.book_new();
 
       // Summary Statistics
@@ -376,7 +358,12 @@ export default function AssetReportsPage() {
         ['Total Assets', assetStats?.totalAssets || 0],
         ['Active Assets', assetStats?.activeAssets || 0],
         ['Total Value', assetStats?.totalValue || 0],
-        ['Total Depreciation', assetStats?.totalDepreciation || 0]
+        ['Total Depreciation', assetStats?.totalDepreciation || 0],
+        ['', ''],
+        ['Export Details', ''],
+        ['Total Exported Assets', allFilteredAssets.length],
+        ['Export Date', new Date().toLocaleString()],
+        ['Applied Filters', Object.entries(currentFilters).filter(([key, value]) => value && value !== 'all' && value !== '').map(([key, value]) => `${key}: ${value}`).join(', ') || 'None']
       ];
       const statsSheet = XLSX.utils.aoa_to_sheet(statsData);
       XLSX.utils.book_append_sheet(workbook, statsSheet, 'Summary');
@@ -385,7 +372,7 @@ export default function AssetReportsPage() {
       const categoryData: (string | number)[][] = [
         ['Category Distribution', '', '', ''],
         ['Category', 'Status', 'Count', 'Total Value'],
-        ...assetsByCategory.map(item => [
+        ...safeAssetsByCategory.map(item => [
           item.category || '',
           item.status || '',
           item.count || 0,
@@ -395,60 +382,94 @@ export default function AssetReportsPage() {
       const categorySheet = XLSX.utils.aoa_to_sheet(categoryData);
       XLSX.utils.book_append_sheet(workbook, categorySheet, 'Categories');
 
-      // Detailed Asset List
+      // Detailed Asset List - ALL FILTERED ASSETS
       const baseAssetHeaders = [
-        'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
-        'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life (Years)', 'Residual %'
+        'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
+        'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
+        'Current Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
+        'Salvage Value', 'Calculated Salvage Value'
       ];
 
+      // Add monthly book value columns if year filter is applied
       const bookValueHeaders = (currentFilters.year && !currentFilters.month)
-        ? Array.from({ length: 12 }, (_, i) => 
-            `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`
+        ? Array.from({ length: 12 }, (_, i) =>
+            `${new Date(0, i).toLocaleString('default', { month: 'short' })} ${currentFilters.year} Book Value`
           )
-        : ['Book Value'];
+        : [];
 
-      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders, 'Status'];
+      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders];
       const headerPadding = Array(assetHeaders.length - 1).fill('');
 
       const assetsData: (string | number)[][] = [
-        ['Detailed Asset List', ...headerPadding],
+        ['All Filtered Assets', ...headerPadding],
         assetHeaders,
-        ...detailedAssets.map(asset => {
+        ...allFilteredAssets.map((asset: any) => {
+          // Determine the correct book value to display based on filters
+          let bookValueToShow = '';
+          if (currentFilters.year && currentFilters.month) {
+            // Specific month selected - use bookValue field
+            bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
+              ? Number(asset.bookValue).toFixed(2)
+              : '';
+          } else if (!currentFilters.year && !currentFilters.month) {
+            // No date filter - use currentBookValue field
+            bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
+              ? Number(asset.currentBookValue).toFixed(2)
+              : '';
+          } else {
+            // Year only - leave blank, monthly columns will show data
+            bookValueToShow = '';
+          }
+
           const baseRow = [
+            asset.name || '',
             asset.itemDescription || '',
             asset.serialNumber || '',
             asset.oldTagNumber || '',
             asset.newTagNumber || '',
-            asset.grnNumber || '',
-            asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-            asset.unitPrice ? Number(asset.unitPrice).toFixed(2) : '',
-            asset.sivNumber || '',
-            asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-            asset.department || asset.currentDepartment || '',
-            asset.remark || '',
+            asset.category || '',
+            asset.type || '',
+            asset.currentDepartment || '',
+            asset.location || '',
+            asset.supplier || '',
+            asset.status || '',
+            asset.unitPrice || 0,
+            asset.currentValue || 0,
+            bookValueToShow, // Use calculated book value
+            `${asset.depreciationRate || 0}%`,
+            asset.age || 0,
             asset.usefulLifeYears || '',
-            asset.residualPercentage ? `${asset.residualPercentage}%` : ''
+            `${asset.residualPercentage || 0}%`,
+            asset.depreciationMethod || '',
+            asset.sivDate || '',
+            asset.grnDate || '',
+            asset.warrantyExpiry || '',
+            asset.salvageValue || 0,
+            asset.calculatedSalvageValue || 0
           ];
 
-          const bookValueCells = (currentFilters.year && !currentFilters.month)
+          // Add monthly book values if year filter is applied (but not month)
+          const bookValueCells = (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth)
             ? Array.from({ length: 12 }, (_, i) => {
-                const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
-                return monthValue ? Number(monthValue).toFixed(2) : '';
+                const monthValue = asset.bookValuesByMonth[i + 1];
+                return monthValue !== undefined && monthValue !== null
+                  ? Number(monthValue).toFixed(2)
+                  : '';
               })
-            : [asset.bookValue ? Number(asset.bookValue).toFixed(2) : ''];
+            : [];
 
-          return [...baseRow, ...bookValueCells, asset.status || ''];
+          return [...baseRow, ...bookValueCells];
         })
       ];
       const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
-      XLSX.utils.book_append_sheet(workbook, assetsSheet, 'Assets');
+      XLSX.utils.book_append_sheet(workbook, assetsSheet, 'All Filtered Assets');
 
       // Linked Assets
       const linkedAssetsData: (string | number)[][] = [
         ['Linked Assets', '', '', '', ''],
         ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'],
-        ...linkedAssets.map(asset => [
+        ...safeLinkedAssets.map(asset => [
           asset.fromAsset.name || '',
           asset.fromAsset.serialNumber || '',
           asset.toAsset.name || '',
@@ -459,25 +480,36 @@ export default function AssetReportsPage() {
       const linkedAssetsSheet = XLSX.utils.aoa_to_sheet(linkedAssetsData);
       XLSX.utils.book_append_sheet(workbook, linkedAssetsSheet, 'Linked Assets');
 
-      XLSX.writeFile(workbook, `asset-report-${new Date().toISOString().split('T')[0]}.xlsx`);
-      toast.success('Excel report exported successfully!');
+      const filename = `asset-report-${currentFilters.year ? `${currentFilters.year}${currentFilters.month ? `-${currentFilters.month.toString().padStart(2, '0')}` : ''}` : 'all'}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+
+      toast.success(`Excel report exported successfully! (${allFilteredAssets.length} assets)`, { id: 'excel-export' });
     } catch (error) {
       console.error('Error exporting to Excel:', error);
-      toast.error('Failed to export Excel file');
+      toast.error(`Failed to export Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'excel-export' });
     }
   };
 
-  const exportToCSV = () => {
+  const exportToCSV = async () => {
     try {
+      toast.loading('Generating CSV file...', { id: 'csv-export' });
+
+      // Use detailedAssets directly (contains ALL filtered data since pagination is removed)
+      const allFilteredAssets = safeDetailedAssets;
+      console.log(`🔍 CSV Export Debug: Exporting ${allFilteredAssets.length} assets`);
+
       // Summary Statistics CSV
       const statsHeaders = ['Metric', 'Value'];
       const statsRows = [
         ['Total Assets', assetStats?.totalAssets || 0],
         ['Active Assets', assetStats?.activeAssets || 0],
         ['Total Value', assetStats?.totalValue || 0],
-        ['Total Depreciation', assetStats?.totalDepreciation || 0]
+        ['Total Depreciation', assetStats?.totalDepreciation || 0],
+        ['Total Exported Assets', allFilteredAssets.length],
+        ['Export Date', new Date().toLocaleString()],
+        ['Applied Filters', Object.entries(currentFilters).filter(([key, value]) => value && value !== 'all' && value !== '').map(([key, value]) => `${key}: ${value}`).join('; ') || 'None']
       ];
-      const statsContent = [statsHeaders, ...statsRows].map(row => row.join(',')).join('\n');
+      const statsContent = [statsHeaders, ...statsRows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
       const statsBlob = new Blob([statsContent], { type: 'text/csv;charset=utf-8;' });
       const statsLink = document.createElement('a');
       statsLink.href = URL.createObjectURL(statsBlob);
@@ -486,87 +518,129 @@ export default function AssetReportsPage() {
 
       // Category Distribution CSV
       const categoryHeaders = ['Category', 'Status', 'Count', 'Total Value'];
-      const categoryRows = assetsByCategory.map(item => [
+      const categoryRows = safeAssetsByCategory.map(item => [
         item.category || '',
         item.status || '',
         item.count || 0,
         Number(item.value || 0).toFixed(2)
       ]);
-      const categoryContent = [categoryHeaders, ...categoryRows].map(row => row.join(',')).join('\n');
+      const categoryContent = [categoryHeaders, ...categoryRows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
       const categoryBlob = new Blob([categoryContent], { type: 'text/csv;charset=utf-8;' });
       const categoryLink = document.createElement('a');
       categoryLink.href = URL.createObjectURL(categoryBlob);
       categoryLink.download = `asset-report-categories-${new Date().toISOString().split('T')[0]}.csv`;
       categoryLink.click();
 
-      // Detailed Assets CSV
+      // Detailed Assets CSV - ALL FILTERED ASSETS
       const baseAssetHeaders = [
-        'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'GRN #', 'GRN Date',
-        'Unit Price', 'SIV #', 'SIV Date', 'Department', 'Remark', 
-        'Useful Life (Years)', 'Residual %'
+        'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
+        'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
+        'Current Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
+        'Salvage Value', 'Calculated Salvage Value'
       ];
 
+      // Add monthly book value headers if year filter is applied
       const bookValueHeaders = (currentFilters.year && !currentFilters.month)
-        ? Array.from({ length: 12 }, (_, i) => 
-            `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`
+        ? Array.from({ length: 12 }, (_, i) =>
+            `${new Date(0, i).toLocaleString('default', { month: 'short' })} ${currentFilters.year} Book Value`
           )
-        : ['Book Value'];
+        : [];
 
-      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders, 'Status'];
+      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders];
 
-      const assetRows = detailedAssets.map(asset => {
+      const assetRows = allFilteredAssets.map((asset: any) => {
+        // Determine the correct book value to display based on filters
+        let bookValueToShow = '';
+        if (currentFilters.year && currentFilters.month) {
+          // Specific month selected - use bookValue field
+          bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
+            ? Number(asset.bookValue).toFixed(2)
+            : '';
+        } else if (!currentFilters.year && !currentFilters.month) {
+          // No date filter - use currentBookValue field
+          bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
+            ? Number(asset.currentBookValue).toFixed(2)
+            : '';
+        } else {
+          // Year only - leave blank, monthly columns will show data
+          bookValueToShow = '';
+        }
+
         const baseRow = [
+          asset.name || '',
           asset.itemDescription || '',
           asset.serialNumber || '',
           asset.oldTagNumber || '',
           asset.newTagNumber || '',
-          asset.grnNumber || '',
-          asset.grnDate ? new Date(asset.grnDate).toLocaleDateString() : '',
-          asset.unitPrice ? `$${Number(asset.unitPrice).toFixed(2)}` : '',
-          asset.sivNumber || '',
-          asset.sivDate ? new Date(asset.sivDate).toLocaleDateString() : '',
-          asset.department || asset.currentDepartment || '',
-          asset.remark || '',
+          asset.category || '',
+          asset.type || '',
+          asset.currentDepartment || '',
+          asset.location || '',
+          asset.supplier || '',
+          asset.status || '',
+          asset.unitPrice || 0,
+          asset.currentValue || 0,
+          bookValueToShow, // Use calculated book value
+          `${asset.depreciationRate || 0}%`,
+          asset.age || 0,
           asset.usefulLifeYears || '',
-          asset.residualPercentage ? `${asset.residualPercentage}%` : ''
+          `${asset.residualPercentage || 0}%`,
+          asset.depreciationMethod || '',
+          asset.sivDate || '',
+          asset.grnDate || '',
+          asset.warrantyExpiry || '',
+          asset.salvageValue || 0,
+          asset.calculatedSalvageValue || 0
         ];
 
-        const bookValueCells = (currentFilters.year && !currentFilters.month)
-          ? Array.from({ length: 12 }, (_, i) => {
-              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
-              return monthValue ? `$${Number(monthValue).toFixed(2)}` : '';
-            })
-          : [asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : ''];
+        // Add monthly book values if year filter is applied (but not month)
+        if (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth) {
+          for (let month = 1; month <= 12; month++) {
+            const monthValue = asset.bookValuesByMonth[month];
+            baseRow.push(monthValue !== undefined && monthValue !== null
+              ? Number(monthValue).toFixed(2)
+              : '');
+          }
+        }
 
-        return [...baseRow, ...bookValueCells, asset.status || ''];
+        return baseRow.map(cell => `"${cell}"`);
       });
-      const assetContent = [assetHeaders, ...assetRows].map(row => row.join(',')).join('\n');
+
+      const assetContent = [
+        assetHeaders.map(header => `"${header}"`).join(','),
+        ...assetRows.map(row => row.join(','))
+      ].join('\n');
       const assetBlob = new Blob([assetContent], { type: 'text/csv;charset=utf-8;' });
       const assetLink = document.createElement('a');
       assetLink.href = URL.createObjectURL(assetBlob);
-      assetLink.download = `asset-report-detailed-${new Date().toISOString().split('T')[0]}.csv`;
+      const filename = `asset-report-detailed-${currentFilters.year ? `${currentFilters.year}${currentFilters.month ? `-${currentFilters.month.toString().padStart(2, '0')}` : ''}` : 'all'}-${new Date().toISOString().split('T')[0]}.csv`;
+      assetLink.download = filename;
       assetLink.click();
 
       // Linked Assets CSV
       const linkedAssetsHeaders = ['Parent Asset', 'Parent Serial', 'Child Asset', 'Child Serial', 'Linked Date'];
-      const linkedAssetsRows = linkedAssets.map(asset => [
+      const linkedAssetsRows = safeLinkedAssets.map(asset => [
         asset.fromAsset.name || '',
         asset.fromAsset.serialNumber || '',
         asset.toAsset.name || '',
         asset.toAsset.serialNumber || '',
         new Date(asset.createdAt).toLocaleDateString()
       ]);
-      const linkedAssetsContent = [linkedAssetsHeaders, ...linkedAssetsRows].map(row => row.join(',')).join('\n');
+      const linkedAssetsContent = [
+        linkedAssetsHeaders.map(header => `"${header}"`).join(','),
+        ...linkedAssetsRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
       const linkedAssetsBlob = new Blob([linkedAssetsContent], { type: 'text/csv;charset=utf-8;' });
       const linkedAssetsLink = document.createElement('a');
       linkedAssetsLink.href = URL.createObjectURL(linkedAssetsBlob);
       linkedAssetsLink.download = `asset-report-linked-${new Date().toISOString().split('T')[0]}.csv`;
       linkedAssetsLink.click();
 
-      toast.success('CSV reports exported successfully!');
+      toast.success(`CSV reports exported successfully! (${allFilteredAssets.length} assets)`, { id: 'csv-export' });
     } catch (error) {
       console.error('Error exporting CSV:', error);
-      toast.error('Failed to export CSV files');
+      toast.error(`Failed to export CSV files: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'csv-export' });
     }
   };
 
@@ -577,6 +651,12 @@ export default function AssetReportsPage() {
       </div>
     );
   }
+
+  // Safety check to prevent undefined length errors
+  const safeAssetsByCategory = assetsByCategory || [];
+  const safeStatusDistribution = statusDistribution || [];
+  const safeDetailedAssets = detailedAssets || [];
+  const safeLinkedAssets = linkedAssets || [];
 
   return (
     <div className="container mx-auto p-6 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
@@ -816,8 +896,8 @@ export default function AssetReportsPage() {
               <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">🔍 Debug Info:</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p><strong>Assets with monthly data:</strong> {detailedAssets.filter(asset => (asset as any).bookValuesByMonth && Object.keys((asset as any).bookValuesByMonth).length > 0).length}</p>
-                  <p><strong>Total assets:</strong> {detailedAssets.length}</p>
+                  <p><strong>Assets with monthly data:</strong> {safeDetailedAssets.filter(asset => (asset as any).bookValuesByMonth && Object.keys((asset as any).bookValuesByMonth).length > 0).length}</p>
+                  <p><strong>Total assets:</strong> {safeDetailedAssets.length}</p>
                 </div>
                 <div>
                   <p><strong>Monthly totals received:</strong> {Object.keys(assetStats.monthlyBookValueTotals || {}).length}</p>
@@ -867,13 +947,13 @@ export default function AssetReportsPage() {
                   Assets by Category{getFilterDisplayText()}
                 </h2>
               </div>
-              {assetsByCategory.length > 0 ? (
+              {safeAssetsByCategory.length > 0 ? (
                 <RoleBasedChart
                   type="pie"
-                  data={assetsByCategory}
+                  data={safeAssetsByCategory}
                   options={{
-                    labels: assetsByCategory.map((item) => item.category),
-                    values: assetsByCategory.map((item) => item.count),
+                    labels: safeAssetsByCategory.map((item) => item.category),
+                    values: safeAssetsByCategory.map((item) => item.count),
                     customColors: ['#EF4444', '#F97316', '#F59E0B', '#EAB308', '#84CC16', '#22C55E', '#10B981']
                   }}
                 />
@@ -886,16 +966,16 @@ export default function AssetReportsPage() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Asset Status Distribution</h2>
               </div>
-              {statusDistribution.length > 0 ? (
+              {safeStatusDistribution.length > 0 ? (
                 <RoleBasedChart
                   type="pie"
-                  data={statusDistribution}
+                  data={safeStatusDistribution}
                   options={{
-                    labels: statusDistribution.map((item) => 
-                      item.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' : 
+                    labels: safeStatusDistribution.map((item) =>
+                      item.status === 'UNDER_MAINTENANCE' ? 'Under Maintenance' :
                       item.status.charAt(0) + item.status.slice(1).toLowerCase()
                     ),
-                    values: statusDistribution.map((item) => item.count),
+                    values: safeStatusDistribution.map((item) => item.count),
                     customColors: ['#22C55E', '#F97316', '#A855F7', '#06B6D4', '#EAB308', '#F43F5E', '#84CC16']
                   }}
                 />
@@ -912,7 +992,7 @@ export default function AssetReportsPage() {
                   Asset Value Details by Category{getFilterDisplayText()}
                 </h2>
                 <TableExportDropdown
-                  data={assetsByCategory}
+                  data={safeAssetsByCategory}
                   columns={[
                     { header: 'Category', key: 'category' },
                     { header: 'Status', key: 'status' },
@@ -925,9 +1005,9 @@ export default function AssetReportsPage() {
                   filterSummary={getFilterDisplayText()}
                 />
               </div>
-              {assetsByCategory.length > 0 ? (
+              {safeAssetsByCategory.length > 0 ? (
                 <RoleBasedTable
-                  data={assetsByCategory}
+                  data={safeAssetsByCategory}
                   columns={[
                     {
                       header: 'Category',
@@ -966,10 +1046,10 @@ export default function AssetReportsPage() {
                 </h2>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {detailedAssets.length} assets found
+                    {safeDetailedAssets.length} assets found
                   </span>
                   <TableExportDropdown
-                    data={detailedAssets}
+                    data={safeDetailedAssets}
                     columns={[
                       { header: 'Asset Name', key: 'name' },
                       { header: 'Serial Number', key: 'serialNumber' },
@@ -1000,17 +1080,13 @@ export default function AssetReportsPage() {
                   />
                 </div>
               </div>
-              {detailedAssets.length > 0 ? (
+              {safeDetailedAssets.length > 0 ? (
                 <PaginatedTable
-                  data={detailedAssets}
+                  data={safeDetailedAssets}
                   defaultItemsPerPage={25}
-                  itemsPerPageOptions={[10, 25, 50, 100]}
                   searchPlaceholder="Search assets by name, serial number, department..."
-                  serverSide={true}
-                  pagination={paginationState}
-                  onPageChange={handlePageChange}
-                  onItemsPerPageChange={handleItemsPerPageChange}
                   loading={loading || refreshing}
+                  // Pagination removed - all filtered assets displayed
                   columns={[
                       {
                         header: 'Description',
@@ -1171,10 +1247,10 @@ export default function AssetReportsPage() {
               </h2>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {linkedAssets.length} linked assets found
+                  {safeLinkedAssets.length} linked assets found
                 </span>
                 <TableExportDropdown
-                  data={linkedAssets.map((asset: LinkedAsset) => ({
+                  data={safeLinkedAssets.map((asset: LinkedAsset) => ({
                     'Parent Asset': asset.fromAsset.name,
                     'Parent Serial': asset.fromAsset.serialNumber,
                     'Child Asset': asset.toAsset.name,
@@ -1198,10 +1274,10 @@ export default function AssetReportsPage() {
               <div className="flex justify-center items-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
               </div>
-            ) : linkedAssets.length > 0 ? (
+            ) : safeLinkedAssets.length > 0 ? (
               <div className="overflow-x-auto">
                 <RoleBasedTable
-                  data={linkedAssets}
+                  data={safeLinkedAssets}
                   columns={[
                     {
                       header: 'Parent Asset',
