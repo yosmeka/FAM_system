@@ -3,9 +3,18 @@ import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
 
 export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(req) {
-  try {
-    const url = new URL(req.url);
-    const now = new Date();
+  // Add overall timeout to prevent hanging
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('API request timeout after 60 seconds')), 60000);
+  });
+
+  const apiPromise = (async () => {
+    try {
+      console.log('🔍 API Debug: Asset reports request received');
+      const url = new URL(req.url);
+      console.log('🔍 API Debug: Request URL:', req.url);
+      console.log('🔍 API Debug: Search params:', Object.fromEntries(url.searchParams.entries()));
+      const now = new Date();
 
     // Parse filter parameters
     const startDate = url.searchParams.get('startDate');
@@ -121,6 +130,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
     // Fetch ALL assets (no limit) - user wants complete data
     console.log('🔍 API Debug: Fetching all assets without limit for complete reporting');
+    console.log('🔍 API Debug: About to query database...');
 
     let assets = await prisma.asset.findMany({
       where: whereClause,
@@ -156,15 +166,18 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       }
     });
 
+    console.log(`🔍 API Debug: Database query completed successfully`);
     console.log(`🔍 API Debug: Found ${assets.length} assets before post-processing filters`);
 
     // Add circuit breaker for very large datasets
     const MAX_CALCULATION_ASSETS = 2000; // Limit calculations to prevent hanging
     let assetsToCalculate = assets;
+    let calculationLimited = false;
 
     if (assets.length > MAX_CALCULATION_ASSETS) {
       console.log(`🔍 API Debug: Large dataset detected (${assets.length} assets). Limiting calculations to ${MAX_CALCULATION_ASSETS} assets to prevent timeout.`);
       assetsToCalculate = assets.slice(0, MAX_CALCULATION_ASSETS);
+      calculationLimited = true;
     }
 
     // Calculate book values using the correct depreciation utility (restored original logic)
@@ -295,6 +308,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
     } else if (year && !month) {
       // Calculate all monthly book values for the selected year using our optimized utility
       console.log('🔍 API Debug: Calculating monthly book values for year:', year);
+      console.log('🔍 API Debug: Assets to calculate monthly values for:', assetsToCalculate.length);
 
       let processedAssets = 0;
       const startTime = Date.now();
@@ -348,8 +362,21 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 }
               });
 
+              // Debug: Log monthly calculation results for first few assets
+              if (processedAssets <= 3) {
+                console.log(`🔍 API Debug: Asset ${asset.id} monthly calculation:`, {
+                  totalMonthlyResults: monthlyResults.length,
+                  targetYear: year,
+                  yearlyBookValuesCount: Object.keys(yearlyBookValues).length,
+                  yearlyBookValues: yearlyBookValues,
+                  sampleMonthlyResults: monthlyResults.slice(0, 3).map(r => `${r.year}-${r.month}: $${r.bookValue.toFixed(2)}`)
+                });
+              }
+
               if (Object.keys(yearlyBookValues).length > 0) {
                 bookValuesByAsset[asset.id] = yearlyBookValues;
+              } else {
+                console.log(`🔍 API Debug: No yearly book values found for asset ${asset.id} for year ${year}`);
               }
             } catch (calcError) {
               console.error(`🔍 API Debug: Monthly calculation failed for asset ${asset.id}:`, calcError.message);
@@ -361,6 +388,17 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       }
 
       console.log(`🔍 API Debug: Calculated monthly book values for ${Object.keys(bookValuesByAsset).length} assets`);
+
+      // Debug: Show sample monthly data
+      if (Object.keys(bookValuesByAsset).length > 0) {
+        const sampleAssetId = Object.keys(bookValuesByAsset)[0];
+        const sampleData = bookValuesByAsset[sampleAssetId];
+        console.log(`🔍 API Debug: Sample monthly data for asset ${sampleAssetId}:`, sampleData);
+        console.log(`🔍 API Debug: Sample monthly data keys:`, Object.keys(sampleData));
+        console.log(`🔍 API Debug: Sample values - Month 1: ${sampleData[1]}, Month 6: ${sampleData[6]}, Month 12: ${sampleData[12]}`);
+      } else {
+        console.log(`🔍 API Debug: No monthly book values calculated - this will cause empty export columns`);
+      }
     }
 
     // Apply post-processing filters
@@ -551,7 +589,47 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           accumulatedDepreciation: accumulatedDepreciationMap[asset.id] ?? null
         } : {}),
         // Add monthly book values when only year is selected
-        ...(year && !month ? { bookValuesByMonth: bookValuesByAsset[asset.id] || {} } : {})
+        ...(year && !month ? {
+          bookValuesByMonth: (() => {
+            // If we have calculated data, use it
+            if (bookValuesByAsset[asset.id]) {
+              return bookValuesByAsset[asset.id];
+            }
+
+            // If calculation was limited and this asset wasn't included, provide fallback
+            if (calculationLimited && !bookValuesByAsset[asset.id]) {
+              console.log(`🔍 API Debug: Providing fallback monthly values for asset ${asset.id} (calculation was limited)`);
+
+              // Simple fallback calculation for assets beyond the limit
+              const unitPrice = asset.unitPrice || 0;
+              const usefulLifeYears = asset.usefulLifeYears || 5;
+              const residualPercentage = asset.residualPercentage || 0;
+              const sivDate = asset.sivDate;
+
+              if (unitPrice > 0 && sivDate) {
+                const fallbackValues = {};
+                const residualValue = unitPrice * residualPercentage / 100;
+                const depreciableAmount = unitPrice - residualValue;
+                const monthlyDepreciation = depreciableAmount / (usefulLifeYears * 12);
+
+                for (let m = 1; m <= 12; m++) {
+                  const targetDate = new Date(year, m - 1, 1);
+                  const ageInMonths = Math.max(0, (targetDate - new Date(sivDate)) / (1000 * 60 * 60 * 24 * 30.44));
+                  const totalDepreciation = Math.min(monthlyDepreciation * ageInMonths, depreciableAmount);
+                  fallbackValues[m] = Math.max(unitPrice - totalDepreciation, residualValue);
+                }
+
+                return fallbackValues;
+              }
+            }
+
+            return {};
+          })(),
+          // Debug info
+          _debug_hasMonthlyData: !!bookValuesByAsset[asset.id],
+          _debug_monthlyDataKeys: bookValuesByAsset[asset.id] ? Object.keys(bookValuesByAsset[asset.id]) : [],
+          _debug_usedFallback: calculationLimited && !bookValuesByAsset[asset.id] && asset.unitPrice > 0 && asset.sivDate
+        } : {})
       };
     });
 
@@ -580,12 +658,39 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       filterOptions
     };
 
+    console.log('🔍 API Debug: Formatted data prepared successfully');
+    console.log('🔍 API Debug: Response stats:', {
+      assetsCount: formattedData.assets?.length || 0,
+      statsPresent: !!formattedData.stats,
+      filterOptionsPresent: !!formattedData.filterOptions
+    });
+    console.log('🔍 API Debug: Sending response...');
+
     return Response.json(formattedData);
 
+    } catch (error) {
+      console.error('❌ API Error: Asset reports failed:', error);
+      console.error('❌ API Error: Stack trace:', error.stack);
+      console.error('❌ API Error: Request URL:', req.url);
+
+      // Return detailed error for debugging
+      return Response.json(
+        {
+          error: 'Failed to fetch asset reports',
+          message: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        },
+        { status: 500 }
+      );
+    }
+  })();
+
+  try {
+    return await Promise.race([apiPromise, timeoutPromise]);
   } catch (error) {
-    console.error('Error fetching asset reports:', error);
+    console.error('❌ API Timeout or Error:', error.message);
     return Response.json(
-      { error: 'Failed to fetch asset reports' },
+      { error: 'API request failed or timed out', message: error.message },
       { status: 500 }
     );
   }

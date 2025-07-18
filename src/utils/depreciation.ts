@@ -327,6 +327,25 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
     });
   }
 
+  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  // Generate results for up to 20 years after useful life ends to cover future queries
+  const endOfUsefulLife = addMonths(start, usefulLifeMonths);
+  const finalAccumulatedDepreciation = depreciableAmount; // Total depreciable amount
+
+  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+    const date = addMonths(endOfUsefulLife, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    results.push({
+      year,
+      month,
+      depreciationExpense: 0, // No more depreciation after useful life
+      accumulatedDepreciation: finalAccumulatedDepreciation,
+      bookValue: salvageValue, // Book value remains at salvage value
+    });
+  }
+
   return results;
 }
 
@@ -371,6 +390,25 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
     });
     if (bookValue <= salvageValue) break;
   }
+
+  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  const endOfUsefulLife = addMonths(start, usefulLifeMonths);
+  const finalAccumulatedDepreciation = unitPrice - salvageValue;
+
+  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+    const date = addMonths(endOfUsefulLife, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    results.push({
+      year,
+      month,
+      depreciationExpense: 0, // No more depreciation after useful life
+      accumulatedDepreciation: finalAccumulatedDepreciation,
+      bookValue: salvageValue, // Book value remains at salvage value
+    });
+  }
+
   return results;
 }
 
@@ -415,6 +453,25 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
     });
     if (bookValue <= salvageValue) break;
   }
+
+  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  const endOfUsefulLife = addMonths(start, usefulLifeMonths);
+  const finalAccumulatedDepreciation = unitPrice - salvageValue;
+
+  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+    const date = addMonths(endOfUsefulLife, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    results.push({
+      year,
+      month,
+      depreciationExpense: 0, // No more depreciation after useful life
+      accumulatedDepreciation: finalAccumulatedDepreciation,
+      bookValue: salvageValue, // Book value remains at salvage value
+    });
+  }
+
   return results;
 }
 
@@ -455,6 +512,25 @@ function calculateSumOfYearsDigitsMonthly(input: DepreciationInput): MonthlyDepr
       bookValue,
     });
   }
+
+  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  const endOfUsefulLife = addMonths(start, usefulLifeMonths);
+  const finalAccumulatedDepreciation = depreciableAmount;
+
+  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+    const date = addMonths(endOfUsefulLife, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    results.push({
+      year,
+      month,
+      depreciationExpense: 0, // No more depreciation after useful life
+      accumulatedDepreciation: finalAccumulatedDepreciation,
+      bookValue: salvageValue, // Book value remains at salvage value
+    });
+  }
+
   return results;
 }
 
@@ -510,6 +586,25 @@ function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepre
     });
     if (cappedAccumulatedDepreciation >= depreciableAmount) break;
   }
+
+  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  const endOfUsefulLife = addMonths(start, usefulLifeMonths);
+  const finalAccumulatedDepreciation = depreciableAmount;
+
+  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+    const date = addMonths(endOfUsefulLife, m);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    results.push({
+      year,
+      month,
+      depreciationExpense: 0, // No more depreciation after useful life
+      accumulatedDepreciation: finalAccumulatedDepreciation,
+      bookValue: salvageValue, // Book value remains at salvage value
+    });
+  }
+
   return results;
 }
 

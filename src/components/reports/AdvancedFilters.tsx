@@ -429,34 +429,102 @@ export function AdvancedFilters({
             <label className="block text-sm font-medium text-black dark:text-white mb-1">
               Year
             </label>
-            <select
-              value={pendingFilters.year || ''}
-              onChange={e => handleFilterChange('year', e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white"
-            >
-              <option value="">Year</option>
-              {Array.from({ length: 10 }, (_, i) => {
-                const year = new Date().getFullYear() - i;
-                return <option key={year} value={year}>{year}</option>;
-              })}
-            </select>
+            <div className="relative">
+              <input
+                type="number"
+                value={pendingFilters.year || ''}
+                onChange={e => {
+                  const value = e.target.value;
+                  // Allow empty or valid 4-digit years
+                  if (value === '' || (value.length <= 4 && /^\d+$/.test(value))) {
+                    handleFilterChange('year', value);
+                  }
+                }}
+                onBlur={e => {
+                  const value = e.target.value;
+                  // Validate year on blur - must be between 1900 and current year + 10
+                  if (value && value.length === 4) {
+                    const year = parseInt(value);
+                    const currentYear = new Date().getFullYear();
+                    if (year < 1900 || year > currentYear + 10) {
+                      // Reset to empty if invalid
+                      handleFilterChange('year', '');
+                      alert(`Please enter a year between 1900 and ${currentYear + 10}`);
+                    }
+                  }
+                }}
+                placeholder="Enter year (e.g., 2020)"
+                min="1900"
+                max={new Date().getFullYear() + 10}
+                className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              />
+              {/* Quick year selection dropdown */}
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                <select
+                  value=""
+                  onChange={e => {
+                    if (e.target.value) {
+                      handleFilterChange('year', e.target.value);
+                    }
+                  }}
+                  className="appearance-none bg-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer text-xs"
+                  title="Quick select recent years"
+                >
+                  <option value="">📅</option>
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return <option key={year} value={year}>{year}</option>;
+                  })}
+                </select>
+              </div>
+              {pendingFilters.year && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleFilterChange('year', '');
+                  }}
+                  className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="Clear year"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-black dark:text-white mb-1">
               Month
             </label>
-            <select
-              value={pendingFilters.month || ''}
-              onChange={e => handleFilterChange('month', e.target.value)}
-              className="w-full px-3 py-2 rounded-md bg-white dark:bg-black text-black dark:text-white"
-            >
-              <option value="">Month</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={pendingFilters.month || ''}
+                onChange={e => handleFilterChange('month', e.target.value)}
+                className="w-full px-3 py-2 pr-8 rounded-md bg-white dark:bg-black text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm"
+              >
+                <option value="">All Months</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                    {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+              {pendingFilters.month && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleFilterChange('month', '');
+                  }}
+                  className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="Clear month"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
         {/* Category Filter */}

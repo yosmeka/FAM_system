@@ -346,6 +346,64 @@ export default function AssetReportsPage() {
 
       // Use detailedAssets directly (contains ALL filtered data since pagination is removed)
       const allFilteredAssets = safeDetailedAssets;
+
+      console.log('🔍 Excel Export Debug: Starting export...');
+      console.log('🔍 Excel Export Debug: Current filters:', currentFilters);
+      console.log('🔍 Excel Export Debug: Total assets to export:', allFilteredAssets.length);
+
+      // Check for large dataset and warn user
+      if (allFilteredAssets.length > 5000) {
+        const proceed = confirm(
+          `You are about to export ${allFilteredAssets.length.toLocaleString()} assets. ` +
+          `This may create a large file and take some time. ` +
+          `Consider applying filters to reduce the dataset. ` +
+          `Do you want to continue?`
+        );
+        if (!proceed) {
+          toast.error('Export cancelled', { id: 'excel-export' });
+          return;
+        }
+      }
+
+      // Debug first few assets for monthly data
+      if (currentFilters.year && !currentFilters.month && allFilteredAssets.length > 0) {
+        console.log('🔍 Excel Export Debug: First 3 assets monthly data:');
+        allFilteredAssets.slice(0, 3).forEach((asset: any, index) => {
+          console.log(`  Asset ${index + 1} (${asset.name}):`, {
+            hasBookValuesByMonth: !!asset.bookValuesByMonth,
+            monthlyDataType: typeof asset.bookValuesByMonth,
+            monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+            sampleMonthlyValues: asset.bookValuesByMonth ? {
+              month1: asset.bookValuesByMonth[1],
+              month6: asset.bookValuesByMonth[6],
+              month12: asset.bookValuesByMonth[12]
+            } : null
+          });
+        });
+      }
+
+      // Add debug function to window for easy browser console access
+      if (typeof window !== 'undefined') {
+        (window as any).debugMonthlyExport = () => {
+          console.log('🔍 Debug Monthly Export Data:');
+          console.log('Current filters:', currentFilters);
+          console.log('Total assets:', allFilteredAssets.length);
+
+          if (currentFilters.year && !currentFilters.month) {
+            console.log('First 5 assets monthly data:');
+            allFilteredAssets.slice(0, 5).forEach((asset: any, index) => {
+              console.log(`Asset ${index + 1} (${asset.name}):`, {
+                hasBookValuesByMonth: !!asset.bookValuesByMonth,
+                monthlyDataType: typeof asset.bookValuesByMonth,
+                monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+                monthlyDataValues: asset.bookValuesByMonth || 'No data'
+              });
+            });
+          } else {
+            console.log('Not a year-only filter - no monthly data expected');
+          }
+        };
+      }
       console.log(`🔍 Export Debug: Exporting ${allFilteredAssets.length} assets`);
 
       const XLSX = await import('xlsx');
@@ -406,10 +464,23 @@ export default function AssetReportsPage() {
       const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...bookValueHeaders];
       const headerPadding = Array(assetHeaders.length - 1).fill('');
 
-      const assetsData: (string | number)[][] = [
-        ['All Filtered Assets', ...headerPadding],
-        assetHeaders,
-        ...allFilteredAssets.map((asset: any) => {
+      // Process assets in chunks to prevent memory issues with large datasets
+      const CHUNK_SIZE = 1000;
+      const assetDataRows: (string | number)[][] = [];
+
+      console.log('🔍 Excel Export Debug: Processing assets in chunks for memory efficiency...');
+
+      for (let i = 0; i < allFilteredAssets.length; i += CHUNK_SIZE) {
+        const chunk = allFilteredAssets.slice(i, i + CHUNK_SIZE);
+        const chunkNumber = Math.floor(i / CHUNK_SIZE) + 1;
+        const totalChunks = Math.ceil(allFilteredAssets.length / CHUNK_SIZE);
+
+        console.log(`🔍 Excel Export Debug: Processing chunk ${chunkNumber}/${totalChunks} (${chunk.length} assets)`);
+
+        // Update progress toast
+        toast.loading(`Processing assets... ${chunkNumber}/${totalChunks}`, { id: 'excel-export' });
+
+        const chunkRows = chunk.map((asset: any) => {
           // Determine the correct book value to display based on filters
           let bookValueToShow = '';
           let accumulatedDepreciationToShow = '';
@@ -468,20 +539,86 @@ export default function AssetReportsPage() {
           }
 
           // Add monthly book values if year filter is applied (but not month)
-          const bookValueCells = (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth)
+          const bookValueCells = (currentFilters.year && !currentFilters.month)
             ? Array.from({ length: 12 }, (_, i) => {
-                const monthValue = asset.bookValuesByMonth[i + 1];
-                return monthValue !== undefined && monthValue !== null
-                  ? Number(monthValue).toFixed(2)
-                  : '';
+                const monthKey = (i + 1).toString(); // Ensure string key
+                const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[i + 1] : undefined;
+
+                // More robust value checking
+                if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
+                  const numValue = Number(monthValue);
+                  if (!isNaN(numValue)) {
+                    return numValue.toFixed(2);
+                  }
+                }
+                return '';
               })
             : [];
 
+          // Debug: Log monthly data for first few assets
+          if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 3) {
+            console.log(`🔍 Excel Export Debug: Asset ${asset.id} monthly data:`, {
+              assetName: asset.name,
+              hasBookValuesByMonth: !!asset.bookValuesByMonth,
+              monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+              monthlyDataType: typeof asset.bookValuesByMonth,
+              sampleValues: asset.bookValuesByMonth ? {
+                month1: asset.bookValuesByMonth[1],
+                month6: asset.bookValuesByMonth[6],
+                month12: asset.bookValuesByMonth[12]
+              } : null,
+              bookValueCellsLength: bookValueCells.length,
+              bookValueCellsSample: bookValueCells.slice(0, 3),
+              fullBookValueCells: bookValueCells
+            });
+          }
+
           return [...baseRow, ...bookValueCells];
-        })
+        });
+
+        // Add chunk rows to the main data array
+        assetDataRows.push(...chunkRows);
+      }
+
+      // Combine all processed chunks into the final data array
+      const assetsData: (string | number)[][] = [
+        ['All Filtered Assets', ...headerPadding],
+        assetHeaders,
+        ...assetDataRows
       ];
-      const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
-      XLSX.utils.book_append_sheet(workbook, assetsSheet, 'All Filtered Assets');
+
+      console.log(`🔍 Excel Export Debug: Finished processing ${allFilteredAssets.length} assets in ${Math.ceil(allFilteredAssets.length / CHUNK_SIZE)} chunks`);
+
+      // Create the Excel sheet with memory optimization
+      toast.loading('Creating Excel file...', { id: 'excel-export' });
+
+      try {
+        const assetsSheet = XLSX.utils.aoa_to_sheet(assetsData);
+
+        // Set column widths for better readability
+        const columnWidths = assetHeaders.map((header, index) => {
+          if (header.includes('Book Value') || header.includes('Price') || header.includes('Value')) {
+            return { wch: 15 }; // Wider for currency values
+          } else if (header.includes('Date')) {
+            return { wch: 12 }; // Medium for dates
+          } else if (header.includes('Description') || header.includes('Name')) {
+            return { wch: 25 }; // Wider for text
+          } else {
+            return { wch: 10 }; // Default width
+          }
+        });
+
+        assetsSheet['!cols'] = columnWidths;
+
+        XLSX.utils.book_append_sheet(workbook, assetsSheet, 'All Filtered Assets');
+
+        // Clear the processed data from memory
+        assetDataRows.length = 0;
+
+      } catch (sheetError) {
+        console.error('Error creating Excel sheet:', sheetError);
+        throw new Error(`Failed to create Excel sheet: ${sheetError instanceof Error ? sheetError.message : 'Unknown error'}`);
+      }
 
       // Linked Assets
       const linkedAssetsData: (string | number)[][] = [
@@ -498,10 +635,67 @@ export default function AssetReportsPage() {
       const linkedAssetsSheet = XLSX.utils.aoa_to_sheet(linkedAssetsData);
       XLSX.utils.book_append_sheet(workbook, linkedAssetsSheet, 'Linked Assets');
 
-      const filename = `asset-report-${currentFilters.year ? `${currentFilters.year}${currentFilters.month ? `-${currentFilters.month.toString().padStart(2, '0')}` : ''}` : 'all'}-${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, filename);
+      // Export with improved error handling and file corruption prevention
+      toast.loading('Saving Excel file...', { id: 'excel-export' });
 
-      toast.success(`Excel report exported successfully! (${allFilteredAssets.length} assets)`, { id: 'excel-export' });
+      try {
+        // Generate a more reliable filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+        const filterInfo = currentFilters.year
+          ? `${currentFilters.year}${currentFilters.month ? `-${currentFilters.month.toString().padStart(2, '0')}` : ''}`
+          : 'all';
+        const filename = `asset-report-${filterInfo}-${timestamp}.xlsx`;
+
+        console.log('🔍 Excel Export Debug: Writing Excel file...');
+
+        // Use improved write method to prevent corruption
+        const opts = {
+          bookType: 'xlsx' as const,
+          compression: true // Enable compression to reduce file size
+        };
+
+        // Create a write buffer instead of direct file write for better reliability
+        const wbout = XLSX.write(workbook, { type: 'array', ...opts });
+
+        // Convert to Blob with proper MIME type
+        const blob = new Blob([wbout], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        // Create download link with proper cleanup
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.style.display = 'none';
+
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup resources
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+
+        const fileSizeMB = (blob.size / 1024 / 1024).toFixed(2);
+        console.log(`🔍 Excel Export Debug: Excel file created successfully (${fileSizeMB}MB)`);
+
+        // Show success with file size info
+        toast.success(
+          `Excel report exported successfully! (${allFilteredAssets.length.toLocaleString()} assets, ${fileSizeMB}MB)`,
+          { id: 'excel-export' }
+        );
+
+      } catch (writeError) {
+        console.error('Error writing Excel file:', writeError);
+        toast.error(
+          `Failed to save Excel file: ${writeError instanceof Error ? writeError.message : 'Unknown error'}`,
+          { id: 'excel-export' }
+        );
+        throw writeError;
+      }
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       toast.error(`Failed to export Excel file: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'excel-export' });
@@ -514,6 +708,27 @@ export default function AssetReportsPage() {
 
       // Use detailedAssets directly (contains ALL filtered data since pagination is removed)
       const allFilteredAssets = safeDetailedAssets;
+
+      console.log('🔍 CSV Export Debug: Starting export...');
+      console.log('🔍 CSV Export Debug: Current filters:', currentFilters);
+      console.log('🔍 CSV Export Debug: Total assets to export:', allFilteredAssets.length);
+
+      // Debug first few assets for monthly data
+      if (currentFilters.year && !currentFilters.month && allFilteredAssets.length > 0) {
+        console.log('🔍 CSV Export Debug: First 3 assets monthly data:');
+        allFilteredAssets.slice(0, 3).forEach((asset: any, index) => {
+          console.log(`  Asset ${index + 1} (${asset.name}):`, {
+            hasBookValuesByMonth: !!asset.bookValuesByMonth,
+            monthlyDataType: typeof asset.bookValuesByMonth,
+            monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+            sampleMonthlyValues: asset.bookValuesByMonth ? {
+              month1: asset.bookValuesByMonth[1],
+              month6: asset.bookValuesByMonth[6],
+              month12: asset.bookValuesByMonth[12]
+            } : null
+          });
+        });
+      }
       console.log(`🔍 CSV Export Debug: Exporting ${allFilteredAssets.length} assets`);
 
       // Summary Statistics CSV
@@ -631,13 +846,38 @@ export default function AssetReportsPage() {
         }
 
         // Add monthly book values if year filter is applied (but not month)
-        if (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth) {
+        if (currentFilters.year && !currentFilters.month) {
           for (let month = 1; month <= 12; month++) {
-            const monthValue = asset.bookValuesByMonth[month];
-            baseRow.push(monthValue !== undefined && monthValue !== null
-              ? Number(monthValue).toFixed(2)
-              : '');
+            const monthKey = month.toString(); // Ensure string key
+            const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[month] : undefined;
+
+            // More robust value checking
+            if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
+              const numValue = Number(monthValue);
+              if (!isNaN(numValue)) {
+                baseRow.push(numValue.toFixed(2));
+                continue;
+              }
+            }
+            baseRow.push('');
           }
+        }
+
+        // Debug: Log monthly data for first few assets in CSV export
+        if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 3) {
+          console.log(`🔍 CSV Export Debug: Asset ${asset.id} monthly data:`, {
+            assetName: asset.name,
+            hasBookValuesByMonth: !!asset.bookValuesByMonth,
+            monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+            monthlyDataType: typeof asset.bookValuesByMonth,
+            sampleValues: asset.bookValuesByMonth ? {
+              month1: asset.bookValuesByMonth[1],
+              month6: asset.bookValuesByMonth[6],
+              month12: asset.bookValuesByMonth[12]
+            } : null,
+            baseRowLength: baseRow.length,
+            baseRowSample: baseRow.slice(-5) // Last 5 items to see monthly data
+          });
         }
 
         return baseRow.map(cell => `"${cell}"`);
