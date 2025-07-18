@@ -158,13 +158,23 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
     console.log(`🔍 API Debug: Found ${assets.length} assets before post-processing filters`);
 
+    // Add circuit breaker for very large datasets
+    const MAX_CALCULATION_ASSETS = 2000; // Limit calculations to prevent hanging
+    let assetsToCalculate = assets;
+
+    if (assets.length > MAX_CALCULATION_ASSETS) {
+      console.log(`🔍 API Debug: Large dataset detected (${assets.length} assets). Limiting calculations to ${MAX_CALCULATION_ASSETS} assets to prevent timeout.`);
+      assetsToCalculate = assets.slice(0, MAX_CALCULATION_ASSETS);
+    }
+
     // Calculate book values using the correct depreciation utility (restored original logic)
     let bookValueMap = {};
+    let accumulatedDepreciationMap = {};
     let bookValueByDepartment = [];
     let bookValueByCategory = [];
     let bookValuesByAsset = {};
 
-    console.log('🔍 API Debug: Calculating book values for', assets.length, 'assets');
+    console.log('🔍 API Debug: Calculating book values for', assetsToCalculate.length, 'assets');
 
     if (year && month) {
       console.log('🔍 API Debug: Calculating book values for specific month:', year, month);
@@ -173,11 +183,21 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       const bookValues = [];
       let processedAssets = 0;
 
-      for (const asset of assets) {
+      // Add timeout protection to prevent hanging
+      const startTime = Date.now();
+      const TIMEOUT_MS = 30000; // 30 seconds timeout
+
+      for (const asset of assetsToCalculate) {
         try {
+          // Check for timeout
+          if (Date.now() - startTime > TIMEOUT_MS) {
+            console.log(`🔍 API Debug: Timeout reached after processing ${processedAssets} assets. Stopping calculations.`);
+            break;
+          }
+
           processedAssets++;
-          if (processedAssets % 100 === 0) {
-            console.log(`🔍 API Debug: Processed ${processedAssets}/${assets.length} assets`);
+          if (processedAssets % 50 === 0) { // Reduced logging frequency
+            console.log(`🔍 API Debug: Processed ${processedAssets}/${assetsToCalculate.length} assets`);
           }
 
           const depreciableCost = asset.depreciableCost || asset.unitPrice;
@@ -190,18 +210,13 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
             // Ensure sivDate is properly formatted
             const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
 
-            console.log(`🔍 API Debug: Preparing calculation for asset ${asset.id}`);
-            console.log(`  - depreciableCost: ${depreciableCost}`);
-            console.log(`  - salvageValue: ${salvageValue}`);
-            console.log(`  - usefulLifeYears: ${usefulLifeYears}`);
-            console.log(`  - method: ${method}`);
-            console.log(`  - sivDate: ${sivDateString}`);
-
-            // Use the correct depreciation calculation from utils/depreciation.ts
+            // Use the correct depreciation calculation from utils/depreciation.ts with timeout protection
             let monthlyResults;
             try {
               const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
-              console.log(`🔍 API Debug: Starting depreciation calculation for asset ${asset.id}`);
+
+              // Add individual calculation timeout
+              const calcStartTime = Date.now();
               monthlyResults = calculateMonthlyDepreciation({
                 unitPrice: depreciableCost,
                 sivDate: sivDateString,
@@ -209,14 +224,20 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 salvageValue: salvageValue,
                 method: method,
               });
-              console.log(`🔍 API Debug: Depreciation calculation completed for asset ${asset.id}, got ${monthlyResults.length} results`);
+
+              const calcDuration = Date.now() - calcStartTime;
+              if (calcDuration > 1000) { // Log slow calculations
+                console.log(`🔍 API Debug: Slow calculation for asset ${asset.id}: ${calcDuration}ms`);
+              }
+
             } catch (calcError) {
               console.error(`🔍 API Debug: Depreciation calculation failed for asset ${asset.id}:`, calcError.message);
               continue; // Skip this asset
             }
 
-            // Determine book value for the specific year and month with proper blank handling
+            // Determine book value and accumulated depreciation for the specific year and month
             let bookValue = null;
+            let accumulatedDepreciation = null;
 
             if (monthlyResults && monthlyResults.length > 0) {
               // Find the exact match for the requested year and month
@@ -226,17 +247,22 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
               if (targetResult) {
                 bookValue = targetResult.bookValue;
-                console.log(`🔍 API Debug: Found book value for ${year}-${month}: $${bookValue.toFixed(2)}`);
+                accumulatedDepreciation = targetResult.accumulatedDepreciation;
+                console.log(`🔍 API Debug: Found values for ${year}-${month}: Book Value $${bookValue.toFixed(2)}, Accumulated Depreciation $${accumulatedDepreciation.toFixed(2)}`);
               } else {
-                console.log(`🔍 API Debug: No book value found for ${year}-${month} for asset ${asset.id}`);
+                console.log(`🔍 API Debug: No values found for ${year}-${month} for asset ${asset.id}`);
                 // Show available results for debugging
-                const availableResults = monthlyResults.slice(0, 5).map(r => `${r.year}-${r.month}: $${r.bookValue.toFixed(2)}`);
+                const availableResults = monthlyResults.slice(0, 5).map(r => `${r.year}-${r.month}: BV $${r.bookValue.toFixed(2)}, AD $${r.accumulatedDepreciation.toFixed(2)}`);
                 console.log(`  - Available results (first 5): ${availableResults.join(', ')}`);
               }
             }
 
-            if (bookValue !== null) {
-              bookValues.push({ assetId: asset.id, bookValue });
+            if (bookValue !== null && accumulatedDepreciation !== null) {
+              bookValues.push({
+                assetId: asset.id,
+                bookValue,
+                accumulatedDepreciation
+              });
             }
           }
         } catch (error) {
@@ -246,8 +272,11 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
       bookValueMap = Object.fromEntries(bookValues.map(bv => [bv.assetId, bv.bookValue]));
 
+      // Create accumulated depreciation map for the selected month
+      accumulatedDepreciationMap = Object.fromEntries(bookValues.map(bv => [bv.assetId, bv.accumulatedDepreciation]));
+
       // Aggregate book value by department
-      const assetIdToDepartment = Object.fromEntries(assets.map(a => [a.id, a.currentDepartment || 'Unassigned']));
+      const assetIdToDepartment = Object.fromEntries(assetsToCalculate.map(a => [a.id, a.currentDepartment || 'Unassigned']));
       const departmentTotals = {};
       for (const bv of bookValues) {
         const dept = assetIdToDepartment[bv.assetId] || 'Unassigned';
@@ -256,7 +285,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       bookValueByDepartment = Object.entries(departmentTotals).map(([department, totalBookValue]) => ({ department, totalBookValue }));
 
       // Aggregate book value by category
-      const assetIdToCategory = Object.fromEntries(assets.map(a => [a.id, a.category || 'Uncategorized']));
+      const assetIdToCategory = Object.fromEntries(assetsToCalculate.map(a => [a.id, a.category || 'Uncategorized']));
       const categoryTotals = {};
       for (const bv of bookValues) {
         const cat = assetIdToCategory[bv.assetId] || 'Uncategorized';
@@ -268,11 +297,20 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       console.log('🔍 API Debug: Calculating monthly book values for year:', year);
 
       let processedAssets = 0;
-      for (const asset of assets) {
+      const startTime = Date.now();
+      const TIMEOUT_MS = 45000; // 45 seconds timeout for monthly calculations
+
+      for (const asset of assetsToCalculate) {
         try {
+          // Check for timeout
+          if (Date.now() - startTime > TIMEOUT_MS) {
+            console.log(`🔍 API Debug: Monthly calculation timeout reached after processing ${processedAssets} assets. Stopping.`);
+            break;
+          }
+
           processedAssets++;
-          if (processedAssets % 50 === 0) {
-            console.log(`🔍 API Debug: Processed ${processedAssets}/${assets.length} assets for monthly calculations`);
+          if (processedAssets % 25 === 0) { // Reduced frequency for monthly calculations
+            console.log(`🔍 API Debug: Processed ${processedAssets}/${assetsToCalculate.length} assets for monthly calculations`);
           }
 
           const depreciableCost = asset.depreciableCost || asset.unitPrice;
@@ -286,6 +324,9 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
             try {
               const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
+
+              // Add individual calculation timeout
+              const calcStartTime = Date.now();
               const monthlyResults = calculateMonthlyDepreciation({
                 unitPrice: depreciableCost,
                 sivDate: sivDateString,
@@ -293,6 +334,11 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 salvageValue: salvageValue,
                 method: method,
               });
+
+              const calcDuration = Date.now() - calcStartTime;
+              if (calcDuration > 2000) { // Log very slow calculations
+                console.log(`🔍 API Debug: Very slow monthly calculation for asset ${asset.id}: ${calcDuration}ms`);
+              }
 
               // Extract book values for the specific year
               const yearlyBookValues = {};
@@ -500,7 +546,10 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           })()
         } : {}),
         // Add book value for specific month when year and month are selected
-        ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
+        ...(year && month ? {
+          bookValue: bookValueMap[asset.id] ?? null,
+          accumulatedDepreciation: accumulatedDepreciationMap[asset.id] ?? null
+        } : {}),
         // Add monthly book values when only year is selected
         ...(year && !month ? { bookValuesByMonth: bookValuesByAsset[asset.id] || {} } : {})
       };

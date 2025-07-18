@@ -386,19 +386,24 @@ export default function AssetReportsPage() {
       const baseAssetHeaders = [
         'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
         'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
-        'Current Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
         'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
         'Salvage Value', 'Calculated Salvage Value'
       ];
 
-      // Add monthly book value columns if year filter is applied
+      // Add accumulated depreciation column if year and month are selected
+      const accDepreciationHeaders = (currentFilters.year && currentFilters.month)
+        ? [`Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`]
+        : [];
+
+      // Add monthly book value columns if year filter is applied (but not month)
       const bookValueHeaders = (currentFilters.year && !currentFilters.month)
         ? Array.from({ length: 12 }, (_, i) =>
             `${new Date(0, i).toLocaleString('default', { month: 'short' })} ${currentFilters.year} Book Value`
           )
         : [];
 
-      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders];
+      const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...bookValueHeaders];
       const headerPadding = Array(assetHeaders.length - 1).fill('');
 
       const assetsData: (string | number)[][] = [
@@ -407,19 +412,27 @@ export default function AssetReportsPage() {
         ...allFilteredAssets.map((asset: any) => {
           // Determine the correct book value to display based on filters
           let bookValueToShow = '';
+          let accumulatedDepreciationToShow = '';
+
           if (currentFilters.year && currentFilters.month) {
-            // Specific month selected - use bookValue field
+            // Specific month selected - use bookValue and accumulatedDepreciation fields
             bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
               ? Number(asset.bookValue).toFixed(2)
+              : '';
+            accumulatedDepreciationToShow = asset.accumulatedDepreciation !== undefined && asset.accumulatedDepreciation !== null
+              ? Number(asset.accumulatedDepreciation).toFixed(2)
               : '';
           } else if (!currentFilters.year && !currentFilters.month) {
             // No date filter - use currentBookValue field
             bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
               ? Number(asset.currentBookValue).toFixed(2)
               : '';
+            // No accumulated depreciation for current values
+            accumulatedDepreciationToShow = '';
           } else {
             // Year only - leave blank, monthly columns will show data
             bookValueToShow = '';
+            accumulatedDepreciationToShow = '';
           }
 
           const baseRow = [
@@ -448,6 +461,11 @@ export default function AssetReportsPage() {
             asset.salvageValue || 0,
             asset.calculatedSalvageValue || 0
           ];
+
+          // Add accumulated depreciation column if year and month are selected
+          if (currentFilters.year && currentFilters.month) {
+            baseRow.push(accumulatedDepreciationToShow);
+          }
 
           // Add monthly book values if year filter is applied (but not month)
           const bookValueCells = (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth)
@@ -535,36 +553,49 @@ export default function AssetReportsPage() {
       const baseAssetHeaders = [
         'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
         'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
-        'Current Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
         'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
         'Salvage Value', 'Calculated Salvage Value'
       ];
 
-      // Add monthly book value headers if year filter is applied
+      // Add accumulated depreciation column if year and month are selected
+      const accDepreciationHeaders = (currentFilters.year && currentFilters.month)
+        ? [`Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`]
+        : [];
+
+      // Add monthly book value headers if year filter is applied (but not month)
       const bookValueHeaders = (currentFilters.year && !currentFilters.month)
         ? Array.from({ length: 12 }, (_, i) =>
             `${new Date(0, i).toLocaleString('default', { month: 'short' })} ${currentFilters.year} Book Value`
           )
         : [];
 
-      const assetHeaders = [...baseAssetHeaders, ...bookValueHeaders];
+      const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...bookValueHeaders];
 
       const assetRows = allFilteredAssets.map((asset: any) => {
         // Determine the correct book value to display based on filters
         let bookValueToShow = '';
+        let accumulatedDepreciationToShow = '';
+
         if (currentFilters.year && currentFilters.month) {
-          // Specific month selected - use bookValue field
+          // Specific month selected - use bookValue and accumulatedDepreciation fields
           bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
             ? Number(asset.bookValue).toFixed(2)
+            : '';
+          accumulatedDepreciationToShow = asset.accumulatedDepreciation !== undefined && asset.accumulatedDepreciation !== null
+            ? Number(asset.accumulatedDepreciation).toFixed(2)
             : '';
         } else if (!currentFilters.year && !currentFilters.month) {
           // No date filter - use currentBookValue field
           bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
             ? Number(asset.currentBookValue).toFixed(2)
             : '';
+          // No accumulated depreciation for current values
+          accumulatedDepreciationToShow = '';
         } else {
           // Year only - leave blank, monthly columns will show data
           bookValueToShow = '';
+          accumulatedDepreciationToShow = '';
         }
 
         const baseRow = [
@@ -593,6 +624,11 @@ export default function AssetReportsPage() {
           asset.salvageValue || 0,
           asset.calculatedSalvageValue || 0
         ];
+
+        // Add accumulated depreciation column if year and month are selected
+        if (currentFilters.year && currentFilters.month) {
+          baseRow.push(accumulatedDepreciationToShow);
+        }
 
         // Add monthly book values if year filter is applied (but not month)
         if (currentFilters.year && !currentFilters.month && asset.bookValuesByMonth) {
@@ -1071,7 +1107,13 @@ export default function AssetReportsPage() {
                             header: `Book Value (${new Date(0, i).toLocaleString('default', { month: 'short' })})`,
                             key: `bookValueMonth${i + 1}`
                           }))
-                        : [{ header: 'Book Value', key: 'bookValue' }]
+                        : [
+                            { header: 'Book Value', key: 'bookValue' },
+                            // Add Accumulated Depreciation column for export when year and month are selected
+                            ...(currentFilters.year && currentFilters.month ? [
+                              { header: `Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`, key: 'accumulatedDepreciation' }
+                            ] : [])
+                          ]
                       )
                     ]}
                     title="Detailed Asset List"
@@ -1169,19 +1211,32 @@ export default function AssetReportsPage() {
                               },
                             };
                           })
-                        : [{
-                            header: 'Book Value',
-                            key: 'bookValue',
-                            render: (_, item) => {
-                              // Use currentBookValue when no year/month filter, otherwise use bookValue or currentValue
-                              const bookValue = !currentFilters.year && !currentFilters.month
-                                ? (item as any).currentBookValue || item.currentValue
-                                : item.bookValue || item.currentValue;
-                              return bookValue !== undefined && bookValue !== null
-                                ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                : '—';
+                        : [
+                            {
+                              header: 'Book Value',
+                              key: 'bookValue',
+                              render: (_, item) => {
+                                // Use currentBookValue when no year/month filter, otherwise use bookValue or currentValue
+                                const bookValue = !currentFilters.year && !currentFilters.month
+                                  ? (item as any).currentBookValue || item.currentValue
+                                  : item.bookValue || item.currentValue;
+                                return bookValue !== undefined && bookValue !== null
+                                  ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : '—';
+                              },
                             },
-                          }]
+                            // Add Accumulated Depreciation column when year and month are selected
+                            ...(currentFilters.year && currentFilters.month ? [{
+                              header: `Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`,
+                              key: 'accumulatedDepreciation',
+                              render: (_, item: any) => {
+                                const accDepreciation = item.accumulatedDepreciation;
+                                return accDepreciation !== undefined && accDepreciation !== null
+                                  ? `$${Number(accDepreciation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : '—';
+                              },
+                            }] : [])
+                          ]
                       ),
                       {
                         header: 'Status',
