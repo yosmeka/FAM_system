@@ -376,7 +376,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
+      {/* <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="bg-white p-6 rounded-lg shadow dark:bg-gray-900">
           <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             Asset Status Distribution
@@ -394,7 +394,7 @@ export default function DashboardPage() {
             <Pie data={categoryDistributionData} />
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 } 

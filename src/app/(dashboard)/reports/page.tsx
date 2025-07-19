@@ -11,30 +11,30 @@ const reportTypes = [
     path: '/reports/assets',
     icon: '📊',
   },
-  {
-    title: 'Audit Reports',
-    description: '🔍 Track audit compliance and findings',
-    path: '/reports/audits',
-    icon: '🔍',
-  },
-  {
-    title: 'Transfer Reports',
-    description: '🔄 Analyze asset movement patterns',
-    path: '/reports/transfers',
-    icon: '🔄',
-  },
-  {
-    title: 'Disposal Reports',
-    description: '📉 Monitor disposal trends and recovery',
-    path: '/reports/disposals',
-    icon: '📉',
-  },
-  {
-    title: 'Maintenance Reports',
-    description: '🔍 Track maintenance activities and trends',
-    path: '/reports/maintenance',
-    icon: '🔍', 
-  }
+  // {
+  //   title: 'Audit Reports',
+  //   description: '🔍 Track audit compliance and findings',
+  //   path: '/reports/audits',
+  //   icon: '🔍',
+  // },
+  // {
+  //   title: 'Transfer Reports',
+  //   description: '🔄 Analyze asset movement patterns',
+  //   path: '/reports/transfers',
+  //   icon: '🔄',
+  // },
+  // {
+  //   title: 'Disposal Reports',
+  //   description: '📉 Monitor disposal trends and recovery',
+  //   path: '/reports/disposals',
+  //   icon: '📉',
+  // },
+  // {
+  //   title: 'Maintenance Reports',
+  //   description: '🔍 Track maintenance activities and trends',
+  //   path: '/reports/maintenance',
+  //   icon: '🔍', 
+  // }
 ];
 
 export default function ReportsPage() {

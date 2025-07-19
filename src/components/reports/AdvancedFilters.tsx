@@ -364,7 +364,7 @@ export function AdvancedFilters({
       {/* Basic Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* Date Range */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-black dark:text-white mb-1">
             📅 Start Date
           </label>
@@ -391,9 +391,9 @@ export function AdvancedFilters({
               </button>
             )}
           </div>
-        </div>
+        </div> */}
 
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-black dark:text-white mb-1">
             📅 End Date
           </label>
@@ -421,7 +421,7 @@ export function AdvancedFilters({
               </button>
             )}
           </div>
-        </div>
+        </div> */}
 
         {/* Book Value As Of (Year/Month Dropdowns) */}
         <div className="grid grid-cols-2 gap-2">

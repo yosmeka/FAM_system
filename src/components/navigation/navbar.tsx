@@ -25,31 +25,31 @@ const navigation = [
 		href: "/assets",
 		roles: ["MANAGER", "USER","AUDITOR"],
 	},
-	{
-		name: "Transfers",
-		href: "/transfers",
-		roles: ["MANAGER", "USER"],
-	},
-	{
-		name: "Maintenance",
-		href: "/maintenance",
-		roles: ["MANAGER", "USER"],
-	},
-	{
-		name: "Audits",
-		href: "/audits/workflow",
-		roles: ["MANAGER",  "AUDITOR"],
-	},
-	{
-		name: "Audit Review",
-		href: "/audits/review",
-		roles: ["MANAGER"],
-	},
-	{
-		name: "Disposals",
-		href: "/disposals",
-		roles: ["MANAGER", "USER"],
-	},
+	// {
+	// 	name: "Transfers",
+	// 	href: "/transfers",
+	// 	roles: ["MANAGER", "USER"],
+	// },
+	// {
+	// 	name: "Maintenance",
+	// 	href: "/maintenance",
+	// 	roles: ["MANAGER", "USER"],
+	// },
+	// {
+	// 	name: "Audits",
+	// 	href: "/audits/workflow",
+	// 	roles: ["MANAGER",  "AUDITOR"],
+	// },
+	// {
+	// 	name: "Audit Review",
+	// 	href: "/audits/review",
+	// 	roles: ["MANAGER"],
+	// },
+	// {
+	// 	name: "Disposals",
+	// 	href: "/disposals",
+	// 	roles: ["MANAGER", "USER"],
+	// },
 	{
 		name: "Reports",
 		href: "/reports",

@@ -7,7 +7,7 @@ import { RoleBasedChart } from '@/components/ui/RoleBasedChart';
 import { RoleBasedStats } from '@/components/ui/RoleBasedStats';
 import { AdvancedFilters, FilterValues, FilterOptions } from '@/components/reports/AdvancedFilters';
 import { TableExportDropdown } from '@/components/reports/TableExportDropdown';
-import { DepreciationAnalytics } from '@/components/reports/DepreciationAnalytics';
+// import { DepreciationAnalytics } from '@/components/reports/DepreciationAnalytics';
 import { Download, ChevronDown } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { toast } from 'react-hot-toast';
@@ -1496,7 +1496,7 @@ export default function AssetReportsPage() {
 
       {activeTab === 'depreciationAnalytics' && (
         <div className="space-y-6">
-          {assetStats && (
+          {/* {assetStats && (
             <DepreciationAnalytics
               stats={{
                 totalCurrentBookValue: assetStats.totalCurrentBookValue || 0,
@@ -1510,7 +1510,7 @@ export default function AssetReportsPage() {
                 totalPurchaseValue: assetStats.totalPurchaseValue || 0
               }}
             />
-          )}
+          )} */}
 
           {(!assetStats || !Array.isArray(assetStats.depreciationByMethod) || assetStats.depreciationByMethod.length === 0) && (
             <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg text-center">
