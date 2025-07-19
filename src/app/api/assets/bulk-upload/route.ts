@@ -86,6 +86,7 @@ export const POST = withPermission(async function POST(request: Request) {
         // Extract and validate required fields
         // Handle both old and new column headers for backward compatibility
         const name = (row['Asset Name'] || row['Asset Name (Optional)'] || '').toString().trim();
+        const itemDescription = (row['Item Description'] || '').toString().trim();
         const serialNumber = (row['Serial Number'] || row['Serial Number (Optional)'] || '').toString().trim();
         const sivDateRaw = row['SIV Date'] || row['SIV Date *'];
         const unitPriceRaw = row['Unit Price'] || row['Unit Price *'];
@@ -99,7 +100,8 @@ export const POST = withPermission(async function POST(request: Request) {
         }
 
         // Generate default values for optional fields
-        const finalName = name || `Asset-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        // Use item description as asset name if no asset name is provided
+        const finalName = name || itemDescription || `Asset-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
         const finalSerialNumber = serialNumber || `SN-${Date.now()}-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
 
         // Parse and validate SIV Date
@@ -296,9 +298,19 @@ export const POST = withPermission(async function POST(request: Request) {
           assetId: asset.id,
           assetName: asset.name,
           serialNumber: asset.serialNumber,
-          // Add note if values were auto-generated
-          ...(name !== asset.name && { note: 'Asset name was auto-generated' }),
-          ...(serialNumber !== asset.serialNumber && { note: (name !== asset.name ? 'Asset name and serial number were auto-generated' : 'Serial number was auto-generated') })
+          // Add note if values were auto-generated or taken from item description
+          ...(name !== asset.name && {
+            note: name ? 'Asset name was auto-generated' :
+                  itemDescription ? 'Asset name taken from item description' :
+                  'Asset name was auto-generated'
+          }),
+          ...(serialNumber !== asset.serialNumber && {
+            note: (name !== asset.name ?
+              (name ? 'Asset name and serial number were auto-generated' :
+               itemDescription ? 'Asset name taken from item description, serial number was auto-generated' :
+               'Asset name and serial number were auto-generated') :
+              'Serial number was auto-generated')
+          })
         });
         successCount++;
 
