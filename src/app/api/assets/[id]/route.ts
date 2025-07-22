@@ -150,12 +150,46 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       return Response.json({ error: 'Asset not found' }, { status: 404 });
     }
 
+    // Check if serial number is being changed and if it's unique
+    if (body.serialNumber && body.serialNumber.trim() !== '') {
+      const trimmedSerial = body.serialNumber.trim();
+
+      // Only check uniqueness if the serial number is actually different
+      if (trimmedSerial !== currentAsset.serialNumber) {
+        console.log(`🔍 Serial Number Check: Current='${currentAsset.serialNumber}', New='${trimmedSerial}'`);
+
+        const existingAsset = await prisma.asset.findUnique({
+          where: { serialNumber: trimmedSerial },
+          select: { id: true, name: true, serialNumber: true }
+        });
+
+        if (existingAsset && existingAsset.id !== id) {
+          console.log(`❌ Serial Number Conflict: Asset '${existingAsset.name}' (${existingAsset.id}) already has serial '${existingAsset.serialNumber}'`);
+          return Response.json(
+            {
+              error: `Serial Number '${trimmedSerial}' already exists for asset '${existingAsset.name}'`,
+              field: 'serialNumber',
+              conflictingAsset: {
+                id: existingAsset.id,
+                name: existingAsset.name
+              }
+            },
+            { status: 400 }
+          );
+        } else {
+          console.log(`✅ Serial Number OK: '${trimmedSerial}' is unique`);
+        }
+      } else {
+        console.log(`✅ Serial Number Unchanged: '${trimmedSerial}'`);
+      }
+    }
+
     // Prepare data for update, handling potential invalid values from frontend
     const updateData: Record<string, unknown> = {
       name: body.name,
       serialNumber: body.serialNumber,
       status: body.status,
-      department: "Zemen Bank",
+      currentDepartment: body.currentDepartment || body.department || null,
     };
 
     // Handle optional string fields
@@ -167,16 +201,32 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
     // Handle type field based on category
     updateData.type = body.category === 'LAND' ? null : body.type;
 
-    // Handle string fields
-    const stringFields = ['name', 'description', 'serialNumber', 'status', 'location', 'department', 'category', 'supplier'];
+    // Handle string fields (using correct field names from Prisma schema)
+    const stringFields = [
+      'name', 'itemDescription', 'serialNumber', 'status', 'location', 'category', 'supplier', 'type',
+      'oldTagNumber', 'newTagNumber', 'grnNumber', 'sivNumber', 'remark'
+    ];
     stringFields.forEach(field => {
       if (body[field] !== undefined) {
         updateData[field] = body[field] || null;
       }
     });
 
-    // Handle number fields
-    const numberFields = ['purchasePrice', 'currentValue', 'depreciableCost', 'usefulLifeMonths', 'salvageValue'];
+    // Handle department field mapping (frontend might send 'department' but schema uses 'currentDepartment')
+    if (body.department !== undefined) {
+      updateData.currentDepartment = body.department || null;
+    }
+    if (body.currentDepartment !== undefined) {
+      updateData.currentDepartment = body.currentDepartment || null;
+    }
+
+    // Handle description field mapping (frontend might send 'description' but schema uses 'itemDescription')
+    if (body.description !== undefined) {
+      updateData.itemDescription = body.description || null;
+    }
+
+    // Handle number fields (using correct schema field names)
+    const numberFields = ['unitPrice', 'currentValue', 'depreciableCost', 'salvageValue', 'residualPercentage'];
     numberFields.forEach(field => {
       if (body[field] !== undefined) {
         const value = parseFloat(body[field]);
@@ -188,8 +238,24 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       }
     });
 
-    // Handle date fields
-    const dateFields = ['purchaseDate', 'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'depreciationStartDate'];
+    // Handle field mapping for number fields (frontend might send old field names)
+    if (body.purchasePrice !== undefined) {
+      const value = parseFloat(body.purchasePrice);
+      updateData.unitPrice = !isNaN(value) ? value : null;
+    }
+
+    // Handle useful life field mapping (frontend might send usefulLifeMonths but schema uses usefulLifeYears)
+    if (body.usefulLifeMonths !== undefined) {
+      const months = parseFloat(body.usefulLifeMonths);
+      updateData.usefulLifeYears = !isNaN(months) ? Math.round(months / 12) : null;
+    }
+    if (body.usefulLifeYears !== undefined) {
+      const years = parseFloat(body.usefulLifeYears);
+      updateData.usefulLifeYears = !isNaN(years) ? years : null;
+    }
+
+    // Handle date fields (using correct schema field names)
+    const dateFields = ['sivDate', 'grnDate', 'warrantyExpiry', 'lastMaintenance', 'nextMaintenance', 'lastAuditDate', 'nextAuditDate'];
     dateFields.forEach(field => {
       if (body[field] !== undefined) {
         if (body[field]) {
@@ -205,13 +271,74 @@ export const PUT = withRole(['MANAGER', 'USER', 'AUDITOR'], async function PUT(
       }
     });
 
-    // Update the asset
-    const updatedAsset = await prisma.asset.update({
-      where: {
-        id: id,
-      },
-      data: updateData,
+    // Handle date field mapping (frontend might send old field names)
+    if (body.purchaseDate !== undefined) {
+      if (body.purchaseDate) {
+        const date = new Date(body.purchaseDate);
+        updateData.sivDate = !isNaN(date.getTime()) ? date : null;
+      } else {
+        updateData.sivDate = null;
+      }
+    }
+
+    if (body.depreciationStartDate !== undefined) {
+      if (body.depreciationStartDate) {
+        const date = new Date(body.depreciationStartDate);
+        updateData.sivDate = !isNaN(date.getTime()) ? date : null;
+      } else {
+        updateData.sivDate = null;
+      }
+    }
+
+    // Clean updateData: remove undefined values and invalid fields
+    const cleanedUpdateData: Record<string, any> = {};
+    Object.keys(updateData).forEach(key => {
+      const value = updateData[key];
+      // Only include defined values and exclude 'description' field
+      if (value !== undefined && key !== 'description') {
+        cleanedUpdateData[key] = value;
+      }
     });
+
+    console.log('🔧 Asset Update: Cleaned data for Prisma:', cleanedUpdateData);
+
+    // Update the asset with enhanced error handling
+    let updatedAsset;
+    try {
+      updatedAsset = await prisma.asset.update({
+        where: {
+          id: id,
+        },
+        data: cleanedUpdateData,
+      });
+      console.log('✅ Asset Update: Successfully updated asset', updatedAsset.id);
+    } catch (prismaError: any) {
+      console.error('❌ Prisma Update Error:', prismaError);
+
+      // Handle specific Prisma errors
+      if (prismaError.code === 'P2002') {
+        // Unique constraint violation
+        const field = prismaError.meta?.target?.[0] || 'unknown field';
+        return Response.json(
+          {
+            error: `${field === 'serialNumber' ? 'Serial Number' : field} must be unique`,
+            field: field,
+            details: prismaError.message
+          },
+          { status: 400 }
+        );
+      }
+
+      // Generic Prisma error
+      return Response.json(
+        {
+          error: 'Failed to update asset',
+          details: prismaError.message,
+          type: 'PrismaError'
+        },
+        { status: 500 }
+      );
+    }
 
     // Regenerate and store monthly depreciation schedule
     try {
