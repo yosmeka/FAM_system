@@ -29,14 +29,17 @@ export function calculateStraightLineDepreciation(input: DepreciationInput): Dep
 
   const results: DepreciationResult[] = [];
   let accumulatedDepreciation = 0;
+  // Start with depreciable amount instead of full unit price
+  let currentBookValue = depreciableAmount;
 
   for (let year = 0; year < usefulLifeYears; year++) {
     accumulatedDepreciation += annualDepreciation;
+    currentBookValue -= annualDepreciation;
     results.push({
       year: purchaseYear + year,
       depreciationExpense: annualDepreciation,
       accumulatedDepreciation,
-      bookValue: unitPrice - accumulatedDepreciation
+      bookValue: Math.max(currentBookValue, 0) // Book value should not go below 0
     });
   }
 
@@ -49,26 +52,28 @@ export function calculateStraightLineDepreciation(input: DepreciationInput): Dep
 export function calculateDecliningBalanceDepreciation(input: DepreciationInput): DepreciationResult[] {
   const { unitPrice, sivDate, usefulLifeYears, salvageValue, depreciationRate = 20 } = input;
   const purchaseYear = new Date(sivDate).getFullYear();
+  const depreciableAmount = unitPrice - salvageValue;
   const rate = depreciationRate / 100;
 
   const results: DepreciationResult[] = [];
-  let bookValue = unitPrice;
+  // Start with depreciable amount instead of full unit price
+  let bookValue = depreciableAmount;
   let accumulatedDepreciation = 0;
 
   for (let year = 0; year < usefulLifeYears; year++) {
-    if (bookValue <= salvageValue) {
+    if (bookValue <= 0) {
       results.push({
         year: purchaseYear + year,
         depreciationExpense: 0,
         accumulatedDepreciation,
-        bookValue: salvageValue
+        bookValue: 0
       });
       break;
     }
     let depreciationExpense = rate * bookValue;
-    // If this is the last year or would go below salvage value, adjust so book value = salvage value
-    if (year === usefulLifeYears - 1 || bookValue - depreciationExpense < salvageValue) {
-      depreciationExpense = bookValue - salvageValue;
+    // If this is the last year or would go below 0, adjust so book value = 0
+    if (year === usefulLifeYears - 1 || bookValue - depreciationExpense < 0) {
+      depreciationExpense = bookValue;
     }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
@@ -76,9 +81,9 @@ export function calculateDecliningBalanceDepreciation(input: DepreciationInput):
       year: purchaseYear + year,
       depreciationExpense,
       accumulatedDepreciation,
-      bookValue: bookValue
+      bookValue: Math.max(bookValue, 0)
     });
-    if (bookValue <= salvageValue) break;
+    if (bookValue <= 0) break;
   }
   return results;
 }
@@ -89,26 +94,28 @@ export function calculateDecliningBalanceDepreciation(input: DepreciationInput):
 export function calculateDoubleDecliningBalanceDepreciation(input: DepreciationInput): DepreciationResult[] {
   const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
   const purchaseYear = new Date(sivDate).getFullYear();
+  const depreciableAmount = unitPrice - salvageValue;
   const rate = 2 / usefulLifeYears;
 
   const results: DepreciationResult[] = [];
-  let bookValue = unitPrice;
+  // Start with depreciable amount instead of full unit price
+  let bookValue = depreciableAmount;
   let accumulatedDepreciation = 0;
 
   for (let year = 0; year < usefulLifeYears; year++) {
-    if (bookValue <= salvageValue) {
+    if (bookValue <= 0) {
       results.push({
         year: purchaseYear + year,
         depreciationExpense: 0,
         accumulatedDepreciation,
-        bookValue: salvageValue
+        bookValue: 0
       });
       break;
     }
     let depreciationExpense = rate * bookValue;
-    // If this is the last year or would go below salvage value, adjust so book value = salvage value
-    if (year === usefulLifeYears - 1 || bookValue - depreciationExpense < salvageValue) {
-      depreciationExpense = bookValue - salvageValue;
+    // If this is the last year or would go below 0, adjust so book value = 0
+    if (year === usefulLifeYears - 1 || bookValue - depreciationExpense < 0) {
+      depreciationExpense = bookValue;
     }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
@@ -116,9 +123,9 @@ export function calculateDoubleDecliningBalanceDepreciation(input: DepreciationI
       year: purchaseYear + year,
       depreciationExpense,
       accumulatedDepreciation,
-      bookValue: bookValue
+      bookValue: Math.max(bookValue, 0)
     });
-    if (bookValue <= salvageValue) break;
+    if (bookValue <= 0) break;
   }
   return results;
 }
@@ -136,6 +143,8 @@ export function calculateSumOfYearsDigitsDepreciation(input: DepreciationInput):
 
   const results: DepreciationResult[] = [];
   let accumulatedDepreciation = 0;
+  // Start with depreciable amount instead of full unit price
+  let currentBookValue = depreciableAmount;
 
   for (let year = 0; year < usefulLifeYears; year++) {
     // Calculate the fraction for this year (e.g., for year 1 of 5: 5/15, year 2: 4/15, etc.)
@@ -143,11 +152,12 @@ export function calculateSumOfYearsDigitsDepreciation(input: DepreciationInput):
     const depreciationExpense = depreciableAmount * fraction;
 
     accumulatedDepreciation += depreciationExpense;
+    currentBookValue -= depreciationExpense;
     results.push({
       year: purchaseYear + year,
       depreciationExpense,
       accumulatedDepreciation,
-      bookValue: unitPrice - accumulatedDepreciation
+      bookValue: Math.max(currentBookValue, 0) // Book value should not go below 0
     });
   }
 
@@ -194,7 +204,7 @@ export function calculateUnitsOfActivityDepreciation(input: DepreciationInput): 
                            depreciableAmount - results[year-1].accumulatedDepreciation :
                            depreciationExpense),
       accumulatedDepreciation: cappedAccumulatedDepreciation,
-      bookValue: unitPrice - cappedAccumulatedDepreciation
+      bookValue: Math.max(depreciableAmount - cappedAccumulatedDepreciation, 0) // Start from depreciable amount
     });
 
     // Stop if we've fully depreciated the asset
@@ -294,6 +304,8 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
 
   const results: MonthlyDepreciationResult[] = [];
   let accumulatedDepreciation = 0;
+  // Start with depreciable amount instead of full unit price
+  let currentBookValue = depreciableAmount;
 
   // Generate exactly one result per month for the useful life period
   for (let m = 0; m < usefulLifeMonths; m++) {
@@ -310,13 +322,14 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
       depreciationExpense = monthlyDepreciation * daysUsed / daysInMonth;
     }
 
-    // Adjust last month to ensure book value equals salvage value exactly
+    // Adjust last month to ensure book value equals zero (since we start from depreciable amount)
     if (m === usefulLifeMonths - 1) {
-      depreciationExpense = unitPrice - accumulatedDepreciation - salvageValue;
+      depreciationExpense = currentBookValue; // Depreciate remaining amount
     }
 
     accumulatedDepreciation += depreciationExpense;
-    const bookValue = Math.max(unitPrice - accumulatedDepreciation, salvageValue);
+    currentBookValue -= depreciationExpense;
+    const bookValue = Math.max(currentBookValue, 0); // Book value should not go below 0
 
     results.push({
       year,
@@ -353,18 +366,20 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
   const { unitPrice, sivDate, usefulLifeYears, salvageValue, depreciationRate = 20 } = input;
   const start = new Date(sivDate);
   const usefulLifeMonths = usefulLifeYears * 12;
+  const depreciableAmount = unitPrice - salvageValue;
   const rate = depreciationRate / 100;
   const monthlyRate = 1 - Math.pow(1 - rate, 1 / 12); // Convert annual rate to monthly
 
   const results: MonthlyDepreciationResult[] = [];
-  let bookValue = unitPrice;
+  // Start with depreciable amount instead of full unit price
+  let bookValue = depreciableAmount;
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
     const date = addMonths(start, m);
     let depreciationExpense = monthlyRate * bookValue;
-    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
-      depreciationExpense = bookValue - salvageValue;
+    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < 0) {
+      depreciationExpense = bookValue; // Depreciate remaining amount
     }
     if (m === 0) {
       // Prorate for first month
@@ -372,14 +387,14 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
       const startDay = start.getDate();
       depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
     }
-    // If this is the last month, adjust so book value = salvage value
+    // If this is the last month, adjust so book value = 0
     if (m === usefulLifeMonths - 1) {
-      depreciationExpense = bookValue - salvageValue;
+      depreciationExpense = bookValue;
     }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
     if (m === usefulLifeMonths - 1) {
-      bookValue = salvageValue;
+      bookValue = 0; // End at 0 since we started from depreciable amount
     }
     results.push({
       year: date.getFullYear(),
@@ -416,18 +431,20 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
   const { unitPrice, sivDate, usefulLifeYears, salvageValue } = input;
   const start = new Date(sivDate);
   const usefulLifeMonths = usefulLifeYears * 12;
+  const depreciableAmount = unitPrice - salvageValue;
   const annualRate = 2 / usefulLifeYears;
   const monthlyRate = 1 - Math.pow(1 - annualRate, 1 / 12);
 
   const results: MonthlyDepreciationResult[] = [];
-  let bookValue = unitPrice;
+  // Start with depreciable amount instead of full unit price
+  let bookValue = depreciableAmount;
   let accumulatedDepreciation = 0;
 
   for (let m = 0; m < usefulLifeMonths; m++) {
     const date = addMonths(start, m);
     let depreciationExpense = monthlyRate * bookValue;
-    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < salvageValue) {
-      depreciationExpense = bookValue - salvageValue;
+    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < 0) {
+      depreciationExpense = bookValue; // Depreciate remaining amount
     }
     if (m === 0) {
       // Prorate for first month
@@ -435,14 +452,14 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
       const startDay = start.getDate();
       depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
     }
-    // If this is the last month, adjust so book value = salvage value
+    // If this is the last month, adjust so book value = 0
     if (m === usefulLifeMonths - 1) {
-      depreciationExpense = bookValue - salvageValue;
+      depreciationExpense = bookValue;
     }
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
     if (m === usefulLifeMonths - 1) {
-      bookValue = salvageValue;
+      bookValue = 0; // End at 0 since we started from depreciable amount
     }
     results.push({
       year: date.getFullYear(),
@@ -495,14 +512,14 @@ function calculateSumOfYearsDigitsMonthly(input: DepreciationInput): MonthlyDepr
       const startDay = start.getDate();
       depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
     }
-    // If this is the last month, adjust so book value = salvage value
+    // If this is the last month, adjust so book value = 0
     if (m === usefulLifeMonths - 1) {
-      depreciationExpense = unitPrice - accumulatedDepreciation - salvageValue;
+      depreciationExpense = depreciableAmount - accumulatedDepreciation;
     }
     accumulatedDepreciation += depreciationExpense;
-    let bookValue = unitPrice - accumulatedDepreciation;
+    let bookValue = depreciableAmount - accumulatedDepreciation;
     if (m === usefulLifeMonths - 1) {
-      bookValue = salvageValue;
+      bookValue = 0; // End at 0 since we started from depreciable amount
     }
     results.push({
       year: date.getFullYear(),
@@ -564,15 +581,15 @@ function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepre
       const startDay = start.getDate();
       depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
     }
-    // If this is the last month, adjust so book value = salvage value
+    // If this is the last month, adjust so book value = 0
     if (m === usefulLifeMonths - 1) {
-      depreciationExpense = unitPrice - accumulatedDepreciation - salvageValue;
+      depreciationExpense = depreciableAmount - accumulatedDepreciation;
     }
     accumulatedDepreciation += depreciationExpense;
     let cappedAccumulatedDepreciation = Math.min(accumulatedDepreciation, depreciableAmount);
-    let bookValue = unitPrice - cappedAccumulatedDepreciation;
+    let bookValue = depreciableAmount - cappedAccumulatedDepreciation;
     if (m === usefulLifeMonths - 1) {
-      bookValue = salvageValue;
+      bookValue = 0; // End at 0 since we started from depreciable amount
     }
     results.push({
       year: date.getFullYear(),
