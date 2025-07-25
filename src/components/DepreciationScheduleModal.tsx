@@ -77,15 +77,17 @@ export function DepreciationScheduleModal({ open, onClose, assetId, assetName }:
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {schedule.map((row, idx) => (
-                      <tr key={idx}>
-                        <td className="px-4 py-2">{row.year}</td>
-                        <td className="px-4 py-2">{row.month}</td>
-                        <td className="px-4 py-2">{row.depreciationExpense.toFixed(2)}</td>
-                        <td className="px-4 py-2">{row.accumulatedDepreciation.toFixed(2)}</td>
-                        <td className="px-4 py-2">{row.bookValue.toFixed(2)}</td>
-                      </tr>
-                    ))}
+                    {schedule
+                      .filter(row => row.depreciationExpense > 0) // Only show rows with actual depreciation
+                      .map((row, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2">{row.year}</td>
+                          <td className="px-4 py-2">{row.month}</td>
+                          <td className="px-4 py-2">{row.depreciationExpense.toFixed(2)}</td>
+                          <td className="px-4 py-2">{row.accumulatedDepreciation.toFixed(2)}</td>
+                          <td className="px-4 py-2">{row.bookValue.toFixed(2)}</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

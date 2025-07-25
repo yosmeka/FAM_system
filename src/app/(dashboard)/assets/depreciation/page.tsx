@@ -304,10 +304,12 @@ export default function AssetDepreciationPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {depreciationResults.map((result) => (
-                  <tr key={result.year}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {result.year}
+                {depreciationResults
+                  .filter(result => result.depreciation > 0) // Only show years with actual depreciation
+                  .map((result) => (
+                    <tr key={result.year}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {result.year}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       ${result.depreciation.toFixed(2)}

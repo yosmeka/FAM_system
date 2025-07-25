@@ -712,14 +712,16 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                     </tr>
                   </thead>
                   <tbody className="dark:bg-gray-800">
-                    {depreciationResults.map((result, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
-                        <td className="p-2 border">{result.year}</td>
-                        <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
-                        <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
-                        <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
-                      </tr>
-                    ))}
+                    {depreciationResults
+                      .filter(result => result.depreciationExpense > 0) // Only show years with actual depreciation
+                      .map((result, index) => (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
+                          <td className="p-2 border">{result.year}</td>
+                          <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
+                          <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
+                          <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -737,15 +739,17 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                     </tr>
                   </thead>
                   <tbody className="dark:bg-gray-800">
-                    {monthlyDepreciationResults.map((result, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
-                        <td className="p-2 border">{result.year}</td>
-                        <td className="p-2 border">{result.month}</td>
-                        <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
-                        <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
-                        <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
-                      </tr>
-                    ))}
+                    {monthlyDepreciationResults
+                      .filter(result => result.depreciationExpense > 0) // Only show rows with actual depreciation
+                      .map((result, index) => (
+                        <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'}>
+                          <td className="p-2 border">{result.year}</td>
+                          <td className="p-2 border">{result.month}</td>
+                          <td className="p-2 border">{formatCurrency(result.depreciationExpense)}</td>
+                          <td className="p-2 border">{formatCurrency(result.accumulatedDepreciation)}</td>
+                          <td className="p-2 border">{formatCurrency(result.bookValue)}</td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
