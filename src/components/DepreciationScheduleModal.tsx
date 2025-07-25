@@ -20,6 +20,7 @@ export function DepreciationScheduleModal({ open, onClose, assetId, assetName }:
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBudgetYear, setSelectedBudgetYear] = useState<string>('');
 
   useEffect(() => {
     if (!open) return;

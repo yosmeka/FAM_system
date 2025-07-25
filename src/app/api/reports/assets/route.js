@@ -26,7 +26,21 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
     const minValue = url.searchParams.get('minValue') ? parseFloat(url.searchParams.get('minValue')) : null;
     const maxValue = url.searchParams.get('maxValue') ? parseFloat(url.searchParams.get('maxValue')) : null;
     const depreciationMethod = url.searchParams.get('depreciationMethod');
-    const year = url.searchParams.get('year') ? parseInt(url.searchParams.get('year')) : null;
+    // Parse Ethiopian budget year format (e.g., "2024/2025" or just "2024")
+    const yearParam = url.searchParams.get('year');
+    let year = null;
+    if (yearParam) {
+      if (yearParam.includes('/')) {
+        // Ethiopian budget year format: "2024/2025" -> use 2024 as the start year
+        const startYear = yearParam.split('/')[0];
+        year = parseInt(startYear);
+        console.log(`🔍 API Debug: Parsed Ethiopian budget year "${yearParam}" -> start year ${year}`);
+      } else {
+        // Regular year format: "2024" -> use as is
+        year = parseInt(yearParam);
+        console.log(`🔍 API Debug: Parsed regular year "${yearParam}" -> ${year}`);
+      }
+    }
     const month = url.searchParams.get('month') ? parseInt(url.searchParams.get('month')) : null;
 
     // Depreciation-specific filters
@@ -363,14 +377,18 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 console.log(`🔍 API Debug: Very slow monthly calculation for asset ${asset.id}: ${calcDuration}ms`);
               }
 
-              // Extract depreciation expenses for the specific year (instead of book values)
+              // Extract depreciation expenses for Ethiopian budget year (July to June)
               const yearlyDepreciationExpenses = {};
               monthlyResults.forEach(result => {
-                if (result.year === year) {
+                // Ethiopian budget year: July of 'year' to June of 'year+1'
+                const isInBudgetYear = (result.year === year && result.month >= 7) ||
+                                      (result.year === year + 1 && result.month <= 6);
+
+                if (isInBudgetYear) {
                   yearlyDepreciationExpenses[result.month] = result.depreciationExpense;
-                  // Debug first month specifically
-                  if (result.month <= 6) { // Log first 6 months
-                    console.log(`🔍 Main Calc: Asset ${asset.id} Year ${year} Month ${result.month}: $${result.depreciationExpense.toFixed(2)}`);
+                  // Debug Ethiopian budget year mapping
+                  if (result.month <= 6 || result.month >= 7) { // Log budget year months
+                    console.log(`🔍 Ethiopian Main Calc: Asset ${asset.id} Budget Year ${year}/${year+1} - Calendar ${result.year} Month ${result.month}: $${result.depreciationExpense.toFixed(2)}`);
                   }
                 }
               });
@@ -663,30 +681,34 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 const depreciableAmount = unitPrice - residualValue;
                 const monthlyDepreciationExpense = depreciableAmount / (usefulLifeYears * 12);
 
+                // Ethiopian budget year fallback: July to June
                 for (let m = 1; m <= 12; m++) {
                   const sivDateObj = new Date(sivDate);
                   const sivYear = sivDateObj.getFullYear();
                   const sivMonth = sivDateObj.getMonth() + 1; // 1-based month
 
+                  // Determine which calendar year this budget month belongs to
+                  const calendarYear = m >= 7 ? year : year + 1;
+
                   // Check if this month is within the depreciation period
-                  if (year > sivYear || (year === sivYear && m >= sivMonth)) {
+                  if (calendarYear > sivYear || (calendarYear === sivYear && m >= sivMonth)) {
                     // Calculate months from start of depreciation
-                    const monthsFromStart = (year - sivYear) * 12 + (m - sivMonth);
+                    const monthsFromStart = (calendarYear - sivYear) * 12 + (m - sivMonth);
                     const totalUsefulLifeMonths = usefulLifeYears * 12;
 
                     if (monthsFromStart < totalUsefulLifeMonths) {
                       let monthlyExpense = monthlyDepreciationExpense;
 
                       // Prorate first month if asset wasn't acquired on the 1st
-                      if (year === sivYear && m === sivMonth && sivDateObj.getDate() > 1) {
-                        const daysInMonth = new Date(year, m, 0).getDate();
+                      if (calendarYear === sivYear && m === sivMonth && sivDateObj.getDate() > 1) {
+                        const daysInMonth = new Date(calendarYear, m, 0).getDate();
                         const daysUsed = daysInMonth - (sivDateObj.getDate() - 1);
                         monthlyExpense = monthlyDepreciationExpense * daysUsed / daysInMonth;
-                        console.log(`🔍 Fallback Proration: Asset ${asset.id} Month ${m}: ${daysUsed}/${daysInMonth} days = $${monthlyExpense.toFixed(2)}`);
+                        console.log(`🔍 Ethiopian Fallback Proration: Asset ${asset.id} Budget Year ${year}/${year+1} Month ${m}: ${daysUsed}/${daysInMonth} days = $${monthlyExpense.toFixed(2)}`);
                       }
 
                       fallbackValues[m] = monthlyExpense;
-                      console.log(`🔍 Fallback: Asset ${asset.id} Year ${year} Month ${m}: $${monthlyExpense.toFixed(2)} (${monthsFromStart} months from start)`);
+                      console.log(`🔍 Ethiopian Fallback: Asset ${asset.id} Budget Year ${year}/${year+1} Calendar ${calendarYear} Month ${m}: $${monthlyExpense.toFixed(2)} (${monthsFromStart} months from start)`);
                     } else {
                       // Asset is fully depreciated, no more expense
                       fallbackValues[m] = 0;
