@@ -454,21 +454,26 @@ export default function AssetReportsPage() {
         ? [`Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`]
         : [];
 
-      // Add monthly book value columns if year filter is applied (but not month)
+      // Add yearly accumulated depreciation and monthly book value columns if year filter is applied (but not month)
       // Ethiopian budget year: July to June
       const bookValueHeaders = (currentFilters.year && !currentFilters.month)
-        ? Array.from({ length: 12 }, (_, i) => {
-            // Ethiopian budget year starts from July (month 7)
-            const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-            // Parse budget year format (e.g., "2024/2025" or "2024")
-            let startYear = parseInt(currentFilters.year || '0');
-            if (currentFilters.year && currentFilters.year.includes('/')) {
-              startYear = parseInt(currentFilters.year.split('/')[0]);
-            }
-            const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
-            const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-            return `${monthName} ${budgetYear} Book Value`;
-          })
+        ? [
+            // Yearly accumulated depreciation column first
+            `Yearly Accumulated Depreciation (${currentFilters.year})`,
+            // Monthly columns after
+            ...Array.from({ length: 12 }, (_, i) => {
+              // Ethiopian budget year starts from July (month 7)
+              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+              // Parse budget year format (e.g., "2024/2025" or "2024")
+              let startYear = parseInt(currentFilters.year || '0');
+              if (currentFilters.year && currentFilters.year.includes('/')) {
+                startYear = parseInt(currentFilters.year.split('/')[0]);
+              }
+              const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
+              const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
+              return `${monthName} ${budgetYear} Book Value`;
+            })
+          ]
         : [];
 
       const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...bookValueHeaders];
@@ -548,25 +553,46 @@ export default function AssetReportsPage() {
             baseRow.push(accumulatedDepreciationToShow);
           }
 
-          // Add monthly depreciation expenses if year filter is applied (but not month)
+          // Add yearly accumulated depreciation and monthly depreciation expenses if year filter is applied (but not month)
           // Ethiopian budget year: July to June
-          const depreciationExpenseCells = (currentFilters.year && !currentFilters.month)
-            ? Array.from({ length: 12 }, (_, i) => {
-                // Ethiopian budget year starts from July (month 7)
-                const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-                const monthKey = budgetMonth.toString(); // Ensure string key
-                const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+          if (currentFilters.year && !currentFilters.month) {
+            // Calculate yearly accumulated depreciation first
+            let yearlyTotal = 0;
+            for (let i = 0; i < 12; i++) {
+              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+              const monthKey = budgetMonth.toString();
+              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
 
-                // More robust value checking for depreciation expenses
-                if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
-                  const numValue = Number(monthValue);
-                  if (!isNaN(numValue)) {
-                    return numValue.toFixed(2);
-                  }
+              if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
+                const numValue = Number(monthValue);
+                if (!isNaN(numValue)) {
+                  yearlyTotal += numValue;
                 }
-                return '';
-              })
-            : [];
+              }
+            }
+
+            // Add yearly total column
+            baseRow.push(yearlyTotal > 0 ? yearlyTotal.toFixed(2) : '');
+
+            // Add monthly columns
+            const depreciationExpenseCells = Array.from({ length: 12 }, (_, i) => {
+              // Ethiopian budget year starts from July (month 7)
+              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+              const monthKey = budgetMonth.toString(); // Ensure string key
+              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+
+              // More robust value checking for depreciation expenses
+              if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
+                const numValue = Number(monthValue);
+                if (!isNaN(numValue)) {
+                  return numValue.toFixed(2);
+                }
+              }
+              return '';
+            });
+
+            baseRow.push(...depreciationExpenseCells);
+          }
 
           // Debug: Log monthly depreciation expense data for first few assets
           if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 3) {
@@ -806,22 +832,27 @@ export default function AssetReportsPage() {
         ? [`Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`]
         : [];
 
-      // Add monthly depreciation expense headers if year filter is applied (but not month)
+      // Add yearly accumulated depreciation and monthly depreciation expense headers if year filter is applied (but not month)
       // Ethiopian budget year: July to June
       const depreciationExpenseHeaders = (currentFilters.year && !currentFilters.month)
-        ? Array.from({ length: 12 }, (_, i) => {
-            // Ethiopian budget year starts from July (month 7)
-            const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-            // Parse budget year format (e.g., "2024/2025" or "2024")
-            let startYear = parseInt(currentFilters.year || '0');
-            if (currentFilters.year && currentFilters.year.includes('/')) {
-              startYear = parseInt(currentFilters.year.split('/')[0]);
-            }
-            const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
-            const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-            console.log(`🔍 Ethiopian Header Debug: Index ${i} -> Budget Month ${budgetMonth} (${monthName}) Year ${budgetYear}`);
-            return `${monthName} ${budgetYear} Depreciation Expense`;
-          })
+        ? [
+            // Yearly accumulated depreciation header first
+            `Yearly Accumulated Depreciation (${currentFilters.year})`,
+            // Monthly headers after
+            ...Array.from({ length: 12 }, (_, i) => {
+              // Ethiopian budget year starts from July (month 7)
+              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+              // Parse budget year format (e.g., "2024/2025" or "2024")
+              let startYear = parseInt(currentFilters.year || '0');
+              if (currentFilters.year && currentFilters.year.includes('/')) {
+                startYear = parseInt(currentFilters.year.split('/')[0]);
+              }
+              const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
+              const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
+              console.log(`🔍 Ethiopian Header Debug: Index ${i} -> Budget Month ${budgetMonth} (${monthName}) Year ${budgetYear}`);
+              return `${monthName} ${budgetYear} Depreciation Expense`;
+            })
+          ]
         : [];
 
       const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...depreciationExpenseHeaders];
@@ -912,9 +943,28 @@ export default function AssetReportsPage() {
           baseRow.push(accumulatedDepreciationToShow);
         }
 
-        // Add monthly depreciation expenses if year filter is applied (but not month)
+        // Add yearly accumulated depreciation and monthly depreciation expenses if year filter is applied (but not month)
         // Ethiopian budget year: July to June
         if (currentFilters.year && !currentFilters.month) {
+          // Calculate yearly accumulated depreciation first
+          let yearlyTotal = 0;
+          for (let i = 0; i < 12; i++) {
+            const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+            const monthKey = budgetMonth.toString();
+            const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+
+            if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
+              const numValue = Number(monthValue);
+              if (!isNaN(numValue)) {
+                yearlyTotal += numValue;
+              }
+            }
+          }
+
+          // Add yearly total column
+          baseRow.push(yearlyTotal > 0 ? yearlyTotal.toFixed(2) : '');
+
+          // Add monthly columns
           for (let i = 0; i < 12; i++) {
             // Ethiopian budget year starts from July (month 7)
             const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
@@ -1428,21 +1478,29 @@ export default function AssetReportsPage() {
                       { header: 'Warranty Expiry', key: 'warrantyExpiry' },
                       // Conditional book value columns - Ethiopian budget year
                       ...((currentFilters.year && !currentFilters.month)
-                        ? Array.from({ length: 12 }, (_, i) => {
-                            // Ethiopian budget year starts from July (month 7)
-                            const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-                            // Parse budget year format (e.g., "2024/2025" or "2024")
-                            let startYear = parseInt(currentFilters.year || '0');
-                            if (currentFilters.year && currentFilters.year.includes('/')) {
-                              startYear = parseInt(currentFilters.year.split('/')[0]);
-                            }
-                            const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
-                            const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-                            return {
-                              header: `Book Value (${monthName} ${budgetYear})`,
-                              key: `bookValueMonth${budgetMonth}`
-                            };
-                          })
+                        ? [
+                            // Yearly accumulated depreciation column first
+                            {
+                              header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
+                              key: 'yearlyAccumulatedDepreciation'
+                            },
+                            // Monthly columns after
+                            ...Array.from({ length: 12 }, (_, i) => {
+                              // Ethiopian budget year starts from July (month 7)
+                              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+                              // Parse budget year format (e.g., "2024/2025" or "2024")
+                              let startYear = parseInt(currentFilters.year || '0');
+                              if (currentFilters.year && currentFilters.year.includes('/')) {
+                                startYear = parseInt(currentFilters.year.split('/')[0]);
+                              }
+                              const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
+                              const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
+                              return {
+                                header: `Book Value (${monthName} ${budgetYear})`,
+                                key: `bookValueMonth${budgetMonth}`
+                              };
+                            })
+                          ]
                         : [
                             { header: 'Book Value', key: 'bookValue' },
                             // Add Accumulated Depreciation column for export when year and month are selected
@@ -1533,27 +1591,52 @@ export default function AssetReportsPage() {
                       },
                       // Book Value columns (conditional)
                       ...((currentFilters.year && !currentFilters.month)
-                        ? Array.from({ length: 12 }, (_, i) => {
-                            // Ethiopian budget year starts from July (month 7)
-                            const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-                            // Parse budget year format (e.g., "2024/2025" or "2024")
-                            let startYear = parseInt(currentFilters.year || '0');
-                            if (currentFilters.year && currentFilters.year.includes('/')) {
-                              startYear = parseInt(currentFilters.year.split('/')[0]);
-                            }
-                            const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
-                            const monthLabel = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-                            return {
-                              header: `${monthLabel} ${budgetYear} Depreciation Expense`,
-                              key: `depreciationExpenseMonth${budgetMonth}`,
+                        ? [
+                            // Yearly Accumulated Depreciation column first
+                            {
+                              header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
+                              key: 'yearlyAccumulatedDepreciation',
                               render: (_: any, item: any) => {
-                                const value = item.bookValuesByMonth ? item.bookValuesByMonth[budgetMonth] : undefined;
-                                return value !== undefined && value !== null
-                                  ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                if (!item.bookValuesByMonth) return '—';
+
+                                // Calculate total for Ethiopian budget year (July to June)
+                                let total = 0;
+                                for (let i = 0; i < 12; i++) {
+                                  const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+                                  const monthValue = item.bookValuesByMonth[budgetMonth];
+                                  if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
+                                    total += Number(monthValue);
+                                  }
+                                }
+
+                                return total > 0
+                                  ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                   : '—';
                               },
-                            };
-                          })
+                            },
+                            // Monthly columns after the yearly total
+                            ...Array.from({ length: 12 }, (_, i) => {
+                              // Ethiopian budget year starts from July (month 7)
+                              const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+                              // Parse budget year format (e.g., "2024/2025" or "2024")
+                              let startYear = parseInt(currentFilters.year || '0');
+                              if (currentFilters.year && currentFilters.year.includes('/')) {
+                                startYear = parseInt(currentFilters.year.split('/')[0]);
+                              }
+                              const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
+                              const monthLabel = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
+                              return {
+                                header: `${monthLabel} ${budgetYear} Depreciation Expense`,
+                                key: `depreciationExpenseMonth${budgetMonth}`,
+                                render: (_: any, item: any) => {
+                                  const value = item.bookValuesByMonth ? item.bookValuesByMonth[budgetMonth] : undefined;
+                                  return value !== undefined && value !== null
+                                    ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : '—';
+                                },
+                              };
+                            })
+                          ]
                         : [
                             {
                               header: 'Book Value',
