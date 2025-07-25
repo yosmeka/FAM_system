@@ -569,7 +569,22 @@ export default function AssetReportsPage() {
               } : null,
               depreciationExpenseCellsLength: depreciationExpenseCells.length,
               depreciationExpenseCellsSample: depreciationExpenseCells.slice(0, 3),
-              fullDepreciationExpenseCells: depreciationExpenseCells
+              fullDepreciationExpenseCells: depreciationExpenseCells,
+              monthByMonthMapping: Array.from({ length: 12 }, (_, i) => {
+                const month = i + 1;
+                const monthKey = month.toString();
+                const value = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[month] : undefined;
+                const monthName = new Date(0, i).toLocaleString('default', { month: 'short' });
+                return `${monthName} (${month}): ${value !== undefined ? '$' + Number(value).toFixed(2) : 'undefined'}`;
+              }),
+              // Specific April debugging
+              aprilDebug: {
+                hasBookValuesByMonth: !!asset.bookValuesByMonth,
+                bookValuesByMonthKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
+                aprilValue4: asset.bookValuesByMonth ? asset.bookValuesByMonth[4] : 'no data',
+                aprilValueString4: asset.bookValuesByMonth ? asset.bookValuesByMonth['4'] : 'no data',
+                rawBookValuesByMonth: asset.bookValuesByMonth
+              }
             });
           }
 
@@ -780,12 +795,43 @@ export default function AssetReportsPage() {
 
       // Add monthly depreciation expense headers if year filter is applied (but not month)
       const depreciationExpenseHeaders = (currentFilters.year && !currentFilters.month)
-        ? Array.from({ length: 12 }, (_, i) =>
-            `${new Date(0, i).toLocaleString('default', { month: 'short' })} ${currentFilters.year} Depreciation Expense`
-          )
+        ? Array.from({ length: 12 }, (_, i) => {
+            const month = i + 1; // Convert 0-based index to 1-based month
+            const monthName = new Date(0, i).toLocaleString('default', { month: 'short' });
+            console.log(`🔍 Header Debug: Index ${i} -> Month ${month} (${monthName})`);
+            return `${monthName} ${currentFilters.year} Depreciation Expense`;
+          })
         : [];
 
       const assetHeaders = [...baseAssetHeaders, ...accDepreciationHeaders, ...depreciationExpenseHeaders];
+
+      // Debug: Check for systematic first month issues across all assets
+      if (currentFilters.year && !currentFilters.month && allFilteredAssets.length > 0) {
+        let frontendAssetsWithFirstMonth = 0;
+        let frontendAssetsWithoutFirstMonth = 0;
+        let frontendFirstMonthStats: Record<number, number> = {};
+
+        allFilteredAssets.slice(0, 10).forEach((asset: any) => { // Check first 10 assets
+          if (asset.bookValuesByMonth) {
+            const months = Object.keys(asset.bookValuesByMonth).map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
+            const firstMonth = months[0];
+
+            if (firstMonth && asset.bookValuesByMonth[firstMonth] > 0) {
+              frontendAssetsWithFirstMonth++;
+              frontendFirstMonthStats[firstMonth] = (frontendFirstMonthStats[firstMonth] || 0) + 1;
+            } else {
+              frontendAssetsWithoutFirstMonth++;
+            }
+          }
+        });
+
+        console.log(`🔍 Frontend Debug: First Month Analysis:`, {
+          checkedAssets: Math.min(10, allFilteredAssets.length),
+          frontendAssetsWithFirstMonth,
+          frontendAssetsWithoutFirstMonth,
+          frontendFirstMonthDistribution: frontendFirstMonthStats
+        });
+      }
 
       const assetRows = allFilteredAssets.map((asset: any) => {
         // Determine the correct book value to display based on filters
@@ -851,6 +897,12 @@ export default function AssetReportsPage() {
             const monthKey = month.toString(); // Ensure string key
             const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[month] : undefined;
 
+            // Debug first few assets to see month mapping
+            if (allFilteredAssets.indexOf(asset) < 2) {
+              const monthName = new Date(0, month - 1).toLocaleString('default', { month: 'short' });
+              console.log(`🔍 Data Debug: Asset ${asset.id} Month ${month} (${monthName}) -> Value: ${monthValue}`);
+            }
+
             // More robust value checking for depreciation expenses
             if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
               const numValue = Number(monthValue);
@@ -864,9 +916,10 @@ export default function AssetReportsPage() {
         }
 
         // Debug: Log monthly depreciation expense data for first few assets in CSV export
-        if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 3) {
+        if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 5) {
           console.log(`🔍 CSV Export Debug: Asset ${asset.id} monthly depreciation expenses:`, {
             assetName: asset.name,
+            sivDate: asset.sivDate,
             hasDepreciationExpensesByMonth: !!asset.bookValuesByMonth,
             monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
             monthlyDataType: typeof asset.bookValuesByMonth,

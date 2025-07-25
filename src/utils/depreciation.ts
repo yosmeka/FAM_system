@@ -331,6 +331,11 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
     currentBookValue -= depreciationExpense;
     const bookValue = Math.max(currentBookValue, 0); // Book value should not go below 0
 
+    // Debug month calculation for all assets (first 3 months only to avoid spam)
+    if (m < 3) {
+      console.log(`🔍 Depreciation Debug: SIV=${sivDate}, m=${m}, Date=${date.toISOString().split('T')[0]}, Year=${year}, Month=${month}, Expense=$${depreciationExpense.toFixed(2)}`);
+    }
+
     results.push({
       year,
       month,

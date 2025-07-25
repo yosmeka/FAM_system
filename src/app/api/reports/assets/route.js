@@ -309,10 +309,13 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       // Calculate all monthly book values for the selected year using our optimized utility
       console.log('🔍 API Debug: Calculating monthly book values for year:', year);
       console.log('🔍 API Debug: Assets to calculate monthly values for:', assetsToCalculate.length);
+      console.log('🔍 API Debug: Sample asset SIV dates:', assetsToCalculate.slice(0, 5).map(a => `${a.id}: ${a.sivDate}`));
 
       let processedAssets = 0;
       const startTime = Date.now();
-      const TIMEOUT_MS = 45000; // 45 seconds timeout for monthly calculations
+      const TIMEOUT_MS = 120000; // 2 minutes timeout for monthly calculations (increased)
+
+      console.log(`🔍 API Debug: Starting monthly calculation for ${assetsToCalculate.length} assets`);
 
       for (const asset of assetsToCalculate) {
         try {
@@ -341,6 +344,12 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
               // Add individual calculation timeout
               const calcStartTime = Date.now();
+
+              // Debug first few assets being processed
+              if (processedAssets <= 3) {
+                console.log(`🔍 API Debug: Processing asset ${asset.id} with SIV date ${sivDateString} for year ${year}`);
+              }
+
               const monthlyResults = calculateMonthlyDepreciation({
                 unitPrice: depreciableCost,
                 sivDate: sivDateString,
@@ -359,17 +368,32 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
               monthlyResults.forEach(result => {
                 if (result.year === year) {
                   yearlyDepreciationExpenses[result.month] = result.depreciationExpense;
+                  // Debug first month specifically
+                  if (result.month <= 6) { // Log first 6 months
+                    console.log(`🔍 Main Calc: Asset ${asset.id} Year ${year} Month ${result.month}: $${result.depreciationExpense.toFixed(2)}`);
+                  }
                 }
               });
 
               // Debug: Log monthly calculation results for first few assets
               if (processedAssets <= 3) {
                 console.log(`🔍 API Debug: Asset ${asset.id} monthly calculation:`, {
+                  assetName: asset.name || 'Unknown',
+                  sivDate: asset.sivDate,
                   totalMonthlyResults: monthlyResults.length,
                   targetYear: year,
                   yearlyDepreciationExpensesCount: Object.keys(yearlyDepreciationExpenses).length,
                   yearlyDepreciationExpenses: yearlyDepreciationExpenses,
-                  sampleMonthlyResults: monthlyResults.slice(0, 3).map(r => `${r.year}-${r.month}: Expense $${r.depreciationExpense.toFixed(2)}, BV $${r.bookValue.toFixed(2)}`)
+                  sampleMonthlyResults: monthlyResults.slice(0, 6).map(r => `${r.year}-${r.month}: Expense $${r.depreciationExpense.toFixed(2)}, BV $${r.bookValue.toFixed(2)}`),
+                  allResultsForTargetYear: monthlyResults.filter(r => r.year === year).map(r => `Month ${r.month}: $${r.depreciationExpense.toFixed(2)}`),
+                  // Specific check for April issue
+                  aprilCheck: {
+                    hasAprilData: !!yearlyDepreciationExpenses[4],
+                    aprilValue: yearlyDepreciationExpenses[4],
+                    aprilStringKey: yearlyDepreciationExpenses['4'],
+                    monthKeys: Object.keys(yearlyDepreciationExpenses),
+                    monthValues: Object.values(yearlyDepreciationExpenses)
+                  }
                 });
               }
 
@@ -388,14 +412,40 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
       }
 
       console.log(`🔍 API Debug: Calculated monthly depreciation expenses for ${Object.keys(bookValuesByAsset).length} assets`);
+      console.log(`🔍 API Debug: Calculation limited: ${calculationLimited}, Total assets: ${assetsToCalculate.length}`);
 
-      // Debug: Show sample monthly data
+      // Debug: Show sample monthly data and check for systematic first month issues
       if (Object.keys(bookValuesByAsset).length > 0) {
         const sampleAssetId = Object.keys(bookValuesByAsset)[0];
         const sampleData = bookValuesByAsset[sampleAssetId];
         console.log(`🔍 API Debug: Sample monthly depreciation expenses for asset ${sampleAssetId}:`, sampleData);
         console.log(`🔍 API Debug: Sample monthly data keys:`, Object.keys(sampleData));
         console.log(`🔍 API Debug: Sample depreciation expenses - Month 1: $${sampleData[1]?.toFixed(2) || 'N/A'}, Month 6: $${sampleData[6]?.toFixed(2) || 'N/A'}, Month 12: $${sampleData[12]?.toFixed(2) || 'N/A'}`);
+
+        // Check for systematic first month issues across all assets
+        let assetsWithFirstMonth = 0;
+        let assetsWithoutFirstMonth = 0;
+        let firstMonthStats = {};
+
+        Object.keys(bookValuesByAsset).forEach(assetId => {
+          const assetData = bookValuesByAsset[assetId];
+          const months = Object.keys(assetData).map(Number).sort((a, b) => a - b);
+          const firstMonth = months[0];
+
+          if (firstMonth && assetData[firstMonth] > 0) {
+            assetsWithFirstMonth++;
+            firstMonthStats[firstMonth] = (firstMonthStats[firstMonth] || 0) + 1;
+          } else {
+            assetsWithoutFirstMonth++;
+          }
+        });
+
+        console.log(`🔍 API Debug: First Month Analysis:`, {
+          totalAssets: Object.keys(bookValuesByAsset).length,
+          assetsWithFirstMonth,
+          assetsWithoutFirstMonth,
+          firstMonthDistribution: firstMonthStats
+        });
       } else {
         console.log(`🔍 API Debug: No monthly depreciation expenses calculated - this will cause empty export columns`);
       }
@@ -593,6 +643,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           bookValuesByMonth: (() => {
             // If we have calculated data, use it
             if (bookValuesByAsset[asset.id]) {
+              console.log(`🔍 API Debug: Using calculated data for asset ${asset.id}:`, bookValuesByAsset[asset.id]);
               return bookValuesByAsset[asset.id];
             }
 
@@ -613,18 +664,29 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 const monthlyDepreciationExpense = depreciableAmount / (usefulLifeYears * 12);
 
                 for (let m = 1; m <= 12; m++) {
-                  const targetDate = new Date(year, m - 1, 1);
                   const sivDateObj = new Date(sivDate);
+                  const sivYear = sivDateObj.getFullYear();
+                  const sivMonth = sivDateObj.getMonth() + 1; // 1-based month
 
-                  // Check if depreciation has started for this month
-                  if (targetDate >= sivDateObj) {
-                    // Check if asset is still within useful life
-                    const monthsFromStart = Math.floor((targetDate - sivDateObj) / (1000 * 60 * 60 * 24 * 30.44));
+                  // Check if this month is within the depreciation period
+                  if (year > sivYear || (year === sivYear && m >= sivMonth)) {
+                    // Calculate months from start of depreciation
+                    const monthsFromStart = (year - sivYear) * 12 + (m - sivMonth);
                     const totalUsefulLifeMonths = usefulLifeYears * 12;
 
                     if (monthsFromStart < totalUsefulLifeMonths) {
-                      // Return monthly depreciation expense
-                      fallbackValues[m] = monthlyDepreciationExpense;
+                      let monthlyExpense = monthlyDepreciationExpense;
+
+                      // Prorate first month if asset wasn't acquired on the 1st
+                      if (year === sivYear && m === sivMonth && sivDateObj.getDate() > 1) {
+                        const daysInMonth = new Date(year, m, 0).getDate();
+                        const daysUsed = daysInMonth - (sivDateObj.getDate() - 1);
+                        monthlyExpense = monthlyDepreciationExpense * daysUsed / daysInMonth;
+                        console.log(`🔍 Fallback Proration: Asset ${asset.id} Month ${m}: ${daysUsed}/${daysInMonth} days = $${monthlyExpense.toFixed(2)}`);
+                      }
+
+                      fallbackValues[m] = monthlyExpense;
+                      console.log(`🔍 Fallback: Asset ${asset.id} Year ${year} Month ${m}: $${monthlyExpense.toFixed(2)} (${monthsFromStart} months from start)`);
                     } else {
                       // Asset is fully depreciated, no more expense
                       fallbackValues[m] = 0;
