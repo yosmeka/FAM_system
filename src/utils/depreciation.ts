@@ -16,6 +16,7 @@ export interface DepreciationInput {
   depreciationRate?: number; // for declining balance method
   totalUnits?: number; // for units of activity method
   unitsPerYear?: number[]; // for units of activity method - estimated usage per year
+  targetYears?: number[]; // optional: only calculate for specific years (performance optimization)
 }
 
 /**
@@ -331,10 +332,7 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
     currentBookValue -= depreciationExpense;
     const bookValue = Math.max(currentBookValue, 0); // Book value should not go below 0
 
-    // Debug month calculation for all assets (first 3 months only to avoid spam)
-    if (m < 3) {
-      console.log(`🔍 Depreciation Debug: SIV=${sivDate}, m=${m}, Date=${date.toISOString().split('T')[0]}, Year=${year}, Month=${month}, Expense=$${depreciationExpense.toFixed(2)}`);
-    }
+    // Removed debug logging for performance
 
     results.push({
       year,
@@ -346,11 +344,11 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
   }
 
   // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
-  // Generate results for up to 20 years after useful life ends to cover future queries
+  // Generate results for only 3 years after useful life ends (reduced from 20 years for performance)
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = depreciableAmount; // Total depreciable amount
 
-  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+  for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -415,7 +413,7 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = unitPrice - salvageValue;
 
-  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+  for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -480,7 +478,7 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = unitPrice - salvageValue;
 
-  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+  for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -539,7 +537,7 @@ function calculateSumOfYearsDigitsMonthly(input: DepreciationInput): MonthlyDepr
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = depreciableAmount;
 
-  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+  for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
@@ -613,7 +611,7 @@ function calculateUnitsOfActivityMonthly(input: DepreciationInput): MonthlyDepre
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = depreciableAmount;
 
-  for (let m = 0; m < 240; m++) { // 20 years * 12 months = 240 months
+  for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
