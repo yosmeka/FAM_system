@@ -203,6 +203,9 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
     console.log('🔍 API Debug: Calculating book values for', assetsToCalculate.length, 'assets');
 
+    // Add caching to prevent repeated calculations
+    const calculationCache = new Map();
+
     if (year && month) {
       console.log('🔍 API Debug: Calculating book values for specific month:', year, month);
 
@@ -223,9 +226,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           }
 
           processedAssets++;
-          if (processedAssets % 50 === 0) { // Reduced logging frequency
-            console.log(`🔍 API Debug: Processed ${processedAssets}/${assetsToCalculate.length} assets`);
-          }
+          // Progress logging removed for performance
 
           const depreciableCost = asset.depreciableCost || asset.unitPrice;
           const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
@@ -340,9 +341,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           }
 
           processedAssets++;
-          if (processedAssets % 25 === 0) { // Reduced frequency for monthly calculations
-            console.log(`🔍 API Debug: Processed ${processedAssets}/${assetsToCalculate.length} assets for monthly calculations`);
-          }
+          // Progress logging removed for performance
 
           const depreciableCost = asset.depreciableCost || asset.unitPrice;
           const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
@@ -359,18 +358,24 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
               // Add individual calculation timeout
               const calcStartTime = Date.now();
 
-              // Debug first few assets being processed
-              if (processedAssets <= 3) {
-                console.log(`🔍 API Debug: Processing asset ${asset.id} with SIV date ${sivDateString} for year ${year}`);
-              }
+              // Create cache key for this asset's depreciation parameters
+              const cacheKey = `${depreciableCost}-${sivDateString}-${usefulLifeYears}-${salvageValue}-${method}`;
 
-              const monthlyResults = calculateMonthlyDepreciation({
-                unitPrice: depreciableCost,
-                sivDate: sivDateString,
-                usefulLifeYears: usefulLifeYears,
-                salvageValue: salvageValue,
-                method: method,
-              });
+              let monthlyResults;
+              if (calculationCache.has(cacheKey)) {
+                // Use cached result
+                monthlyResults = calculationCache.get(cacheKey);
+              } else {
+                // Calculate and cache result
+                monthlyResults = calculateMonthlyDepreciation({
+                  unitPrice: depreciableCost,
+                  sivDate: sivDateString,
+                  usefulLifeYears: usefulLifeYears,
+                  salvageValue: salvageValue,
+                  method: method,
+                });
+                calculationCache.set(cacheKey, monthlyResults);
+              }
 
               const calcDuration = Date.now() - calcStartTime;
               if (calcDuration > 2000) { // Log very slow calculations
@@ -387,33 +392,12 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                 if (isInBudgetYear) {
                   yearlyDepreciationExpenses[result.month] = result.depreciationExpense;
                   // Debug Ethiopian budget year mapping
-                  if (result.month <= 6 || result.month >= 7) { // Log budget year months
-                    console.log(`🔍 Ethiopian Main Calc: Asset ${asset.id} Budget Year ${year}/${year+1} - Calendar ${result.year} Month ${result.month}: $${result.depreciationExpense.toFixed(2)}`);
-                  }
+                  // Removed debug logging for performance
                 }
               });
 
               // Debug: Log monthly calculation results for first few assets
-              if (processedAssets <= 3) {
-                console.log(`🔍 API Debug: Asset ${asset.id} monthly calculation:`, {
-                  assetName: asset.name || 'Unknown',
-                  sivDate: asset.sivDate,
-                  totalMonthlyResults: monthlyResults.length,
-                  targetYear: year,
-                  yearlyDepreciationExpensesCount: Object.keys(yearlyDepreciationExpenses).length,
-                  yearlyDepreciationExpenses: yearlyDepreciationExpenses,
-                  sampleMonthlyResults: monthlyResults.slice(0, 6).map(r => `${r.year}-${r.month}: Expense $${r.depreciationExpense.toFixed(2)}, BV $${r.bookValue.toFixed(2)}`),
-                  allResultsForTargetYear: monthlyResults.filter(r => r.year === year).map(r => `Month ${r.month}: $${r.depreciationExpense.toFixed(2)}`),
-                  // Specific check for April issue
-                  aprilCheck: {
-                    hasAprilData: !!yearlyDepreciationExpenses[4],
-                    aprilValue: yearlyDepreciationExpenses[4],
-                    aprilStringKey: yearlyDepreciationExpenses['4'],
-                    monthKeys: Object.keys(yearlyDepreciationExpenses),
-                    monthValues: Object.values(yearlyDepreciationExpenses)
-                  }
-                });
-              }
+              // Removed debug logging for performance
 
               if (Object.keys(yearlyDepreciationExpenses).length > 0) {
                 bookValuesByAsset[asset.id] = yearlyDepreciationExpenses;
@@ -704,11 +688,11 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
                         const daysInMonth = new Date(calendarYear, m, 0).getDate();
                         const daysUsed = daysInMonth - (sivDateObj.getDate() - 1);
                         monthlyExpense = monthlyDepreciationExpense * daysUsed / daysInMonth;
-                        console.log(`🔍 Ethiopian Fallback Proration: Asset ${asset.id} Budget Year ${year}/${year+1} Month ${m}: ${daysUsed}/${daysInMonth} days = $${monthlyExpense.toFixed(2)}`);
+                        // Removed debug logging for performance
                       }
 
                       fallbackValues[m] = monthlyExpense;
-                      console.log(`🔍 Ethiopian Fallback: Asset ${asset.id} Budget Year ${year}/${year+1} Calendar ${calendarYear} Month ${m}: $${monthlyExpense.toFixed(2)} (${monthsFromStart} months from start)`);
+                      // Removed debug logging for performance
                     } else {
                       // Asset is fully depreciated, no more expense
                       fallbackValues[m] = 0;

@@ -849,7 +849,7 @@ export default function AssetReportsPage() {
               }
               const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
               const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-              console.log(`🔍 Ethiopian Header Debug: Index ${i} -> Budget Month ${budgetMonth} (${monthName}) Year ${budgetYear}`);
+              // Removed debug logging for performance
               return `${monthName} ${budgetYear} Depreciation Expense`;
             })
           ]
@@ -979,11 +979,7 @@ export default function AssetReportsPage() {
             const monthKey = budgetMonth.toString();
             const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
 
-            // Debug first few assets to see Ethiopian budget month mapping
-            if (allFilteredAssets.indexOf(asset) < 2) {
-              const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-              console.log(`🔍 Ethiopian Data Debug: Asset ${asset.id} Column ${i} -> Budget Month ${budgetMonth} (${monthName}) Year ${budgetYear} -> Value: ${monthValue}`);
-            }
+            // Removed debug logging for performance
 
             // More robust value checking for depreciation expenses
             if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
