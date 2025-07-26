@@ -1,6 +1,7 @@
 // Clean version of asset reports API - fixes all syntax errors
 import { prisma } from '@/lib/prisma';
 import { withRole } from '@/middleware/rbac';
+import { calculateMonthlyDepreciation } from '@/utils/depreciation';
 
 export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(req) {
   // Add overall timeout to prevent hanging
@@ -241,7 +242,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
             // Use the correct depreciation calculation from utils/depreciation.ts with timeout protection
             let monthlyResults;
             try {
-              const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
+              // Module import moved to top of file for performance
 
               // Add individual calculation timeout
               const calcStartTime = Date.now();
@@ -254,9 +255,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
               });
 
               const calcDuration = Date.now() - calcStartTime;
-              if (calcDuration > 1000) { // Log slow calculations
-                console.log(`🔍 API Debug: Slow calculation for asset ${asset.id}: ${calcDuration}ms`);
-              }
+              // Removed debug logging for performance
 
             } catch (calcError) {
               console.error(`🔍 API Debug: Depreciation calculation failed for asset ${asset.id}:`, calcError.message);
@@ -353,7 +352,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
             const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
 
             try {
-              const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
+              // Module import moved to top of file for performance
 
               // Add individual calculation timeout
               const calcStartTime = Date.now();
@@ -378,9 +377,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
               }
 
               const calcDuration = Date.now() - calcStartTime;
-              if (calcDuration > 2000) { // Log very slow calculations
-                console.log(`🔍 API Debug: Very slow monthly calculation for asset ${asset.id}: ${calcDuration}ms`);
-              }
+              // Removed debug logging for performance
 
               // Extract depreciation expenses for Ethiopian budget year (July to June)
               const yearlyDepreciationExpenses = {};
@@ -600,7 +597,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
               }
 
               // Calculate current book value using depreciation utility
-              const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
+              // Module import moved to top of file for performance
 
               const depreciationInput = {
                 unitPrice,
@@ -645,13 +642,12 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           bookValuesByMonth: (() => {
             // If we have calculated data, use it
             if (bookValuesByAsset[asset.id]) {
-              console.log(`🔍 API Debug: Using calculated data for asset ${asset.id}:`, bookValuesByAsset[asset.id]);
               return bookValuesByAsset[asset.id];
             }
 
             // If calculation was limited and this asset wasn't included, provide fallback
             if (calculationLimited && !bookValuesByAsset[asset.id]) {
-              console.log(`🔍 API Debug: Providing fallback monthly depreciation expenses for asset ${asset.id} (calculation was limited)`);
+              // Removed debug logging for performance
 
               // Simple fallback calculation for depreciation expenses (not book values)
               const unitPrice = asset.unitPrice || 0;
