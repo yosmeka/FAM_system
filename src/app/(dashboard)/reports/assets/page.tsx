@@ -563,8 +563,8 @@ export default function AssetReportsPage() {
               }
             }
 
-            // Add yearly total column
-            baseRow.push(yearlyTotal > 0 ? yearlyTotal.toFixed(2) : '');
+            // Add yearly total column - always show the total, even if it's 0
+            baseRow.push(yearlyTotal.toFixed(2));
 
             // Add monthly columns
             depreciationExpenseCells = Array.from({ length: 12 }, (_, i) => {
@@ -589,7 +589,8 @@ export default function AssetReportsPage() {
                   return numValue.toFixed(2);
                 }
               }
-              return '';
+              // Show 0.00 instead of blank for missing or invalid values
+              return '0.00';
             });
 
             // Debug: Log monthly depreciation expense data for first few assets
@@ -1453,7 +1454,7 @@ export default function AssetReportsPage() {
                               header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
                               key: 'yearlyAccumulatedDepreciation',
                               render: (_: any, item: any) => {
-                                if (!item.depreciationExpensesByMonth) return '—';
+                                if (!item.depreciationExpensesByMonth) return '0.00';
 
                                 // Calculate total for Ethiopian budget year (July to June)
                                 let total = 0;
@@ -1465,7 +1466,8 @@ export default function AssetReportsPage() {
                                   }
                                 }
 
-                                return total > 0 ? total.toFixed(2) : '—';
+                                // Always show the total, even if it's 0
+                                return total.toFixed(2);
                               }
                             },
                             // Monthly columns after
@@ -1484,9 +1486,12 @@ export default function AssetReportsPage() {
                                 key: `depreciationExpenseMonth${budgetMonth}`,
                                 render: (_: any, item: any) => {
                                   const value = item.depreciationExpensesByMonth ? item.depreciationExpensesByMonth[budgetMonth] : undefined;
-                                  return value !== undefined && value !== null && !isNaN(Number(value))
-                                    ? Number(value).toFixed(2)
-                                    : '—';
+                                  // If value exists and is a valid number, show it; otherwise show 0.00
+                                  if (value !== undefined && value !== null && !isNaN(Number(value))) {
+                                    return Number(value).toFixed(2);
+                                  }
+                                  // Show 0.00 instead of blank for missing or invalid values
+                                  return '0.00';
                                 }
                               };
                             })
@@ -1586,7 +1591,7 @@ export default function AssetReportsPage() {
                               header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
                               key: 'yearlyAccumulatedDepreciation',
                               render: (_: any, item: any) => {
-                                if (!item.depreciationExpensesByMonth) return '—';
+                                if (!item.depreciationExpensesByMonth) return '$0.00';
 
                                 // Calculate total for Ethiopian budget year (July to June)
                                 let total = 0;
@@ -1598,9 +1603,8 @@ export default function AssetReportsPage() {
                                   }
                                 }
 
-                                return total > 0
-                                  ? `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                  : '—';
+                                // Always show the total, even if it's 0
+                                return `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                               },
                             },
                             // Monthly columns after the yearly total
@@ -1619,9 +1623,12 @@ export default function AssetReportsPage() {
                                 key: `depreciationExpenseMonth${budgetMonth}`,
                                 render: (_: any, item: any) => {
                                   const value = item.depreciationExpensesByMonth ? item.depreciationExpensesByMonth[budgetMonth] : undefined;
-                                  return value !== undefined && value !== null
-                                    ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                    : '—';
+                                  // If value exists and is a valid number, show it; otherwise show $0.00
+                                  if (value !== undefined && value !== null && !isNaN(Number(value))) {
+                                    return `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                  }
+                                  // Show $0.00 instead of — for missing or invalid values
+                                  return '$0.00';
                                 },
                               };
                             })
