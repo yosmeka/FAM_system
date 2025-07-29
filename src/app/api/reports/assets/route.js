@@ -637,9 +637,9 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
           bookValue: bookValueMap[asset.id] ?? null,
           accumulatedDepreciation: accumulatedDepreciationMap[asset.id] ?? null
         } : {}),
-        // Add monthly book values when only year is selected
+        // Add monthly depreciation expenses when only year is selected
         ...(year && !month ? {
-          bookValuesByMonth: (() => {
+          depreciationExpensesByMonth: (() => {
             // If we have calculated data, use it
             if (bookValuesByAsset[asset.id]) {
               return bookValuesByAsset[asset.id];

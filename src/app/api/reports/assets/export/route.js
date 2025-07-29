@@ -17,7 +17,16 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
     const minValue = url.searchParams.get('minValue') ? parseFloat(url.searchParams.get('minValue')) : null;
     const maxValue = url.searchParams.get('maxValue') ? parseFloat(url.searchParams.get('maxValue')) : null;
     const depreciationMethod = url.searchParams.get('depreciationMethod');
-    const year = url.searchParams.get('year') ? parseInt(url.searchParams.get('year')) : null;
+    const yearParam = url.searchParams.get('year');
+    let year = null;
+    if (yearParam) {
+      // Handle both "2024" and "2024/2025" formats
+      if (yearParam.includes('/')) {
+        year = parseInt(yearParam.split('/')[0]); // Use the first year for budget year format
+      } else {
+        year = parseInt(yearParam);
+      }
+    }
     const month = url.searchParams.get('month') ? parseInt(url.searchParams.get('month')) : null;
 
     // Depreciation-specific filters
@@ -195,14 +204,14 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
         }
       }
     } else if (year && !month) {
-      // Calculate book values for all months in the year
-      console.log(`🔍 Export API Debug: Calculating monthly book values for ${year}`);
-      
+      // Calculate depreciation expenses for all months in the year
+      console.log(`🔍 Export API Debug: Calculating monthly depreciation expenses for ${year}`);
+
       for (const asset of assets) {
         try {
           if (asset.sivDate && asset.unitPrice > 0) {
             const { calculateMonthlyDepreciation } = require('@/utils/depreciation');
-            
+
             const depreciationInput = {
               unitPrice: asset.unitPrice,
               sivDate: asset.sivDate.toISOString().split('T')[0],
@@ -213,18 +222,18 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
             };
 
             const monthlyResults = calculateMonthlyDepreciation(depreciationInput);
-            const yearlyValues = {};
+            const yearlyDepreciationExpenses = {};
 
             monthlyResults.forEach(result => {
               if (result.year === year) {
-                yearlyValues[result.month] = result.bookValue;
+                yearlyDepreciationExpenses[result.month] = result.depreciationExpense;
               }
             });
 
-            bookValuesByAsset[asset.id] = yearlyValues;
+            bookValuesByAsset[asset.id] = yearlyDepreciationExpenses;
           }
         } catch (error) {
-          console.warn('Error calculating monthly book values for asset', asset.id, ':', error.message);
+          console.warn('Error calculating monthly depreciation expenses for asset', asset.id, ':', error.message);
         }
       }
     }
@@ -349,7 +358,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
         calculatedSalvageValue: asset.salvageValue || (asset.residualPercentage ? ((asset.unitPrice || 0) * asset.residualPercentage / 100) : 0),
         // Add book value based on filters
         ...(year && month ? { bookValue: bookValueMap[asset.id] ?? null } : {}),
-        ...(year && !month ? { bookValuesByMonth: bookValuesByAsset[asset.id] || {} } : {}),
+        ...(year && !month ? { depreciationExpensesByMonth: bookValuesByAsset[asset.id] || {} } : {}),
         // Add current book value when no year/month filter
         ...(!year && !month ? {
           currentBookValue: (() => {

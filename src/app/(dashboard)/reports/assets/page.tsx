@@ -292,7 +292,7 @@ export default function AssetReportsPage() {
         ? Array.from({ length: 12 }, (_, i) =>
             `DE ${new Date(0, i).toLocaleString('default', { month: 'short' })}`
           )
-        : ['Book Value'];
+        : [];
 
       const tableHeaders = [...baseHeaders, ...bookValueHeaders, 'Status'];
       
@@ -315,10 +315,10 @@ export default function AssetReportsPage() {
 
         const bookValueCells = (currentFilters.year && !currentFilters.month)
           ? Array.from({ length: 12 }, (_, i) => {
-              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[i + 1] : undefined;
+              const monthValue = asset.depreciationExpensesByMonth ? asset.depreciationExpensesByMonth[i + 1] : undefined;
               return monthValue ? `$${Number(monthValue).toFixed(2)}` : '';
             })
-          : [asset.bookValue ? `$${Number(asset.bookValue).toFixed(2)}` : ''];
+          : [];
 
         return [...baseRow, ...bookValueCells, asset.status || ''];
       });
@@ -368,16 +368,19 @@ export default function AssetReportsPage() {
       // Debug first few assets for monthly data
       if (currentFilters.year && !currentFilters.month && allFilteredAssets.length > 0) {
         console.log('🔍 Excel Export Debug: First 3 assets monthly data:');
+        console.log('🔍 Excel Export Debug: Current year filter:', currentFilters.year);
         allFilteredAssets.slice(0, 3).forEach((asset: any, index) => {
           console.log(`  Asset ${index + 1} (${asset.name}):`, {
-            hasBookValuesByMonth: !!asset.bookValuesByMonth,
-            monthlyDataType: typeof asset.bookValuesByMonth,
-            monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
-            sampleMonthlyValues: asset.bookValuesByMonth ? {
-              month1: asset.bookValuesByMonth[1],
-              month6: asset.bookValuesByMonth[6],
-              month12: asset.bookValuesByMonth[12]
-            } : null
+            hasDepreciationExpensesByMonth: !!asset.depreciationExpensesByMonth,
+            monthlyDataType: typeof asset.depreciationExpensesByMonth,
+            monthlyDataKeys: asset.depreciationExpensesByMonth ? Object.keys(asset.depreciationExpensesByMonth) : [],
+            sampleMonthlyValues: asset.depreciationExpensesByMonth ? {
+              month1: asset.depreciationExpensesByMonth[1],
+              month6: asset.depreciationExpensesByMonth[6],
+              month7: asset.depreciationExpensesByMonth[7],
+              month12: asset.depreciationExpensesByMonth[12]
+            } : null,
+            fullDepreciationExpensesByMonth: asset.depreciationExpensesByMonth
           });
         });
       }
@@ -444,7 +447,7 @@ export default function AssetReportsPage() {
       const baseAssetHeaders = [
         'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
         'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
-        'Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
         'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
         'Salvage Value', 'Calculated Salvage Value'
       ];
@@ -471,7 +474,7 @@ export default function AssetReportsPage() {
               }
               const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
               const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
-              return `${monthName} ${budgetYear} Book Value`;
+              return `${monthName} ${budgetYear} Depreciation Expense`;
             })
           ]
         : [];
@@ -496,28 +499,16 @@ export default function AssetReportsPage() {
         toast.loading(`Processing assets... ${chunkNumber}/${totalChunks}`, { id: 'excel-export' });
 
         const chunkRows = chunk.map((asset: any) => {
-          // Determine the correct book value to display based on filters
-          let bookValueToShow = '';
+          // Determine accumulated depreciation to display based on filters
           let accumulatedDepreciationToShow = '';
 
           if (currentFilters.year && currentFilters.month) {
-            // Specific month selected - use bookValue and accumulatedDepreciation fields
-            bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
-              ? Number(asset.bookValue).toFixed(2)
-              : '';
+            // Specific month selected - use accumulatedDepreciation field
             accumulatedDepreciationToShow = asset.accumulatedDepreciation !== undefined && asset.accumulatedDepreciation !== null
               ? Number(asset.accumulatedDepreciation).toFixed(2)
               : '';
-          } else if (!currentFilters.year && !currentFilters.month) {
-            // No date filter - use currentBookValue field
-            bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
-              ? Number(asset.currentBookValue).toFixed(2)
-              : '';
-            // No accumulated depreciation for current values
-            accumulatedDepreciationToShow = '';
           } else {
-            // Year only - leave blank, monthly columns will show data
-            bookValueToShow = '';
+            // No accumulated depreciation for other cases
             accumulatedDepreciationToShow = '';
           }
 
@@ -535,7 +526,6 @@ export default function AssetReportsPage() {
             asset.status || '',
             asset.unitPrice || 0,
             asset.currentValue || 0,
-            bookValueToShow, // Use calculated book value
             `${asset.depreciationRate || 0}%`,
             asset.age || 0,
             asset.usefulLifeYears || '',
@@ -555,13 +545,15 @@ export default function AssetReportsPage() {
 
           // Add yearly accumulated depreciation and monthly depreciation expenses if year filter is applied (but not month)
           // Ethiopian budget year: July to June
+          let depreciationExpenseCells: string[] = [];
+
           if (currentFilters.year && !currentFilters.month) {
             // Calculate yearly accumulated depreciation first
             let yearlyTotal = 0;
             for (let i = 0; i < 12; i++) {
               const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
               const monthKey = budgetMonth.toString();
-              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+              const monthValue = asset.depreciationExpensesByMonth ? asset.depreciationExpensesByMonth[monthKey] || asset.depreciationExpensesByMonth[budgetMonth] : undefined;
 
               if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
                 const numValue = Number(monthValue);
@@ -575,11 +567,20 @@ export default function AssetReportsPage() {
             baseRow.push(yearlyTotal > 0 ? yearlyTotal.toFixed(2) : '');
 
             // Add monthly columns
-            const depreciationExpenseCells = Array.from({ length: 12 }, (_, i) => {
+            depreciationExpenseCells = Array.from({ length: 12 }, (_, i) => {
               // Ethiopian budget year starts from July (month 7)
               const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
               const monthKey = budgetMonth.toString(); // Ensure string key
-              const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+              const monthValue = asset.depreciationExpensesByMonth ? asset.depreciationExpensesByMonth[monthKey] || asset.depreciationExpensesByMonth[budgetMonth] : undefined;
+
+              // Debug for first asset and first few months
+              if (allFilteredAssets.indexOf(asset) === 0 && i < 3) {
+                console.log(`🔍 Excel Export Debug: Month ${budgetMonth} (${monthKey}):`, {
+                  monthValue,
+                  hasDepreciationExpensesByMonth: !!asset.depreciationExpensesByMonth,
+                  allKeys: asset.depreciationExpensesByMonth ? Object.keys(asset.depreciationExpensesByMonth) : []
+                });
+              }
 
               // More robust value checking for depreciation expenses
               if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
@@ -591,40 +592,25 @@ export default function AssetReportsPage() {
               return '';
             });
 
-            baseRow.push(...depreciationExpenseCells);
-          }
+            // Debug: Log monthly depreciation expense data for first few assets
+            if (allFilteredAssets.indexOf(asset) < 3) {
+              console.log(`🔍 Excel Export Debug: Asset ${asset.id} monthly depreciation expenses:`, {
+                assetName: asset.name,
+                hasDepreciationExpensesByMonth: !!asset.depreciationExpensesByMonth,
+                monthlyDataKeys: asset.depreciationExpensesByMonth ? Object.keys(asset.depreciationExpensesByMonth) : [],
+                monthlyDataType: typeof asset.depreciationExpensesByMonth,
+                sampleValues: asset.depreciationExpensesByMonth ? {
+                  month1: asset.depreciationExpensesByMonth[1],
+                  month6: asset.depreciationExpensesByMonth[6],
+                  month12: asset.depreciationExpensesByMonth[12]
+                } : null,
+                depreciationExpenseCellsLength: depreciationExpenseCells.length,
+                depreciationExpenseCellsSample: depreciationExpenseCells.slice(0, 3),
+                fullDepreciationExpenseCells: depreciationExpenseCells,
+              });
+            }
 
-          // Debug: Log monthly depreciation expense data for first few assets
-          if ((currentFilters.year && !currentFilters.month) && allFilteredAssets.indexOf(asset) < 3) {
-            console.log(`🔍 Excel Export Debug: Asset ${asset.id} monthly depreciation expenses:`, {
-              assetName: asset.name,
-              hasDepreciationExpensesByMonth: !!asset.bookValuesByMonth,
-              monthlyDataKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
-              monthlyDataType: typeof asset.bookValuesByMonth,
-              sampleValues: asset.bookValuesByMonth ? {
-                month1: asset.bookValuesByMonth[1],
-                month6: asset.bookValuesByMonth[6],
-                month12: asset.bookValuesByMonth[12]
-              } : null,
-              depreciationExpenseCellsLength: depreciationExpenseCells.length,
-              depreciationExpenseCellsSample: depreciationExpenseCells.slice(0, 3),
-              fullDepreciationExpenseCells: depreciationExpenseCells,
-              monthByMonthMapping: Array.from({ length: 12 }, (_, i) => {
-                const month = i + 1;
-                const monthKey = month.toString();
-                const value = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[month] : undefined;
-                const monthName = new Date(0, i).toLocaleString('default', { month: 'short' });
-                return `${monthName} (${month}): ${value !== undefined ? '$' + Number(value).toFixed(2) : 'undefined'}`;
-              }),
-              // Specific April debugging
-              aprilDebug: {
-                hasBookValuesByMonth: !!asset.bookValuesByMonth,
-                bookValuesByMonthKeys: asset.bookValuesByMonth ? Object.keys(asset.bookValuesByMonth) : [],
-                aprilValue4: asset.bookValuesByMonth ? asset.bookValuesByMonth[4] : 'no data',
-                aprilValueString4: asset.bookValuesByMonth ? asset.bookValuesByMonth['4'] : 'no data',
-                rawBookValuesByMonth: asset.bookValuesByMonth
-              }
-            });
+            baseRow.push(...depreciationExpenseCells);
           }
 
           return [...baseRow, ...depreciationExpenseCells];
@@ -822,7 +808,7 @@ export default function AssetReportsPage() {
       const baseAssetHeaders = [
         'Asset Name', 'Description', 'Serial Number', 'Old Tag #', 'New Tag #', 'Category', 'Type',
         'Department', 'Location', 'Supplier', 'Status', 'Unit Price', 'Current Value',
-        'Book Value', 'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
+        'Depreciation Rate', 'Age (Years)', 'Useful Life (Years)',
         'Residual %', 'Depreciation Method', 'SIV Date', 'GRN Date', 'Warranty Expiry',
         'Salvage Value', 'Calculated Salvage Value'
       ];
@@ -864,11 +850,11 @@ export default function AssetReportsPage() {
         let frontendFirstMonthStats: Record<number, number> = {};
 
         allFilteredAssets.slice(0, 10).forEach((asset: any) => { // Check first 10 assets
-          if (asset.bookValuesByMonth) {
-            const months = Object.keys(asset.bookValuesByMonth).map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
+          if (asset.depreciationExpensesByMonth) {
+            const months = Object.keys(asset.depreciationExpensesByMonth).map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
             const firstMonth = months[0];
 
-            if (firstMonth && asset.bookValuesByMonth[firstMonth] > 0) {
+            if (firstMonth && asset.depreciationExpensesByMonth[firstMonth] > 0) {
               frontendAssetsWithFirstMonth++;
               frontendFirstMonthStats[firstMonth] = (frontendFirstMonthStats[firstMonth] || 0) + 1;
             } else {
@@ -886,28 +872,16 @@ export default function AssetReportsPage() {
       }
 
       const assetRows = allFilteredAssets.map((asset: any) => {
-        // Determine the correct book value to display based on filters
-        let bookValueToShow = '';
+        // Determine accumulated depreciation to display based on filters
         let accumulatedDepreciationToShow = '';
 
         if (currentFilters.year && currentFilters.month) {
-          // Specific month selected - use bookValue and accumulatedDepreciation fields
-          bookValueToShow = asset.bookValue !== undefined && asset.bookValue !== null
-            ? Number(asset.bookValue).toFixed(2)
-            : '';
+          // Specific month selected - use accumulatedDepreciation field
           accumulatedDepreciationToShow = asset.accumulatedDepreciation !== undefined && asset.accumulatedDepreciation !== null
             ? Number(asset.accumulatedDepreciation).toFixed(2)
             : '';
-        } else if (!currentFilters.year && !currentFilters.month) {
-          // No date filter - use currentBookValue field
-          bookValueToShow = asset.currentBookValue !== undefined && asset.currentBookValue !== null
-            ? Number(asset.currentBookValue).toFixed(2)
-            : '';
-          // No accumulated depreciation for current values
-          accumulatedDepreciationToShow = '';
         } else {
-          // Year only - leave blank, monthly columns will show data
-          bookValueToShow = '';
+          // No accumulated depreciation for other cases
           accumulatedDepreciationToShow = '';
         }
 
@@ -925,7 +899,6 @@ export default function AssetReportsPage() {
           asset.status || '',
           asset.unitPrice || 0,
           asset.currentValue || 0,
-          bookValueToShow, // Use calculated book value
           `${asset.depreciationRate || 0}%`,
           asset.age || 0,
           asset.usefulLifeYears || '',
@@ -951,7 +924,7 @@ export default function AssetReportsPage() {
           for (let i = 0; i < 12; i++) {
             const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
             const monthKey = budgetMonth.toString();
-            const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+            const monthValue = asset.depreciationExpensesByMonth ? asset.depreciationExpensesByMonth[monthKey] || asset.depreciationExpensesByMonth[budgetMonth] : undefined;
 
             if (monthValue !== undefined && monthValue !== null && monthValue !== '') {
               const numValue = Number(monthValue);
@@ -977,7 +950,7 @@ export default function AssetReportsPage() {
 
             // Look up the value for this budget month and year
             const monthKey = budgetMonth.toString();
-            const monthValue = asset.bookValuesByMonth ? asset.bookValuesByMonth[monthKey] || asset.bookValuesByMonth[budgetMonth] : undefined;
+            const monthValue = asset.depreciationExpensesByMonth ? asset.depreciationExpensesByMonth[monthKey] || asset.depreciationExpensesByMonth[budgetMonth] : undefined;
 
             // Removed debug logging for performance
 
@@ -1303,7 +1276,7 @@ export default function AssetReportsPage() {
               <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">🔍 Debug Info:</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p><strong>Assets with monthly data:</strong> {safeDetailedAssets.filter(asset => (asset as any).bookValuesByMonth && Object.keys((asset as any).bookValuesByMonth).length > 0).length}</p>
+                  <p><strong>Assets with monthly data:</strong> {safeDetailedAssets.filter(asset => (asset as any).depreciationExpensesByMonth && Object.keys((asset as any).depreciationExpensesByMonth).length > 0).length}</p>
                   <p><strong>Total assets:</strong> {safeDetailedAssets.length}</p>
                 </div>
                 <div>
@@ -1478,7 +1451,22 @@ export default function AssetReportsPage() {
                             // Yearly accumulated depreciation column first
                             {
                               header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
-                              key: 'yearlyAccumulatedDepreciation'
+                              key: 'yearlyAccumulatedDepreciation',
+                              render: (_: any, item: any) => {
+                                if (!item.depreciationExpensesByMonth) return '—';
+
+                                // Calculate total for Ethiopian budget year (July to June)
+                                let total = 0;
+                                for (let i = 0; i < 12; i++) {
+                                  const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
+                                  const monthValue = item.depreciationExpensesByMonth[budgetMonth];
+                                  if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
+                                    total += Number(monthValue);
+                                  }
+                                }
+
+                                return total > 0 ? total.toFixed(2) : '—';
+                              }
                             },
                             // Monthly columns after
                             ...Array.from({ length: 12 }, (_, i) => {
@@ -1492,13 +1480,18 @@ export default function AssetReportsPage() {
                               const budgetYear = budgetMonth >= 7 ? startYear : startYear + 1;
                               const monthName = new Date(0, budgetMonth - 1).toLocaleString('default', { month: 'short' });
                               return {
-                                header: `Book Value (${monthName} ${budgetYear})`,
-                                key: `bookValueMonth${budgetMonth}`
+                                header: `${monthName} ${budgetYear} Depreciation Expense`,
+                                key: `depreciationExpenseMonth${budgetMonth}`,
+                                render: (_: any, item: any) => {
+                                  const value = item.depreciationExpensesByMonth ? item.depreciationExpensesByMonth[budgetMonth] : undefined;
+                                  return value !== undefined && value !== null && !isNaN(Number(value))
+                                    ? Number(value).toFixed(2)
+                                    : '—';
+                                }
                               };
                             })
                           ]
                         : [
-                            { header: 'Book Value', key: 'bookValue' },
                             // Add Accumulated Depreciation column for export when year and month are selected
                             ...(currentFilters.year && currentFilters.month ? [
                               { header: `Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`, key: 'accumulatedDepreciation' }
@@ -1593,13 +1586,13 @@ export default function AssetReportsPage() {
                               header: `Yearly Accumulated Depreciation (${currentFilters.year})`,
                               key: 'yearlyAccumulatedDepreciation',
                               render: (_: any, item: any) => {
-                                if (!item.bookValuesByMonth) return '—';
+                                if (!item.depreciationExpensesByMonth) return '—';
 
                                 // Calculate total for Ethiopian budget year (July to June)
                                 let total = 0;
                                 for (let i = 0; i < 12; i++) {
                                   const budgetMonth = ((i + 6) % 12) + 1; // July=7, Aug=8, ..., Dec=12, Jan=1, ..., June=6
-                                  const monthValue = item.bookValuesByMonth[budgetMonth];
+                                  const monthValue = item.depreciationExpensesByMonth[budgetMonth];
                                   if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
                                     total += Number(monthValue);
                                   }
@@ -1625,7 +1618,7 @@ export default function AssetReportsPage() {
                                 header: `${monthLabel} ${budgetYear} Depreciation Expense`,
                                 key: `depreciationExpenseMonth${budgetMonth}`,
                                 render: (_: any, item: any) => {
-                                  const value = item.bookValuesByMonth ? item.bookValuesByMonth[budgetMonth] : undefined;
+                                  const value = item.depreciationExpensesByMonth ? item.depreciationExpensesByMonth[budgetMonth] : undefined;
                                   return value !== undefined && value !== null
                                     ? `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                                     : '—';
@@ -1634,24 +1627,11 @@ export default function AssetReportsPage() {
                             })
                           ]
                         : [
-                            {
-                              header: 'Book Value',
-                              key: 'bookValue',
-                              render: (_, item) => {
-                                // Use currentBookValue when no year/month filter, otherwise use bookValue or currentValue
-                                const bookValue = !currentFilters.year && !currentFilters.month
-                                  ? (item as any).currentBookValue || item.currentValue
-                                  : item.bookValue || item.currentValue;
-                                return bookValue !== undefined && bookValue !== null
-                                  ? `$${Number(bookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                  : '—';
-                              },
-                            },
                             // Add Accumulated Depreciation column when year and month are selected
                             ...(currentFilters.year && currentFilters.month ? [{
                               header: `Accumulated Depreciation (${currentFilters.month}/${currentFilters.year})`,
                               key: 'accumulatedDepreciation',
-                              render: (_, item: any) => {
+                              render: (_: any, item: any) => {
                                 const accDepreciation = item.accumulatedDepreciation;
                                 return accDepreciation !== undefined && accDepreciation !== null
                                   ? `$${Number(accDepreciation).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
