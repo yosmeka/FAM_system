@@ -343,7 +343,7 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
     });
   }
 
-  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  // Add post-useful-life results (asset is fully depreciated, book value = 0)
   // Generate results for only 3 years after useful life ends (reduced from 20 years for performance)
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
   const finalAccumulatedDepreciation = depreciableAmount; // Total depreciable amount
@@ -358,7 +358,7 @@ function calculateStraightLineMonthly(input: DepreciationInput): MonthlyDeprecia
       month,
       depreciationExpense: 0, // No more depreciation after useful life
       accumulatedDepreciation: finalAccumulatedDepreciation,
-      bookValue: salvageValue, // Book value remains at salvage value
+      bookValue: 0, // Book value remains at 0
     });
   }
 
@@ -406,12 +406,12 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
       accumulatedDepreciation,
       bookValue,
     });
-    if (bookValue <= salvageValue) break;
+    if (bookValue <= 0) break;
   }
 
-  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  // Add post-useful-life results (asset is fully depreciated, book value = 0)
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
-  const finalAccumulatedDepreciation = unitPrice - salvageValue;
+  const finalAccumulatedDepreciation = depreciableAmount;
 
   for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
@@ -423,7 +423,7 @@ function calculateDecliningBalanceMonthly(input: DepreciationInput): MonthlyDepr
       month,
       depreciationExpense: 0, // No more depreciation after useful life
       accumulatedDepreciation: finalAccumulatedDepreciation,
-      bookValue: salvageValue, // Book value remains at salvage value
+      bookValue: 0, // Book value remains at 0
     });
   }
 
@@ -436,7 +436,7 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
   const usefulLifeMonths = usefulLifeYears * 12;
   const depreciableAmount = unitPrice - salvageValue;
   const annualRate = 2 / usefulLifeYears;
-  const monthlyRate = 1 - Math.pow(1 - annualRate, 1 / 12);
+  const monthlyRate = annualRate / 12;
 
   const results: MonthlyDepreciationResult[] = [];
   // Start with depreciable amount instead of full unit price
@@ -446,24 +446,26 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
   for (let m = 0; m < usefulLifeMonths; m++) {
     const date = addMonths(start, m);
     let depreciationExpense = monthlyRate * bookValue;
-    if (m === usefulLifeMonths - 1 || bookValue - depreciationExpense < 0) {
-      depreciationExpense = bookValue; // Depreciate remaining amount
-    }
+
     if (m === 0) {
       // Prorate for first month
       const daysInMonth = getDaysInMonth(date.getFullYear(), date.getMonth() + 1);
       const startDay = start.getDate();
       depreciationExpense = depreciationExpense * (daysInMonth - (startDay - 1)) / daysInMonth;
     }
+
     // If this is the last month, adjust so book value = 0
     if (m === usefulLifeMonths - 1) {
       depreciationExpense = bookValue;
     }
+
     accumulatedDepreciation += depreciationExpense;
     bookValue -= depreciationExpense;
+
     if (m === usefulLifeMonths - 1) {
       bookValue = 0; // End at 0 since we started from depreciable amount
     }
+
     results.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
@@ -471,12 +473,13 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
       accumulatedDepreciation,
       bookValue,
     });
-    if (bookValue <= salvageValue) break;
+
+    if (bookValue <= 0) break;
   }
 
-  // Add post-useful-life results (asset is fully depreciated, book value = salvage value)
+  // Add post-useful-life results (asset is fully depreciated, book value = 0)
   const endOfUsefulLife = addMonths(start, usefulLifeMonths);
-  const finalAccumulatedDepreciation = unitPrice - salvageValue;
+  const finalAccumulatedDepreciation = depreciableAmount;
 
   for (let m = 0; m < 36; m++) { // 3 years * 12 months = 36 months (reduced from 240)
     const date = addMonths(endOfUsefulLife, m);
@@ -488,7 +491,7 @@ function calculateDoubleDecliningBalanceMonthly(input: DepreciationInput): Month
       month,
       depreciationExpense: 0, // No more depreciation after useful life
       accumulatedDepreciation: finalAccumulatedDepreciation,
-      bookValue: salvageValue, // Book value remains at salvage value
+      bookValue: 0, // Book value remains at 0
     });
   }
 
