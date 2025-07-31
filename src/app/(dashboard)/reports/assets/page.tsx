@@ -463,6 +463,8 @@ export default function AssetReportsPage() {
         ? [
             // Yearly accumulated depreciation column first
             `Yearly Accumulated Depreciation (${currentFilters.year})`,
+            // Book Value column
+            `Book Value (${currentFilters.year})`,
             // Monthly columns after
             ...Array.from({ length: 12 }, (_, i) => {
               // Ethiopian budget year starts from July (month 7)
@@ -565,6 +567,55 @@ export default function AssetReportsPage() {
 
             // Add yearly total column - always show the total, even if it's 0
             baseRow.push(yearlyTotal.toFixed(2));
+
+            // Add book value column - calculated as unit price minus total accumulated depreciation, but never below salvage value
+            try {
+              const unitPrice = asset.unitPrice || 0;
+              const residualPercentage = asset.residualPercentage || 0;
+              const salvageValue = unitPrice * (residualPercentage / 100);
+
+              // Parse the budget year (e.g., "2023/2024" -> 2023)
+              let startYear = parseInt(currentFilters.year || '0');
+              if (currentFilters.year && currentFilters.year.includes('/')) {
+                startYear = parseInt(currentFilters.year.split('/')[0]);
+              }
+
+              // Calculate total accumulated depreciation up to the end of current budget year
+              let totalAccumulatedDepreciation = 0;
+
+              if (asset.depreciationExpensesByMonth && asset.sivDate) {
+                const sivDate = new Date(asset.sivDate);
+                const sivYear = sivDate.getFullYear();
+                const sivMonth = sivDate.getMonth() + 1;
+
+                // Calculate all depreciation from SIV date up to end of current budget year (June)
+                for (let year = sivYear; year <= startYear + 1; year++) {
+                  for (let month = 1; month <= 12; month++) {
+                    // Skip months before SIV date
+                    if (year === sivYear && month < sivMonth) continue;
+
+                    // For current budget year, only include months up to June of next year
+                    if (year === startYear + 1 && month > 6) break;
+
+                    // Stop if we've gone past the current budget year
+                    if (year > startYear + 1) break;
+
+                    const monthValue = asset.depreciationExpensesByMonth[month];
+                    if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
+                      totalAccumulatedDepreciation += Number(monthValue);
+                    }
+                  }
+                }
+              }
+
+              // Book Value = Unit Price - Total Accumulated Depreciation, but never below salvage value
+              const bookValue = Math.max(unitPrice - totalAccumulatedDepreciation, salvageValue);
+              baseRow.push(bookValue.toFixed(2));
+
+            } catch (error) {
+              console.error('Error calculating book value for Excel export:', error);
+              baseRow.push('0.00');
+            }
 
             // Add monthly columns
             depreciationExpenseCells = Array.from({ length: 12 }, (_, i) => {
@@ -1470,6 +1521,61 @@ export default function AssetReportsPage() {
                                 return total.toFixed(2);
                               }
                             },
+                            // Book Value column - calculated as previous year's book value minus current year's accumulated depreciation
+                            {
+                              header: `Book Value (${currentFilters.year})`,
+                              key: 'bookValueForYear',
+                              render: (_: any, item: any) => {
+                                try {
+                                  const unitPrice = item.unitPrice || 0;
+                                  const residualPercentage = item.residualPercentage || 0;
+                                  const salvageValue = unitPrice * (residualPercentage / 100);
+
+                                  // Parse the budget year (e.g., "2023/2024" -> 2023)
+                                  let startYear = parseInt(currentFilters.year || '0');
+                                  if (currentFilters.year && currentFilters.year.includes('/')) {
+                                    startYear = parseInt(currentFilters.year.split('/')[0]);
+                                  }
+
+                                  // Calculate total accumulated depreciation up to the end of current budget year
+                                  let totalAccumulatedDepreciation = 0;
+
+                                  if (item.depreciationExpensesByMonth && item.sivDate) {
+                                    const sivDate = new Date(item.sivDate);
+                                    const sivYear = sivDate.getFullYear();
+                                    const sivMonth = sivDate.getMonth() + 1;
+
+                                    // Calculate all depreciation from SIV date up to end of current budget year (June)
+                                    for (let year = sivYear; year <= startYear + 1; year++) {
+                                      for (let month = 1; month <= 12; month++) {
+                                        // Skip months before SIV date
+                                        if (year === sivYear && month < sivMonth) continue;
+
+                                        // For current budget year, only include months up to June of next year
+                                        if (year === startYear + 1 && month > 6) break;
+
+                                        // Stop if we've gone past the current budget year
+                                        if (year > startYear + 1) break;
+
+                                        const monthValue = item.depreciationExpensesByMonth[month];
+                                        if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
+                                          totalAccumulatedDepreciation += Number(monthValue);
+                                        }
+                                      }
+                                    }
+                                  }
+
+                                  // Book Value = Unit Price - Total Accumulated Depreciation, but never below salvage value
+                                  const bookValue = Math.max(unitPrice - totalAccumulatedDepreciation, salvageValue);
+
+                                  return bookValue.toFixed(2);
+
+                                } catch (error) {
+                                  console.error('Error calculating book value:', error);
+                                  return '0.00';
+                                }
+                              }
+                            },
                             // Monthly columns after
                             ...Array.from({ length: 12 }, (_, i) => {
                               // Ethiopian budget year starts from July (month 7)
@@ -1606,6 +1712,61 @@ export default function AssetReportsPage() {
                                 // Always show the total, even if it's 0
                                 return `$${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                               },
+                            },
+                            // Book Value column - calculated as previous year's book value minus current year's accumulated depreciation
+                            {
+                              header: `Book Value (${currentFilters.year})`,
+                              key: 'bookValueForYear',
+                              render: (_: any, item: any) => {
+                                try {
+                                  const unitPrice = item.unitPrice || 0;
+                                  const residualPercentage = item.residualPercentage || 0;
+                                  const salvageValue = unitPrice * (residualPercentage / 100);
+
+                                  // Parse the budget year (e.g., "2023/2024" -> 2023)
+                                  let startYear = parseInt(currentFilters.year || '0');
+                                  if (currentFilters.year && currentFilters.year.includes('/')) {
+                                    startYear = parseInt(currentFilters.year.split('/')[0]);
+                                  }
+
+                                  // Calculate total accumulated depreciation up to the end of current budget year
+                                  let totalAccumulatedDepreciation = 0;
+
+                                  if (item.depreciationExpensesByMonth && item.sivDate) {
+                                    const sivDate = new Date(item.sivDate);
+                                    const sivYear = sivDate.getFullYear();
+                                    const sivMonth = sivDate.getMonth() + 1;
+
+                                    // Calculate all depreciation from SIV date up to end of current budget year (June)
+                                    for (let year = sivYear; year <= startYear + 1; year++) {
+                                      for (let month = 1; month <= 12; month++) {
+                                        // Skip months before SIV date
+                                        if (year === sivYear && month < sivMonth) continue;
+
+                                        // For current budget year, only include months up to June of next year
+                                        if (year === startYear + 1 && month > 6) break;
+
+                                        // Stop if we've gone past the current budget year
+                                        if (year > startYear + 1) break;
+
+                                        const monthValue = item.depreciationExpensesByMonth[month];
+                                        if (monthValue !== undefined && monthValue !== null && !isNaN(Number(monthValue))) {
+                                          totalAccumulatedDepreciation += Number(monthValue);
+                                        }
+                                      }
+                                    }
+                                  }
+
+                                  // Book Value = Unit Price - Total Accumulated Depreciation, but never below salvage value
+                                  const bookValue = Math.max(unitPrice - totalAccumulatedDepreciation, salvageValue);
+
+                                  return `$${bookValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                                } catch (error) {
+                                  console.error('Error calculating book value:', error);
+                                  return '$0.00';
+                                }
+                              }
                             },
                             // Monthly columns after the yearly total
                             ...Array.from({ length: 12 }, (_, i) => {
