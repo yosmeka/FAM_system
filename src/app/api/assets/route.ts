@@ -82,27 +82,9 @@ export const POST = withPermission(async function POST(request: Request) {
       },
     });
 
-    // Generate and store monthly depreciation schedule
-    try {
-      const { calculateMonthlyDepreciation } = await import('@/utils/depreciation');
-      const schedule = calculateMonthlyDepreciation({
-        unitPrice: asset.unitPrice,
-        sivDate: asset.sivDate?.toISOString() || new Date().toISOString(),
-        usefulLifeYears: asset.usefulLifeYears,
-        salvageValue: asset.salvageValue ?? 0,
-        method: asset.depreciationMethod ?? 'STRAIGHT_LINE',
-      });
-      await prisma.depreciationSchedule.createMany({
-        data: schedule.map(row => ({
-          assetId: asset.id,
-          year: row.year,
-          month: row.month,
-          bookValue: row.bookValue,
-        })),
-      });
-    } catch (err) {
-      console.error('Error generating/storing depreciation schedule:', err);
-    }
+    // Note: DepreciationSchedule table has been removed from schema
+    // Depreciation is now calculated on-the-fly using calculateMonthlyDepreciation()
+    // This eliminates precision issues and improves performance
 
     // Track initial asset creation in history
     const fields = [
