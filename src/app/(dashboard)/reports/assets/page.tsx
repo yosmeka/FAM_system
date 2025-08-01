@@ -636,7 +636,7 @@ export default function AssetReportsPage() {
               // Book Value = Depreciable Amount - Total Accumulated Depreciation, but never below 0
               const depreciableAmount = unitPrice - salvageValue;
               const bookValue = Math.max(depreciableAmount - totalAccumulatedDepreciation, 0);
-              baseRow.push(bookValue.toFixed(2));
+              baseRow.push(bookValue.toFixed(6)); // Increased precision for Excel export
 
             } catch (error) {
               console.error('Error calculating book value for Excel export:', error);
@@ -1552,6 +1552,15 @@ export default function AssetReportsPage() {
                               header: `Book Value (${currentFilters.year})`,
                               key: 'bookValueForYear',
                               render: (_: any, item: any) => {
+                                // Use the API-calculated book value instead of manual calculation
+                                // This ensures the same precision as the depreciation schedule
+                                const apiBookValue = item.bookValue;
+
+                                if (apiBookValue !== undefined && apiBookValue !== null && !isNaN(Number(apiBookValue))) {
+                                  return Number(apiBookValue).toFixed(6); // Show API-calculated precise value
+                                }
+
+                                // Fallback to manual calculation if API book value not available
                                 try {
                                   const unitPrice = item.unitPrice || 0;
                                   const residualPercentage = item.residualPercentage || 0;
@@ -1622,7 +1631,7 @@ export default function AssetReportsPage() {
                                   const cappedAccumulatedDepreciation = Math.min(totalAccumulatedDepreciation, depreciableAmount);
                                   const bookValue = Math.max(depreciableAmount - cappedAccumulatedDepreciation, 0);
 
-                                  return bookValue.toFixed(2);
+                                  return bookValue.toFixed(6); // Increased precision to show exact values
 
                                 } catch (error) {
                                   console.error('Error calculating book value:', error);
@@ -1772,6 +1781,15 @@ export default function AssetReportsPage() {
                               header: `Book Value (${currentFilters.year})`,
                               key: 'bookValueForYear',
                               render: (_: any, item: any) => {
+                                // Use the API-calculated book value instead of manual calculation
+                                // This ensures the same precision as the depreciation schedule
+                                const apiBookValue = item.bookValue;
+
+                                if (apiBookValue !== undefined && apiBookValue !== null && !isNaN(Number(apiBookValue))) {
+                                  return `$${Number(apiBookValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`;
+                                }
+
+                                // Fallback to manual calculation if API book value not available
                                 try {
                                   const unitPrice = item.unitPrice || 0;
                                   const residualPercentage = item.residualPercentage || 0;
@@ -1840,7 +1858,7 @@ export default function AssetReportsPage() {
                                   const depreciableAmount = unitPrice - salvageValue;
                                   const bookValue = Math.max(depreciableAmount - totalAccumulatedDepreciation, 0);
 
-                                  return `$${bookValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                  return `$${bookValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}`; // Increased precision
 
                                 } catch (error) {
                                   console.error('Error calculating book value:', error);

@@ -5,41 +5,64 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Starting database seeding...');
-  
+
   try {
-    console.log('Creating admin user...');
-    const hashedPassword = await bcrypt.hash('admin123', 10);
+    // Clear existing users
+    console.log('Removing all existing users...');
+    const deletedUsers = await prisma.user.deleteMany({});
+    console.log(`Deleted ${deletedUsers.count} users`);
+
+    console.log('Creating users...');
+
+    // Create admin user
+    const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = await prisma.user.create({
       data: {
         email: 'admin@zemenbank.com',
         name: 'Admin User',
-        password: hashedPassword,
+        password: adminPassword,
         role: 'ADMIN',
       },
     });
+    console.log('Created admin user:', admin.email);
 
-    console.log('Created admin user:', admin);
-
-    console.log('Creating sample assets...');
-    const asset = await prisma.asset.create({
+    // Create manager user
+    const managerPassword = await bcrypt.hash('manager123', 10);
+    const manager = await prisma.user.create({
       data: {
-        name: 'Dell Laptop XPS 15',
-        description: 'High-performance laptop for development',
-        serialNumber: 'DLL-XPS15-2024-001',
-        purchaseDate: new Date('2024-01-01'),
-        purchasePrice: 1500.00,
-        currentValue: 1350.00,
-        status: 'ACTIVE',
-        location: 'Head Office',
-        department: 'IT',
-        category: 'Computer Equipment',
-        supplier: 'Dell Technologies',
-        warrantyExpiry: new Date('2025-01-01'),
+        email: 'manager@zemenbank.com',
+        name: 'Manager User',
+        password: managerPassword,
+        role: 'MANAGER',
       },
     });
+    console.log('Created manager user:', manager.email);
 
-    console.log('Created sample asset:', asset);
-    console.log('Database seeding completed successfully');
+    // Create regular user
+    const userPassword = await bcrypt.hash('user123', 10);
+    const user = await prisma.user.create({
+      data: {
+        email: 'user@zemenbank.com',
+        name: 'Regular User',
+        password: userPassword,
+        role: 'USER',
+      },
+    });
+    console.log('Created regular user:', user.email);
+
+    // Create auditor user
+    const auditorPassword = await bcrypt.hash('auditor123', 10);
+    const auditor = await prisma.user.create({
+      data: {
+        email: 'auditor@zemenbank.com',
+        name: 'Auditor User',
+        password: auditorPassword,
+        role: 'AUDITOR',
+      },
+    });
+    console.log('Created auditor user:', auditor.email);
+
+    console.log('User seeding completed successfully');
   } catch (error) {
     console.error('Error details:', error);
     if (error instanceof Error) {

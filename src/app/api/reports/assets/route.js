@@ -185,7 +185,9 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
     console.log(`🔍 API Debug: Found ${assets.length} assets before post-processing filters`);
 
     // Add circuit breaker for very large datasets
-    const MAX_CALCULATION_ASSETS = 2000; // Limit calculations to prevent hanging
+    // For specific month queries (year && month), allow all assets since it's a targeted calculation
+    // For year-only queries, limit to prevent timeout on monthly expense calculations
+    const MAX_CALCULATION_ASSETS = (year && month) ? assets.length : 5000;
     let assetsToCalculate = assets;
     let calculationLimited = false;
 
@@ -216,7 +218,7 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
 
       // Add timeout protection to prevent hanging
       const startTime = Date.now();
-      const TIMEOUT_MS = 30000; // 30 seconds timeout
+      const TIMEOUT_MS = 60000; // 60 seconds timeout for large datasets
 
       for (const asset of assetsToCalculate) {
         try {
@@ -634,8 +636,118 @@ export const GET = withRole(['MANAGER', 'USER', 'AUDITOR'], async function GET(r
         } : {}),
         // Add book value for specific month when year and month are selected
         ...(year && month ? {
-          bookValue: bookValueMap[asset.id] ?? null,
-          accumulatedDepreciation: accumulatedDepreciationMap[asset.id] ?? null
+          bookValue: (() => {
+            // First try to use the calculated value from bookValueMap
+            if (bookValueMap[asset.id] !== undefined) {
+              return bookValueMap[asset.id];
+            }
+
+            // Fallback calculation if asset wasn't included in main calculation (due to timeout, etc.)
+            try {
+              const depreciableCost = asset.depreciableCost || asset.unitPrice;
+              const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
+              const usefulLifeYears = asset.usefulLifeYears || 5;
+              const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+              const sivDate = asset.sivDate;
+
+              if (!sivDate || !depreciableCost || depreciableCost <= 0) {
+                return null;
+              }
+
+              const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
+
+              const monthlyResults = calculateMonthlyDepreciation({
+                unitPrice: depreciableCost,
+                sivDate: sivDateString,
+                usefulLifeYears: usefulLifeYears,
+                salvageValue: salvageValue,
+                method: method,
+              });
+
+              const targetResult = monthlyResults.find(result =>
+                result.year === year && result.month === month
+              );
+
+              return targetResult ? targetResult.bookValue : null;
+            } catch (error) {
+              console.error('Fallback book value calculation failed for asset', asset.id, ':', error.message);
+              return null;
+            }
+          })(),
+          accumulatedDepreciation: (() => {
+            // First try to use the calculated value from accumulatedDepreciationMap
+            if (accumulatedDepreciationMap[asset.id] !== undefined) {
+              return accumulatedDepreciationMap[asset.id];
+            }
+
+            // Fallback calculation if asset wasn't included in main calculation
+            try {
+              const depreciableCost = asset.depreciableCost || asset.unitPrice;
+              const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
+              const usefulLifeYears = asset.usefulLifeYears || 5;
+              const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+              const sivDate = asset.sivDate;
+
+              if (!sivDate || !depreciableCost || depreciableCost <= 0) {
+                return null;
+              }
+
+              const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
+
+              const monthlyResults = calculateMonthlyDepreciation({
+                unitPrice: depreciableCost,
+                sivDate: sivDateString,
+                usefulLifeYears: usefulLifeYears,
+                salvageValue: salvageValue,
+                method: method,
+              });
+
+              const targetResult = monthlyResults.find(result =>
+                result.year === year && result.month === month
+              );
+
+              return targetResult ? targetResult.accumulatedDepreciation : null;
+            } catch (error) {
+              console.error('Fallback accumulated depreciation calculation failed for asset', asset.id, ':', error.message);
+              return null;
+            }
+          })()
+        } : {}),
+        // Add book value for Ethiopian budget year end when only year is selected
+        ...(year && !month ? {
+          bookValue: (() => {
+            try {
+              const depreciableCost = asset.depreciableCost || asset.unitPrice;
+              const salvageValue = asset.salvageValue || (asset.residualPercentage ? (depreciableCost * asset.residualPercentage / 100) : 0);
+              const usefulLifeYears = asset.usefulLifeYears || 5;
+              const method = asset.depreciationMethod || 'STRAIGHT_LINE';
+              const sivDate = asset.sivDate;
+
+              if (!sivDate || !depreciableCost || depreciableCost <= 0) {
+                return depreciableCost || 0;
+              }
+
+              const sivDateString = sivDate instanceof Date ? sivDate.toISOString() : new Date(sivDate).toISOString();
+
+              const monthlyResults = calculateMonthlyDepreciation({
+                unitPrice: depreciableCost,
+                sivDate: sivDateString,
+                usefulLifeYears: usefulLifeYears,
+                salvageValue: salvageValue,
+                method: method,
+              });
+
+              // Find book value at the end of Ethiopian budget year (June of year+1)
+              const endOfBudgetYear = monthlyResults.find(result =>
+                result.year === year + 1 && result.month === 6
+              );
+
+              return endOfBudgetYear ? endOfBudgetYear.bookValue : (depreciableCost || 0);
+            } catch (error) {
+              console.error('Error calculating budget year end book value for asset', asset.id, ':', error.message);
+              return asset.currentValue || asset.unitPrice || 0;
+            }
+          })()
         } : {}),
         // Add monthly depreciation expenses when only year is selected
         ...(year && !month ? {
